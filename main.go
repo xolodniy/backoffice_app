@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -9,7 +10,18 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"backoffice_app/types"
 )
+
+var AppToken = "yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ"
+var Login = ""
+var Password = ""
+var AuthToken = ""
+var OursOrgsID = 60470
+var SlackOutToken = ""
+var ChannelID = ""
+var BotName = "Я чьё угодно имя"
 
 type Client struct {
 	// AppToken created at https://developer.hubstaff.com/my_apps
@@ -21,20 +33,6 @@ type Client struct {
 	// HTTPClient is required to be passed. Pass http.DefaultClient if not sure
 	HTTPClient *http.Client
 }
-type Project struct {
-	ID           int    `json:"id"`
-	Name         string `json:"name"`
-	LastActivity string `json:"timezone"` /*"2018-09-05T20:26:44.837Z"*/
-	Status       string `json:"status"`
-	Description  string `json:"description"`
-}
-type Projects []Project
-
-var AppToken = "yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ"
-var Login = "@gmail.com"
-var Password = ""
-var AuthToken = ""
-var OursOrgsID = 60470
 
 func main() {
 	hs := Client{
@@ -56,9 +54,21 @@ func main() {
 		os.Exit(3)
 	}
 
+	var concatenatedString string
 	for key, project := range projects {
 		fmt.Println(key, project)
+		concatenatedString += fmt.Sprintf("%s\n", project.Name)
 	}
+
+	resp, err := postChannelMessage(
+		concatenatedString,
+		ChannelID,
+		false,
+		BotName,
+	)
+
+	fmt.Print(resp)
+
 	os.Exit(0)
 }
 
@@ -73,7 +83,7 @@ func (c *Client) ObtainAuthToken(email, password string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("can't create http request: %s", err)
 	}
-	r.Header.Set("App-Token", c.AppToken)
+	r.Header.Set("App-Token", AppToken)
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := c.HTTPClient.Do(r)
 	if err != nil {
@@ -98,14 +108,14 @@ func (c *Client) ObtainAuthToken(email, password string) (string, error) {
 	return t.User.AuthToken, nil
 }
 
-func (c *Client) OrganizationProjects(orgID int) (Projects, error) {
+func (c *Client) OrganizationProjects(orgID int) (types.Projects, error) {
 	bodyRaw, err := c.doRequest("/v1/organizations/"+strconv.Itoa(orgID)+"/projects", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	bodyUnmarshaled := struct {
-		Projects Projects `json:"projects"`
+		Projects types.Projects `json:"projects"`
 	}{}
 	if err := json.Unmarshal(bodyRaw, &bodyUnmarshaled); err != nil {
 		return nil, fmt.Errorf("can't decode response: %s", err)
@@ -119,8 +129,8 @@ func (c *Client) doRequest(path string, q map[string]string) ([]byte, error) {
 		return nil, fmt.Errorf("can't create http request: %s", err)
 	}
 
-	r.Header.Set("App-Token", c.AppToken)
-	r.Header.Set("Auth-Token", c.AuthToken)
+	r.Header.Set("App-Token", AppToken)
+	r.Header.Set("Auth-Token", AuthToken)
 
 	if len(q) > 0 {
 		qs := r.URL.Query()
@@ -138,4 +148,45 @@ func (c *Client) doRequest(path string, q map[string]string) ([]byte, error) {
 	}
 	s, err := ioutil.ReadAll(resp.Body)
 	return s, err
+}
+
+func postJSONMessage(jsonData []byte) (string, error) {
+	var url = "https://slack.com/api/chat.postMessage"
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", SlackOutToken))
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	fmt.Println("response Status:", resp.Status)
+	//fmt.Println("response Headers:", resp.Header)
+	body, _ := ioutil.ReadAll(resp.Body)
+	//fmt.Println("response Body:", string(body))
+
+	return string(body), nil
+}
+func sendPOSTMessage(message *types.PostChannelMessage) (string, error) {
+
+	b, err := json.Marshal(message)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+		return "", err
+	}
+
+	fmt.Printf("JSON IS %+v:\n", string(b))
+
+	resp, err := postJSONMessage(b)
+
+	return resp, err
+}
+func postChannelMessage(text string, channelID string, asUser bool, username string) (string, error) {
+	var msg = types.NewPostChannelMessage(text, channelID, asUser, username, SlackOutToken)
+	fmt.Printf("NewPostChannelMessage is:\n%+v\n", msg)
+
+	return sendPOSTMessage(msg)
 }
