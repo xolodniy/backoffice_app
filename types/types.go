@@ -61,6 +61,23 @@ func NewPostChannelMessage(text string, channel string, asUser bool, username st
 type SlackToken struct {
 	slackToken string
 }
+
+type User struct {
+	Name string `json:"name"`
+	Duration int `json:"duration"`
+}
+
+type Users []User
+
+type Organization struct {
+	ID int64 `json:"id"`
+	Name string `json:"name"`
+	Duration int64 `json:"duration"`
+	Users []User `json:"users"`
+}
+
+type Organizations []Organization
+
 type Project struct {
 	ID           int    `json:"id"`
 	Name         string `json:"name"`

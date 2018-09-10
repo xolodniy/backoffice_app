@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"backoffice_app/types"
 )
@@ -48,17 +50,48 @@ func main() {
 		os.Exit(2)
 	}
 
-	projects, err := hs.OrganizationProjects(OursOrgsID)
+	_, err := hs.OrganizationProjects(OursOrgsID)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(3)
 	}
 
 	var concatenatedString string
-	for key, project := range projects {
-		fmt.Println(key, project)
-		concatenatedString += fmt.Sprintf("%s\n", project.Name)
+	for key, organization := range bodyUnmarshaled.Organizations[0].Users {
+		fmt.Println(key, organization)
+
+
+
+		hours, minutes := math.Modf( float64(120) /60/60)
+
+		fmt.Println( hours, minutes*60 )
+
+		var Hours string
+		if int(hours) < 10 {
+			Hours = fmt.Sprintf( "0%d", int(hours) )
+		} else {
+			Hours = fmt.Sprintf( "%d", int(hours) )
+		}
+
+		var Minutes string
+		if int(math.Round(minutes*60)) < 10 {
+			Minutes = fmt.Sprintf( "0%d", int(math.Round(minutes*60)) )
+		} else {
+			Minutes = fmt.Sprintf( "%d", int(math.Round(minutes*60)) )
+		}
+
+		duration := fmt.Sprintf(
+			"%s:%s", Hours, Minutes,
+		)
+
+		concatenatedString += fmt.Sprintf(
+			"%s - %s\n",
+			duration,
+			organization.Name,
+		)
 	}
+
+
 
 	resp, err := postChannelMessage(
 		concatenatedString,
