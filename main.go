@@ -221,8 +221,15 @@ func postChannelMessage(text string, channelID string, asUser bool, username str
 	return sendPOSTMessage(msg)
 }
 func sendStandardMessage( message string ) error {
-	fmt.Println(
+	_, err := postChannelMessage(
 		message,
+		ChannelID,
+		false,
+		BotName,
 	)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+		return err
+	}
 	return nil
 }
