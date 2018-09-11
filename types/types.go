@@ -1,28 +1,13 @@
 package types
 
+// SlackToken
+type SlackToken struct {
+	slackToken string
+}
+
 // Attachment
 type Attachment struct {
 	Text string `json:"text"`
-}
-
-// Message
-type Message struct {
-	Text        string       `json:"text"`
-	Attachments []Attachment `json:"attachments"`
-}
-
-// AddAttachment
-func (m *Message) AddAttachment(text string) *Message {
-	m.Attachments = append(m.Attachments, Attachment{text})
-	return m
-}
-
-// NewMessage
-func NewMessage(text string) *Message {
-	return &Message{
-		Text:        text,
-		Attachments: make([]Attachment, 0),
-	}
 }
 
 // Attachment
@@ -37,6 +22,43 @@ type PostChannelMessage struct {
 	Text        string                         `json:"text"`
 	Username    string                         `json:"username"`
 	Attachments []PostChannelMessageAttachment `json:"attachments"`
+}
+
+
+// Message
+type Message struct {
+	Text        string       `json:"text"`
+	Attachments []Attachment `json:"attachments"`
+}
+
+type Worker struct {
+	Name       string `json:"name"`
+	TimeWorked int    `json:"duration"`
+}
+
+type Workers []Worker
+
+type Organization struct {
+	ID         int64    `json:"id"`
+	Name       string   `json:"name"`
+	TimeWorked int64    `json:"duration"`
+	Workers    []Worker `json:"users"`
+}
+
+type Organizations []Organization
+
+// AddAttachment
+func (m *Message) AddAttachment(text string) *Message {
+	m.Attachments = append(m.Attachments, Attachment{text})
+	return m
+}
+
+// NewMessage
+func NewMessage(text string) *Message {
+	return &Message{
+		Text:        text,
+		Attachments: make([]Attachment, 0),
+	}
 }
 
 // AddAttachment
@@ -56,33 +78,3 @@ func NewPostChannelMessage(text string, channel string, asUser bool, username st
 		Attachments: make([]PostChannelMessageAttachment, 0),
 	}
 }
-
-// SlackToken
-type SlackToken struct {
-	slackToken string
-}
-
-type User struct {
-	Name string `json:"name"`
-	Duration int `json:"duration"`
-}
-
-type Users []User
-
-type Organization struct {
-	ID int64 `json:"id"`
-	Name string `json:"name"`
-	Duration int64 `json:"duration"`
-	Users []User `json:"users"`
-}
-
-type Organizations []Organization
-
-type Project struct {
-	ID           int    `json:"id"`
-	Name         string `json:"name"`
-	LastActivity string `json:"timezone"` /*"2018-09-05T20:26:44.837Z"*/
-	Status       string `json:"status"`
-	Description  string `json:"description"`
-}
-type Projects []Project

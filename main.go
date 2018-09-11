@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -35,74 +34,87 @@ type Client struct {
 	// HTTPClient is required to be passed. Pass http.DefaultClient if not sure
 	HTTPClient *http.Client
 }
-
 func main() {
-	hs := Client{
+	hubstaff := Client{
 		AppToken:   AppToken,
 		AuthToken:  AuthToken, // Set it if already known. If not, see below how to obtain it.
 		HTTPClient: http.DefaultClient,
 	}
 
 	if AuthToken == "" || AuthToken == "..." {
-		authToken, err := hs.ObtainAuthToken(Login, Password)
-		hs.AuthToken = authToken
+		authToken, err := hubstaff.ObtainAuthToken(Login, Password)
+		hubstaff.AuthToken = authToken
 		fmt.Print(authToken, err)
 		os.Exit(2)
 	}
 
-	_, err := hs.OrganizationProjects(OursOrgsID)
+
+	var date = time.Now().Format("2006-01-02")
+	orgsRaw, err := hubstaff.doRequest(fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d", 	date, date, OursOrgsID), nil)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(3)
+		fmt.Print( err )
+		os.Exit( 4 )
+		return
+	}
+
+	orgs := struct {
+		List types.Organizations `json:"organizations"`
+	}{}
+	if err := json.Unmarshal(orgsRaw, &orgs); err != nil {
+		fmt.Print(fmt.Errorf("can't decode response: %s", err))
+		return
+	}
+
+	if len(orgs.List) == 0 {
+		if err := sendStandardMessage("No tracked time for now or no organization found"); err != nil {
+			fmt.Print( err )
+		}
+		os.Exit(5)
 	}
 
 	var concatenatedString string
-	for key, organization := range bodyUnmarshaled.Organizations[0].Users {
-		fmt.Println(key, organization)
-
-
-
-		hours, minutes := math.Modf( float64(120) /60/60)
-
-		fmt.Println( hours, minutes*60 )
-
-		var Hours string
-		if int(hours) < 10 {
-			Hours = fmt.Sprintf( "0%d", int(hours) )
-		} else {
-			Hours = fmt.Sprintf( "%d", int(hours) )
-		}
-
-		var Minutes string
-		if int(math.Round(minutes*60)) < 10 {
-			Minutes = fmt.Sprintf( "0%d", int(math.Round(minutes*60)) )
-		} else {
-			Minutes = fmt.Sprintf( "%d", int(math.Round(minutes*60)) )
-		}
-
-		duration := fmt.Sprintf(
-			"%s:%s", Hours, Minutes,
-		)
-
+	for workerListOrderID, worker := range orgs.List[0].Workers {
 		concatenatedString += fmt.Sprintf(
-			"%s - %s\n",
-			duration,
-			organization.Name,
+			"%d. %s — %s\n",
+			workerListOrderID+1,
+			secondsToClockTime( worker.TimeWorked ),
+			worker.Name,
 		)
 	}
 
+	if concatenatedString == "" {
+		concatenatedString = "No tracked time for now or no workers found"
+	}
 
+	if err := sendStandardMessage(concatenatedString); err != nil {
+		fmt.Print( err )
+		return
+	}
+	os.Exit(0)
+}
 
-	resp, err := postChannelMessage(
-		concatenatedString,
-		ChannelID,
-		false,
-		BotName,
+func secondsToClockTime(seconds int ) (string) {
+
+	hours, minutes := math.Modf(float64(120) / 60 / 60)
+
+	var Hours string
+	if int(hours) < 10 {
+		Hours = fmt.Sprintf("0%d", int(hours))
+	} else {
+		Hours = fmt.Sprintf("%d", int(hours))
+	}
+
+	var Minutes string
+	if int(math.Round(minutes*60)) < 10 {
+		Minutes = fmt.Sprintf("0%d", int(math.Round(minutes*60)))
+	} else {
+		Minutes = fmt.Sprintf("%d", int(math.Round(minutes*60)))
+	}
+
+	return fmt.Sprintf(
+		"%s:%s", Hours, Minutes,
 	)
 
-	fmt.Print(resp)
-
-	os.Exit(0)
 }
 
 // Retrieves auth token which must be sent along with appToken,
@@ -139,21 +151,6 @@ func (c *Client) ObtainAuthToken(email, password string) (string, error) {
 		return "", fmt.Errorf("can't decode response: %s", err)
 	}
 	return t.User.AuthToken, nil
-}
-
-func (c *Client) OrganizationProjects(orgID int) (types.Projects, error) {
-	bodyRaw, err := c.doRequest("/v1/organizations/"+strconv.Itoa(orgID)+"/projects", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	bodyUnmarshaled := struct {
-		Projects types.Projects `json:"projects"`
-	}{}
-	if err := json.Unmarshal(bodyRaw, &bodyUnmarshaled); err != nil {
-		return nil, fmt.Errorf("can't decode response: %s", err)
-	}
-	return bodyUnmarshaled.Projects, nil
 }
 
 func (c *Client) doRequest(path string, q map[string]string) ([]byte, error) {
@@ -222,4 +219,10 @@ func postChannelMessage(text string, channelID string, asUser bool, username str
 	fmt.Printf("NewPostChannelMessage is:\n%+v\n", msg)
 
 	return sendPOSTMessage(msg)
+}
+func sendStandardMessage( message string ) error {
+	fmt.Println(
+		message,
+	)
+	return nil
 }
