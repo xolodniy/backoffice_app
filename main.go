@@ -34,6 +34,7 @@ type Client struct {
 	// HTTPClient is required to be passed. Pass http.DefaultClient if not sure
 	HTTPClient *http.Client
 }
+
 func main() {
 	hubstaff := Client{
 		AppToken:   AppToken,
@@ -48,12 +49,11 @@ func main() {
 		os.Exit(2)
 	}
 
-
 	var date = time.Now().Format("2006-01-02")
-	orgsRaw, err := hubstaff.doRequest(fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d", 	date, date, OursOrgsID), nil)
+	orgsRaw, err := hubstaff.doRequest(fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d", date, date, OursOrgsID), nil)
 	if err != nil {
-		fmt.Print( err )
-		os.Exit( 4 )
+		fmt.Print(err)
+		os.Exit(4)
 		return
 	}
 
@@ -67,7 +67,7 @@ func main() {
 
 	if len(orgs.List) == 0 {
 		if err := sendStandardMessage("No tracked time for now or no organization found"); err != nil {
-			fmt.Print( err )
+			fmt.Print(err)
 		}
 		os.Exit(5)
 	}
@@ -77,7 +77,7 @@ func main() {
 		concatenatedString += fmt.Sprintf(
 			"%d. %s — %s\n",
 			workerListOrderID+1,
-			secondsToClockTime( worker.TimeWorked ),
+			secondsToClockTime(worker.TimeWorked),
 			worker.Name,
 		)
 	}
@@ -87,15 +87,16 @@ func main() {
 	}
 
 	if err := sendStandardMessage(concatenatedString); err != nil {
-		fmt.Print( err )
+		fmt.Print(err)
 		return
 	}
 	os.Exit(0)
 }
 
-func secondsToClockTime(seconds int ) (string) {
+//TODO  replace by  (time.Second*time.Duration(seconds)).String()
+func secondsToClockTime(seconds int) string {
 
-	hours, minutes := math.Modf(float64(120) / 60 / 60)
+	hours, minutes := math.Modf(float64(seconds) / 60 / 60)
 
 	var Hours string
 	if int(hours) < 10 {
@@ -220,7 +221,7 @@ func postChannelMessage(text string, channelID string, asUser bool, username str
 
 	return sendPOSTMessage(msg)
 }
-func sendStandardMessage( message string ) error {
+func sendStandardMessage(message string) error {
 	_, err := postChannelMessage(
 		message,
 		ChannelID,
