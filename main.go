@@ -5,116 +5,183 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
 	"backoffice_app/types"
 )
 
-var AppToken = "yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ"
-var Login = ""
-var Password = ""
-var AuthToken = ""
-var OursOrgsID = 60470
+var HSAuthToken = ""
+var HSAppToken = "yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ"
+var HSLogin = ""
+var HSPassword = ""
+var HSOursOrgsID = 60470
+
 var SlackOutToken = ""
-var ChannelID = ""
-var BotName = "Я чьё угодно имя"
+var SlackChannelID = ""
+var SlackBotName = "Back Office Bot"
+
+var dateOfWorkdaysStart = time.Date(2018, 9, 10, 0, 0, 0, 0, time.Local)
+var dateOfWorkdaysEnd = time.Date(2018, 9, 11, 23, 59, 59, 0, time.Local)
 
 type Client struct {
-	// AppToken created at https://developer.hubstaff.com/my_apps
+	// HSAppToken created at https://developer.hubstaff.com/my_apps
 	AppToken string
 
-	// (optional) AuthToken, previously obtained through ObtainAuthToken
+	// (optional) HSAuthToken, previously obtained through ObtainAuthToken
 	AuthToken string
 
 	// HTTPClient is required to be passed. Pass http.DefaultClient if not sure
 	HTTPClient *http.Client
 }
 
+func checkCustomError(msg string, err error) bool {
+	if err != nil {
+		if msg != "" {
+			onError(fmt.Sprintf(msg, err))
+		}
+		checkError(err)
+		return true
+	}
+	return false
+}
+func checkError(err error) bool {
+	if err != nil {
+		onError(fmt.Sprintf("Error occured: %v\n", err))
+		return true
+	}
+	return false
+}
+func onError(msg string) {
+	fmt.Println(msg)
+	os.Exit(1)
+}
+
 func main() {
 	hubstaff := Client{
-		AppToken:   AppToken,
-		AuthToken:  AuthToken, // Set it if already known. If not, see below how to obtain it.
+		AppToken:   HSAppToken,
+		AuthToken:  HSAuthToken, // Set it if already known. If not, see below how to obtain it.
 		HTTPClient: http.DefaultClient,
 	}
 
-	if AuthToken == "" || AuthToken == "..." {
-		authToken, err := hubstaff.ObtainAuthToken(Login, Password)
-		hubstaff.AuthToken = authToken
-		fmt.Print(authToken, err)
-		os.Exit(2)
+	if HSAuthToken == "" {
+		var err error
+		HSAuthToken, err = hubstaff.ObtainAuthToken(HSLogin, HSPassword)
+		if checkError(err) {
+			return
+		}
+
+		fmt.Printf("Your «HSAuthToken» is:\n%v\n", HSAuthToken)
+		return
 	}
 
-	var date = time.Now().Format("2006-01-02")
-	orgsRaw, err := hubstaff.doRequest(fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d", date, date, OursOrgsID), nil)
-	if err != nil {
-		fmt.Print(err)
-		os.Exit(4)
+	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
+	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
+	orgsRaw, err := hubstaff.doRequest(fmt.Sprintf(
+		"/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
+		dateStart,
+		dateEnd,
+		HSOursOrgsID), nil)
+	if checkError(err) {
 		return
 	}
 
 	orgs := struct {
 		List types.Organizations `json:"organizations"`
 	}{}
-	if err := json.Unmarshal(orgsRaw, &orgs); err != nil {
-		fmt.Print(fmt.Errorf("can't decode response: %s", err))
+	err = json.Unmarshal(orgsRaw, &orgs)
+	if checkCustomError("can't decode response: %s", err) {
 		return
 	}
 
 	if len(orgs.List) == 0 {
-		if err := sendStandardMessage("No tracked time for now or no organization found"); err != nil {
-			fmt.Print(err)
+		err := sendStandardMessage("No tracked time for now or no organization found")
+		if checkCustomError("can't decode response: %s", err) {
+			return
 		}
-		os.Exit(5)
 	}
 
-	var concatenatedString string
+	var message = fmt.Sprintf(
+		"Work time report\n\nFrom: %v %v\nTo: %v %v\n",
+		dateOfWorkdaysStart.Format("02.01.06"), "00:00:00",
+		dateOfWorkdaysEnd.Format("02.01.06"), "23:59:59",
+	)
 	for workerListOrderID, worker := range orgs.List[0].Workers {
-		concatenatedString += fmt.Sprintf(
-			"%d. %s — %s\n",
+
+		clockTimeString, err := secondsToClockTime(worker.TimeWorked)
+		if checkCustomError("Error occurred when clockTime generation: %v\n", err) {
+			return
+		}
+
+		message += fmt.Sprintf(
+			"\n%d. %s — %s",
 			workerListOrderID+1,
-			secondsToClockTime(worker.TimeWorked),
+			clockTimeString,
 			worker.Name,
 		)
 	}
 
-	if concatenatedString == "" {
-		concatenatedString = "No tracked time for now or no workers found"
+	if len(orgs.List[0].Workers) == 0 {
+		message = "No tracked time for now or no workers found"
 	}
 
-	if err := sendStandardMessage(concatenatedString); err != nil {
-		fmt.Print(err)
+	if checkError(sendStandardMessage(message)) {
 		return
 	}
-	os.Exit(0)
 }
 
-//TODO  replace by  (time.Second*time.Duration(seconds)).String()
-func secondsToClockTime(seconds int) string {
-
-	hours, minutes := math.Modf(float64(seconds) / 60 / 60)
-
-	var Hours string
-	if int(hours) < 10 {
-		Hours = fmt.Sprintf("0%d", int(hours))
-	} else {
-		Hours = fmt.Sprintf("%d", int(hours))
+func addLeadingZeroToStringNumber(stringNumber string) (string, error) {
+	number, err := strconv.Atoi(stringNumber)
+	if err != nil {
+		return "", err
 	}
+	if number < 10 {
+		return fmt.Sprintf("0%d", number), nil
+	}
+	return fmt.Sprintf("%d", number), nil
+}
 
-	var Minutes string
-	if int(math.Round(minutes*60)) < 10 {
-		Minutes = fmt.Sprintf("0%d", int(math.Round(minutes*60)))
-	} else {
-		Minutes = fmt.Sprintf("%d", int(math.Round(minutes*60)))
+func secondsToClockTime(durationInSeconds int) (string, error) {
+	clockTime := (time.Second * time.Duration(durationInSeconds)).String()
+
+	re := regexp.MustCompile("([0-9]+)")
+	clockTimeNumbersList := re.FindAllString(clockTime, -1)
+
+	hours, minutes, seconds := "00", "00", "00"
+	var err error
+
+	switch len(clockTimeNumbersList) {
+	case 3:
+		if seconds, err = addLeadingZeroToStringNumber(clockTimeNumbersList[2]); err != nil {
+			return "", err
+		}
+		if minutes, err = addLeadingZeroToStringNumber(clockTimeNumbersList[1]); err != nil {
+			return "", err
+		}
+		if hours, err = addLeadingZeroToStringNumber(clockTimeNumbersList[0]); err != nil {
+			return "", err
+		}
+	case 2:
+		if seconds, err = addLeadingZeroToStringNumber(clockTimeNumbersList[1]); err != nil {
+			return "", err
+		}
+		if minutes, err = addLeadingZeroToStringNumber(clockTimeNumbersList[0]); err != nil {
+			return "", err
+		}
+	case 1:
+		if seconds, err = addLeadingZeroToStringNumber(clockTimeNumbersList[0]); err != nil {
+			return "", err
+		}
 	}
 
 	return fmt.Sprintf(
-		"%s:%s", Hours, Minutes,
-	)
+		"%s:%s:%s", hours, minutes, seconds,
+	), nil
 
 }
 
@@ -129,7 +196,7 @@ func (c *Client) ObtainAuthToken(email, password string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("can't create http request: %s", err)
 	}
-	r.Header.Set("App-Token", AppToken)
+	r.Header.Set("App-Token", HSAppToken)
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := c.HTTPClient.Do(r)
 	if err != nil {
@@ -160,8 +227,8 @@ func (c *Client) doRequest(path string, q map[string]string) ([]byte, error) {
 		return nil, fmt.Errorf("can't create http request: %s", err)
 	}
 
-	r.Header.Set("App-Token", AppToken)
-	r.Header.Set("Auth-Token", AuthToken)
+	r.Header.Set("App-Token", HSAppToken)
+	r.Header.Set("Auth-Token", HSAuthToken)
 
 	if len(q) > 0 {
 		qs := r.URL.Query()
@@ -216,7 +283,13 @@ func sendPOSTMessage(message *types.PostChannelMessage) (string, error) {
 	return resp, err
 }
 func postChannelMessage(text string, channelID string, asUser bool, username string) (string, error) {
-	var msg = types.NewPostChannelMessage(text, channelID, asUser, username, SlackOutToken)
+	var msg = &types.PostChannelMessage{
+		Token:    SlackOutToken,
+		Channel:  channelID,
+		AsUser:   asUser,
+		Text:     text,
+		Username: username,
+	}
 	fmt.Printf("NewPostChannelMessage is:\n%+v\n", msg)
 
 	return sendPOSTMessage(msg)
@@ -224,9 +297,9 @@ func postChannelMessage(text string, channelID string, asUser bool, username str
 func sendStandardMessage(message string) error {
 	_, err := postChannelMessage(
 		message,
-		ChannelID,
+		SlackChannelID,
 		false,
-		BotName,
+		SlackBotName,
 	)
 	if err != nil {
 		fmt.Printf("Error: %s", err)
