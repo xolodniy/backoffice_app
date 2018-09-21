@@ -52,14 +52,6 @@ func (m *Message) AddAttachment(text string) *Message {
 	return m
 }
 
-// NewMessage
-func NewMessage(text string) *Message {
-	return &Message{
-		Text:        text,
-		Attachments: make([]Attachment, 0),
-	}
-}
-
 // AddAttachment
 func (pm *PostChannelMessage) AddAttachment(text string, preText string) *PostChannelMessage {
 	pm.Attachments = append(pm.Attachments, PostChannelMessageAttachment{Text: text, PreText: preText})

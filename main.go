@@ -111,16 +111,14 @@ func main() {
 		dateOfWorkdaysStart.Format("02.01.06"), "00:00:00",
 		dateOfWorkdaysEnd.Format("02.01.06"), "23:59:59",
 	)
-	for workerListOrderID, worker := range orgs.List[0].Workers {
-
+	for _, worker := range orgs.List[0].Workers {
 		clockTimeString, err := secondsToClockTime(worker.TimeWorked)
 		if checkCustomError("Error occurred when clockTime generation: %v\n", err) {
 			return
 		}
 
 		message += fmt.Sprintf(
-			"\n%d. %s — %s",
-			workerListOrderID+1,
+			"\n%s %s",
 			clockTimeString,
 			worker.Name,
 		)
@@ -152,14 +150,11 @@ func secondsToClockTime(durationInSeconds int) (string, error) {
 	re := regexp.MustCompile("([0-9]+)")
 	clockTimeNumbersList := re.FindAllString(clockTime, -1)
 
-	hours, minutes, seconds := "00", "00", "00"
+	hours, minutes := "00", "00"
 	var err error
 
 	switch len(clockTimeNumbersList) {
 	case 3:
-		if seconds, err = addLeadingZeroToStringNumber(clockTimeNumbersList[2]); err != nil {
-			return "", err
-		}
 		if minutes, err = addLeadingZeroToStringNumber(clockTimeNumbersList[1]); err != nil {
 			return "", err
 		}
@@ -167,20 +162,13 @@ func secondsToClockTime(durationInSeconds int) (string, error) {
 			return "", err
 		}
 	case 2:
-		if seconds, err = addLeadingZeroToStringNumber(clockTimeNumbersList[1]); err != nil {
-			return "", err
-		}
 		if minutes, err = addLeadingZeroToStringNumber(clockTimeNumbersList[0]); err != nil {
-			return "", err
-		}
-	case 1:
-		if seconds, err = addLeadingZeroToStringNumber(clockTimeNumbersList[0]); err != nil {
 			return "", err
 		}
 	}
 
 	return fmt.Sprintf(
-		"%s:%s:%s", hours, minutes, seconds,
+		"%s:%s", hours, minutes,
 	), nil
 
 }
