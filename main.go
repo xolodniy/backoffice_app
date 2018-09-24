@@ -7,9 +7,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -23,7 +20,7 @@ var HSPassword = ""
 var HSOursOrgsID = 60470
 
 var SlackOutToken = ""
-var SlackChannelID = ""
+var SlackChannelID = "#leads-bot-development"
 var SlackBotName = "Back Office Bot"
 
 var dateOfWorkdaysStart = time.Date(2018, 9, 10, 0, 0, 0, 0, time.Local)
@@ -40,28 +37,6 @@ type Client struct {
 	HTTPClient *http.Client
 }
 
-func checkCustomError(msg string, err error) bool {
-	if err != nil {
-		if msg != "" {
-			onError(fmt.Sprintf(msg, err))
-		}
-		checkError(err)
-		return true
-	}
-	return false
-}
-func checkError(err error) bool {
-	if err != nil {
-		onError(fmt.Sprintf("Error occured: %v\n", err))
-		return true
-	}
-	return false
-}
-func onError(msg string) {
-	fmt.Println(msg)
-	os.Exit(1)
-}
-
 func main() {
 	hubstaff := Client{
 		AppToken:   HSAppToken,
@@ -72,8 +47,8 @@ func main() {
 	if HSAuthToken == "" {
 		var err error
 		HSAuthToken, err = hubstaff.ObtainAuthToken(HSLogin, HSPassword)
-		if checkError(err) {
-			return
+		if err != nil {
+			panic(err)
 		}
 
 		fmt.Printf("Your «HSAuthToken» is:\n%v\n", HSAuthToken)
@@ -87,22 +62,22 @@ func main() {
 		dateStart,
 		dateEnd,
 		HSOursOrgsID), nil)
-	if checkError(err) {
-		return
+	if err != nil {
+		panic(err)
 	}
 
 	orgs := struct {
 		List types.Organizations `json:"organizations"`
 	}{}
 	err = json.Unmarshal(orgsRaw, &orgs)
-	if checkCustomError("can't decode response: %s", err) {
-		return
+	if err != nil {
+		panic(fmt.Sprintf("can't decode response: %s", err))
 	}
 
 	if len(orgs.List) == 0 {
 		err := sendStandardMessage("No tracked time for now or no organization found")
-		if checkCustomError("can't decode response: %s", err) {
-			return
+		if err != nil {
+			panic(fmt.Sprintf("can't decode response: %s", err))
 		}
 	}
 
@@ -112,14 +87,9 @@ func main() {
 		dateOfWorkdaysEnd.Format("02.01.06"), "23:59:59",
 	)
 	for _, worker := range orgs.List[0].Workers {
-		clockTimeString, err := secondsToClockTime(worker.TimeWorked)
-		if checkCustomError("Error occurred when clockTime generation: %v\n", err) {
-			return
-		}
-
 		message += fmt.Sprintf(
 			"\n%s %s",
-			clockTimeString,
+			secondsToClockTime(worker.TimeWorked),
 			worker.Name,
 		)
 	}
@@ -128,48 +98,18 @@ func main() {
 		message = "No tracked time for now or no workers found"
 	}
 
-	if checkError(sendStandardMessage(message)) {
-		return
+	if err := sendStandardMessage(message); err != nil {
+		panic(err)
 	}
 }
 
-func addLeadingZeroToStringNumber(stringNumber string) (string, error) {
-	number, err := strconv.Atoi(stringNumber)
-	if err != nil {
-		return "", err
-	}
-	if number < 10 {
-		return fmt.Sprintf("0%d", number), nil
-	}
-	return fmt.Sprintf("%d", number), nil
-}
+func secondsToClockTime(durationInSeconds int) string {
+	workTime := time.Second * time.Duration(durationInSeconds)
 
-func secondsToClockTime(durationInSeconds int) (string, error) {
-	clockTime := (time.Second * time.Duration(durationInSeconds)).String()
+	Hours := int(workTime.Hours())
+	Minutes := int(workTime.Minutes())
 
-	re := regexp.MustCompile("([0-9]+)")
-	clockTimeNumbersList := re.FindAllString(clockTime, -1)
-
-	hours, minutes := "00", "00"
-	var err error
-
-	switch len(clockTimeNumbersList) {
-	case 3:
-		if minutes, err = addLeadingZeroToStringNumber(clockTimeNumbersList[1]); err != nil {
-			return "", err
-		}
-		if hours, err = addLeadingZeroToStringNumber(clockTimeNumbersList[0]); err != nil {
-			return "", err
-		}
-	case 2:
-		if minutes, err = addLeadingZeroToStringNumber(clockTimeNumbersList[0]); err != nil {
-			return "", err
-		}
-	}
-
-	return fmt.Sprintf(
-		"%s:%s", hours, minutes,
-	), nil
+	return fmt.Sprintf("%d%d:%d%d", Hours/10, Hours%10, Minutes/10, Minutes%10)
 
 }
 
@@ -278,9 +218,16 @@ func postChannelMessage(text string, channelID string, asUser bool, username str
 		Text:     text,
 		Username: username,
 	}
-	fmt.Printf("NewPostChannelMessage is:\n%+v\n", msg)
 
 	return sendPOSTMessage(msg)
+}
+
+//Temporarily added. Will be deleted after basic development stage will be finished.
+func sendConsoleMessage(message string) error {
+	fmt.Println(
+		message,
+	)
+	return nil
 }
 func sendStandardMessage(message string) error {
 	_, err := postChannelMessage(
