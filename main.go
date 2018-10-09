@@ -1,15 +1,17 @@
 package main
 
 import (
+	"backoffice_app/services/hubstaff"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
-	"strings"
 	"time"
 
+	"github.com/andygrunwald/go-jira"
+
+	"backoffice_app/config"
 	"backoffice_app/types"
 )
 
@@ -17,7 +19,7 @@ var HSAuthToken = ""
 var HSAppToken = "yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ"
 var HSLogin = ""
 var HSPassword = ""
-var HSOursOrgsID = 60470
+var HSOursOrgsID int64 = 60470
 
 var SlackOutToken = ""
 var SlackChannelID = "#leads-bot-development"
@@ -26,67 +28,51 @@ var SlackBotName = "Back Office Bot"
 var dateOfWorkdaysStart = time.Date(2018, 9, 10, 0, 0, 0, 0, time.Local)
 var dateOfWorkdaysEnd = time.Date(2018, 9, 11, 23, 59, 59, 0, time.Local)
 
-type Client struct {
-	// HSAppToken created at https://developer.hubstaff.com/my_apps
-	AppToken string
-
-	// (optional) HSAuthToken, previously obtained through ObtainAuthToken
-	AuthToken string
-
-	// HTTPClient is required to be passed. Pass http.DefaultClient if not sure
-	HTTPClient *http.Client
-}
-
 func main() {
-	hubstaff := Client{
-		AppToken:   HSAppToken,
-		AuthToken:  HSAuthToken, // Set it if already known. If not, see below how to obtain it.
-		HTTPClient: http.DefaultClient,
+
+	cfg := config.GetConfig()
+	HSOursOrgsID = cfg.HubStaff.OrgsID
+
+	SlackOutToken = cfg.Slack.Auth.OutToken
+	SlackChannelID = "#" + cfg.Slack.Channel.ID
+	SlackBotName = cfg.Slack.Channel.BotName
+
+	jiraClient, err := jiraMakeOAuth(cfg.Jira.Auth)
+	if err != nil {
+		panic(err)
 	}
-
-	if HSAuthToken == "" {
-		var err error
-		HSAuthToken, err = hubstaff.ObtainAuthToken(HSLogin, HSPassword)
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Printf("Your «HSAuthToken» is:\n%v\n", HSAuthToken)
-		return
-	}
-
-	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
-	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
-	orgsRaw, err := hubstaff.doRequest(fmt.Sprintf(
-		"/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
-		dateStart,
-		dateEnd,
-		HSOursOrgsID), nil)
+	jiraAllIssues, _, err := jiraIssuesSearch(cfg.Jira.IssueSearchParams, jiraClient)
 	if err != nil {
 		panic(err)
 	}
 
-	orgs := struct {
-		List types.Organizations `json:"organizations"`
-	}{}
-	err = json.Unmarshal(orgsRaw, &orgs)
+	fmt.Printf("jiraAllIssues quantity: %v\n", len(jiraAllIssues))
+
+	HubStaff, err := hubstaff.New(cfg.HubStaff)
 	if err != nil {
-		panic(fmt.Sprintf("can't decode response: %s", err))
+		panic(fmt.Sprintf("HubStaff error %v: ", err))
 	}
 
-	if len(orgs.List) == 0 {
+	orgsList, err := HubStaff.GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd, cfg.HubStaff.OrgsID)
+	if err != nil {
+		panic(fmt.Sprintf("HubStaff error: %v", err))
+	}
+
+	if len(orgsList) == 0 {
 		err := sendStandardMessage("No tracked time for now or no organization found")
 		if err != nil {
-			panic(fmt.Sprintf("can't decode response: %s", err))
+			panic(fmt.Sprintf("Slack error: can't decode response: %s", err))
 		}
 	}
+
+	fmt.Printf("\nHubStaff output: %v\n", orgsList)
 
 	var message = fmt.Sprintf(
 		"Work time report\n\nFrom: %v %v\nTo: %v %v\n",
 		dateOfWorkdaysStart.Format("02.01.06"), "00:00:00",
 		dateOfWorkdaysEnd.Format("02.01.06"), "23:59:59",
 	)
-	for _, worker := range orgs.List[0].Workers {
+	for _, worker := range orgsList[0].Workers {
 		message += fmt.Sprintf(
 			"\n%s %s",
 			secondsToClockTime(worker.TimeWorked),
@@ -94,13 +80,38 @@ func main() {
 		)
 	}
 
-	if len(orgs.List[0].Workers) == 0 {
+	if len(orgsList[0].Workers) == 0 {
 		message = "No tracked time for now or no workers found"
 	}
 
 	if err := sendStandardMessage(message); err != nil {
 		panic(err)
 	}
+}
+
+func jiraMakeOAuth(jba jira.BasicAuthTransport) (*jira.Client, error) {
+
+	client, err := jira.NewClient(jba.Client(), "https://theflow.atlassian.net")
+	if err != nil {
+		return nil, fmt.Errorf("can't create jira client: %s", err)
+	}
+
+	return client, err
+}
+
+func jiraIssuesSearch(searchParams config.JiraIssueSearchParams, client *jira.Client) ([]jira.Issue, *jira.Response, error) {
+	// allIssues including issues from other sprints and not closed
+	var _, _ = searchParams.JQL, &searchParams.Options
+	allIssues, response, err := client.Issue.Search(
+		searchParams.JQL,
+		searchParams.Options,
+	)
+
+	if err != nil {
+		return nil, response, fmt.Errorf("can't create jira client: %s", err)
+	}
+
+	return allIssues, response, nil
 }
 
 func secondsToClockTime(durationInSeconds int) string {
@@ -111,69 +122,6 @@ func secondsToClockTime(durationInSeconds int) string {
 
 	return fmt.Sprintf("%d%d:%d%d", Hours/10, Hours%10, Minutes/10, Minutes%10)
 
-}
-
-// Retrieves auth token which must be sent along with appToken,
-// see https://support.hubstaff.com/time-tracking-api/ for details
-func (c *Client) ObtainAuthToken(email, password string) (string, error) {
-	form := url.Values{}
-	form.Add("email", email)
-	form.Add("password", password)
-
-	r, err := http.NewRequest("POST", "https://api.hubstaff.com/v1/auth", strings.NewReader(form.Encode()))
-	if err != nil {
-		return "", fmt.Errorf("can't create http request: %s", err)
-	}
-	r.Header.Set("App-Token", HSAppToken)
-	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := c.HTTPClient.Do(r)
-	if err != nil {
-		return "", fmt.Errorf("can't send http request: %s", err)
-	}
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("invalid response code: %d", resp.StatusCode)
-	}
-	defer resp.Body.Close()
-
-	t := struct {
-		User struct {
-			ID           int    `json:"id"`
-			AuthToken    string `json:"auth_token"`
-			Name         string `json:"name"`
-			LastActivity string `json:"last_activity"`
-		} `json:"user"`
-	}{}
-	if err := json.NewDecoder(resp.Body).Decode(&t); err != nil {
-		return "", fmt.Errorf("can't decode response: %s", err)
-	}
-	return t.User.AuthToken, nil
-}
-
-func (c *Client) doRequest(path string, q map[string]string) ([]byte, error) {
-	r, err := http.NewRequest("GET", "https://api.hubstaff.com"+path, nil)
-	if err != nil {
-		return nil, fmt.Errorf("can't create http request: %s", err)
-	}
-
-	r.Header.Set("App-Token", HSAppToken)
-	r.Header.Set("Auth-Token", HSAuthToken)
-
-	if len(q) > 0 {
-		qs := r.URL.Query()
-		for k, v := range q {
-			qs.Add(k, v)
-		}
-		r.URL.RawQuery = qs.Encode()
-	}
-	resp, err := c.HTTPClient.Do(r)
-	if err != nil {
-		return nil, fmt.Errorf("can't send http request: %s", err)
-	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("invalid response code: %d", resp.StatusCode)
-	}
-	s, err := ioutil.ReadAll(resp.Body)
-	return s, err
 }
 
 func postJSONMessage(jsonData []byte) (string, error) {

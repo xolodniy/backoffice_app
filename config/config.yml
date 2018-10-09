@@ -1,0 +1,36 @@
+jira:
+  auth:
+    username: @gmail.com
+    password:
+
+  issuesearchparams:
+    jql: project = "CRA" AND Sprint = "24"
+    options:
+      startat: 0
+      maxresults: 1000
+      validatequery: strict
+      fields:
+      - customfield_10010
+      - timespent
+      - timeoriginalestimate
+      - summary
+      - status
+      - issuetype
+
+slack:
+  auth:
+    intoken:
+    outtoken:
+
+  channel:
+    id: leads-bot-development
+    botname: Back Office Bot
+
+hubstaff:
+  auth:
+    token:
+    apptoken: yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ
+    login: @gmail.com
+    password:
+
+  orgsid: 60470
