@@ -1,118 +1,85 @@
 package clients
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
-	"strings"
 
-	"backoffice_app/config"
+	"backoffice_app/types"
 )
 
-const baseAPIURL = "https://api.hubstaff.com"
-
 type Slack struct {
-	// HSAppToken created at https://developer.hubstaff.com/my_apps
-	InToken string
-
-	// (optional) HSAuthToken, previously obtained through obtainAuthToken
-	OutToken string
+	Auth    types.SlackAuth
+	Channel types.SlackChannel
+	APIUrl  string
 }
 
-// Retrieves auth token which must be sent along with appToken,
-// see https://support.hubstaff.com/time-tracking-api/ for details
-func (c *Slack) Authorize(auth config.HubStaffAuth) error {
-	if c.OutToken == "" {
-		authToken, err := c.obtainAuthToken(auth)
-		if err != nil {
-			return err
-		}
-		c.OutToken = authToken
-	}
+func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
+	var url = slack.APIUrl + "/chat.postMessage"
 
-	return nil
-}
-
-// Retrieves auth token which must be sent along with appToken,
-// see https://support.hubstaff.com/time-tracking-api/ for details
-func (c *Slack) obtainAuthToken(auth config.HubStaffAuth) (string, error) {
-	form := url.Values{}
-	form.Add("email", auth.Login)
-	form.Add("password", auth.Password)
-
-	request, err := c.requestPost("/v1/auth", strings.NewReader(form.Encode()))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %slack", slack.Auth.OutToken))
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
+	defer resp.Body.Close()
 
-	request.Header.Set("App-Token", c.InToken)
-	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	fmt.Println("response Status:", resp.Status)
+	//fmt.Println("response Headers:", resp.Header)
+	body, _ := ioutil.ReadAll(resp.Body)
+	//fmt.Println("response Body:", string(body))
 
-	response, err := c.HTTPClient.Do(request)
-	if err != nil {
-		return "", fmt.Errorf("can't send http Request: %s", err)
-	}
-	if response.StatusCode != 200 {
-		return "", fmt.Errorf("invalid response code: %d", response.StatusCode)
-	}
-	defer response.Body.Close()
-
-	t := struct {
-		User struct {
-			ID           int    `json:"id"`
-			AuthToken    string `json:"auth_token"`
-			Name         string `json:"name"`
-			LastActivity string `json:"last_activity"`
-		} `json:"user"`
-	}{}
-	if err := json.NewDecoder(response.Body).Decode(&t); err != nil {
-		return "", fmt.Errorf("can't decode response: %s", err)
-	}
-	return t.User.AuthToken, nil
+	return string(body), nil
 }
 
-func (c *Slack) Request(path string, q map[string]string) ([]byte, error) {
-	request, err := c.requestGet(path)
+func (slack *Slack) sendPOSTMessage(message *types.PostChannelMessage) (string, error) {
+
+	b, err := json.Marshal(message)
 	if err != nil {
-		return nil, err
+		fmt.Printf("Error: %s", err)
+		return "", err
 	}
 
-	request.Header.Set("App-Token", c.InToken)
-	request.Header.Set("Auth-Token", c.OutToken)
+	fmt.Printf("JSON IS %+v:\n", string(b))
 
-	if len(q) > 0 {
-		qs := request.URL.Query()
-		for k, v := range q {
-			qs.Add(k, v)
-		}
-		request.URL.RawQuery = qs.Encode()
+	resp, err := slack.postJSONMessage(b)
+
+	return resp, err
+}
+func (slack *Slack) postChannelMessage(text string, channelID string, asUser bool, username string) (string, error) {
+	var msg = &types.PostChannelMessage{
+		Token:    slack.Auth.OutToken,
+		Channel:  channelID,
+		AsUser:   asUser,
+		Text:     text,
+		Username: username,
 	}
-	response, err := c.HTTPClient.Do(request)
-	if err != nil {
-		return nil, fmt.Errorf("can't send http Request: %s", err)
-	}
-	if response.StatusCode != 200 {
-		return nil, fmt.Errorf("invalid response code: %d", response.StatusCode)
-	}
-	s, err := ioutil.ReadAll(response.Body)
-	return s, err
+
+	return slack.sendPOSTMessage(msg)
 }
 
-func (c *Slack) requestGet(relativePath string) (*http.Request, error) {
-	r, err := http.NewRequest("GET", baseAPIURL+relativePath, nil)
-	if err != nil {
-		return nil, fmt.Errorf("can't create http GET Request: %s", err)
-	}
-	return r, nil
+//Temporarily added. Will be deleted after basic development stage will be finished.
+func (slack *Slack) SendConsoleMessage(message string) error {
+	fmt.Println(
+		message,
+	)
+	return nil
 }
-
-func (c *Slack) requestPost(relativePath string, body io.Reader) (*http.Request, error) {
-	r, err := http.NewRequest("POST", baseAPIURL+relativePath, body)
+func (slack *Slack) SendStandardMessage(message string) error {
+	_, err := slack.postChannelMessage(
+		message,
+		slack.Channel.ID,
+		false,
+		slack.Channel.BotName,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("can't create http POST Request: %s", err)
+		fmt.Printf("Error: %s", err)
+		return err
 	}
-	return r, nil
+	return nil
 }

@@ -1,6 +1,7 @@
-package libs
+package clients
 
 import (
+	"backoffice_app/types"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,13 +9,11 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
-	"backoffice_app/config"
 )
 
-const baseAPIURL = "https://api.hubstaff.com"
-
 type HubStaff struct {
+	APIUrl string
+
 	// HSAppToken created at https://developer.hubstaff.com/my_apps
 	AppToken string
 
@@ -27,7 +26,7 @@ type HubStaff struct {
 
 // Retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
-func (c *HubStaff) Authorize(auth config.HubStaffAuth) error {
+func (c *HubStaff) Authorize(auth types.HubStaffAuth) error {
 	if c.AuthToken == "" {
 		authToken, err := c.obtainAuthToken(auth)
 		if err != nil {
@@ -41,7 +40,7 @@ func (c *HubStaff) Authorize(auth config.HubStaffAuth) error {
 
 // Retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
-func (c *HubStaff) obtainAuthToken(auth config.HubStaffAuth) (string, error) {
+func (c *HubStaff) obtainAuthToken(auth types.HubStaffAuth) (string, error) {
 	form := url.Values{}
 	form.Add("email", auth.Login)
 	form.Add("password", auth.Password)
@@ -105,7 +104,7 @@ func (c *HubStaff) Request(path string, q map[string]string) ([]byte, error) {
 }
 
 func (c *HubStaff) requestGet(relativePath string) (*http.Request, error) {
-	r, err := http.NewRequest("GET", baseAPIURL+relativePath, nil)
+	r, err := http.NewRequest("GET", c.APIUrl+relativePath, nil)
 	if err != nil {
 		return nil, fmt.Errorf("can't create http GET Request: %s", err)
 	}
@@ -113,7 +112,7 @@ func (c *HubStaff) requestGet(relativePath string) (*http.Request, error) {
 }
 
 func (c *HubStaff) requestPost(relativePath string, body io.Reader) (*http.Request, error) {
-	r, err := http.NewRequest("POST", baseAPIURL+relativePath, body)
+	r, err := http.NewRequest("POST", c.APIUrl+relativePath, body)
 	if err != nil {
 		return nil, fmt.Errorf("can't create http POST Request: %s", err)
 	}

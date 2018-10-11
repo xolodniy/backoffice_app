@@ -1,4 +1,5 @@
 jira:
+  apiurl: https://theflow.atlassian.net
   auth:
     username: @gmail.com
     password:
@@ -18,6 +19,7 @@ jira:
       - issuetype
 
 slack:
+  apiurl: https://slack.com/api
   auth:
     intoken:
     outtoken:
@@ -27,6 +29,7 @@ slack:
     botname: Back Office Bot
 
 hubstaff:
+  apiurl: https://api.hubstaff.com
   auth:
     token:
     apptoken: yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ

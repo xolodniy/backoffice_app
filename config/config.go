@@ -1,53 +1,18 @@
 package config
 
 import (
+	"backoffice_app/types"
 	"log"
 
-	"github.com/andygrunwald/go-jira"
+	"backoffice_app/clients"
+
 	"github.com/jinzhu/configor"
 )
 
-type JiraIssueSearchParams struct {
-	JQL     string
-	Options *jira.SearchOptions
-}
-type Jira struct {
-	IssueSearchParams JiraIssueSearchParams
-	Auth              jira.BasicAuthTransport
-}
-
-type SlackAuth struct {
-	InToken  string `default:"someSlackInToken"`
-	OutToken string `default:"someSlackOutToken"`
-}
-
-type SlackChannel struct {
-	BotName string `default:"someSlackBotName"`
-	ID      string `default:"someSlackChannelID"`
-}
-
-type Slack struct {
-	Auth    SlackAuth
-	Channel SlackChannel
-}
-
-type HubStaffAuth struct {
-	Token    string
-	AppToken string
-
-	Login    string
-	Password string
-}
-
-type HubStaff struct {
-	Auth   HubStaffAuth
-	OrgsID int64
-}
-
 type Config struct {
-	Jira     Jira
-	Slack    Slack
-	HubStaff HubStaff
+	Jira     types.Jira
+	Slack    clients.Slack
+	HubStaff types.HubStaff
 }
 
 func GetConfig() Config {

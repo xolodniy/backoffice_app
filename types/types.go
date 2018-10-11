@@ -1,5 +1,41 @@
 package types
 
+import "github.com/andygrunwald/go-jira"
+
+type JiraIssueSearchParams struct {
+	JQL     string
+	Options *jira.SearchOptions
+}
+type Jira struct {
+	IssueSearchParams JiraIssueSearchParams
+	Auth              jira.BasicAuthTransport
+	APIUrl            string
+}
+
+type HubStaff struct {
+	APIUrl string
+	Auth   HubStaffAuth
+	OrgsID int64
+}
+
+type HubStaffAuth struct {
+	Token    string
+	AppToken string
+
+	Login    string
+	Password string
+}
+
+type SlackAuth struct {
+	InToken  string `default:"someSlackInToken"`
+	OutToken string `default:"someSlackOutToken"`
+}
+
+type SlackChannel struct {
+	BotName string `default:"someSlackBotName"`
+	ID      string `default:"someSlackChannelID"`
+}
+
 // SlackToken
 type SlackToken struct {
 	slackToken string
