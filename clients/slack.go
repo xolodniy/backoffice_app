@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 
 	"backoffice_app/types"
@@ -17,9 +18,7 @@ type Slack struct {
 }
 
 func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
-	var url = slack.APIUrl + "/chat.postMessage"
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", slack.APIUrl+"/chat.postMessage", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %slack", slack.Auth.OutToken))
 	client := &http.Client{}
@@ -29,10 +28,23 @@ func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("response Status:", resp.Status)
+	log.Println("Slack response Status:", resp.Status)
 	//fmt.Println("response Headers:", resp.Header)
 	body, _ := ioutil.ReadAll(resp.Body)
-	//fmt.Println("response Body:", string(body))
+
+	var responseBody struct {
+		Ok      bool   `json:"ok"`
+		Error   string `json:"error"`
+		Warning string `json:"warning"`
+	}
+
+	if err := json.Unmarshal(body, &responseBody); err != nil {
+		return "", err
+	}
+
+	if !responseBody.Ok {
+		return "", fmt.Errorf(responseBody.Error)
+	}
 
 	return string(body), nil
 }
@@ -41,11 +53,10 @@ func (slack *Slack) sendPOSTMessage(message *types.PostChannelMessage) (string, 
 
 	b, err := json.Marshal(message)
 	if err != nil {
-		fmt.Printf("Error: %s", err)
 		return "", err
 	}
 
-	fmt.Printf("JSON IS %+v:\n", string(b))
+	log.Printf("sendPOSTMessage JSON: \n%+v:\n", string(b))
 
 	resp, err := slack.postJSONMessage(b)
 
@@ -78,7 +89,6 @@ func (slack *Slack) SendStandardMessage(message string) error {
 		slack.Channel.BotName,
 	)
 	if err != nil {
-		fmt.Printf("Error: %s", err)
 		return err
 	}
 	return nil
