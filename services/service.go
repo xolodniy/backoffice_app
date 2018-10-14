@@ -30,7 +30,7 @@ func New(config *config.Config) (*service, error) {
 		return nil, fmt.Errorf("Hubstaff error: %v", err)
 	}
 
-	jira, err := jira.NewClient(config.Jira.Auth.Client(), config.Jira.APIUrl)
+	jiraClient, err := jira.NewClient(config.Jira.Auth.Client(), config.Jira.APIUrl)
 	if err != nil {
 		return nil, fmt.Errorf("Jira error: can't create jira client: %s", err)
 	}
@@ -47,7 +47,7 @@ func New(config *config.Config) (*service, error) {
 		},
 	}
 
-	return &service{Hubstaff, slack, jira}, nil
+	return &service{Hubstaff, slack, jiraClient}, nil
 
 }
 
