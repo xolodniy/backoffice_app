@@ -1,7 +1,6 @@
 package clients
 
 import (
-	"backoffice_app/types"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,9 +8,11 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"backoffice_app/types"
 )
 
-type HubStaff struct {
+type Hubstaff struct {
 	APIUrl string
 
 	// HSAppToken created at https://developer.hubstaff.com/my_apps
@@ -26,7 +27,7 @@ type HubStaff struct {
 
 // Retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
-func (c *HubStaff) Authorize(auth types.HubStaffAuth) error {
+func (c *Hubstaff) Authorize(auth types.HubstaffAuth) error {
 	if c.AuthToken == "" {
 		authToken, err := c.obtainAuthToken(auth)
 		if err != nil {
@@ -40,7 +41,7 @@ func (c *HubStaff) Authorize(auth types.HubStaffAuth) error {
 
 // Retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
-func (c *HubStaff) obtainAuthToken(auth types.HubStaffAuth) (string, error) {
+func (c *Hubstaff) obtainAuthToken(auth types.HubstaffAuth) (string, error) {
 	form := url.Values{}
 	form.Add("email", auth.Login)
 	form.Add("password", auth.Password)
@@ -76,7 +77,7 @@ func (c *HubStaff) obtainAuthToken(auth types.HubStaffAuth) (string, error) {
 	return t.User.AuthToken, nil
 }
 
-func (c *HubStaff) Request(path string, q map[string]string) ([]byte, error) {
+func (c *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
 	request, err := c.requestGet(path)
 	if err != nil {
 		return nil, err
@@ -103,7 +104,7 @@ func (c *HubStaff) Request(path string, q map[string]string) ([]byte, error) {
 	return s, err
 }
 
-func (c *HubStaff) requestGet(relativePath string) (*http.Request, error) {
+func (c *Hubstaff) requestGet(relativePath string) (*http.Request, error) {
 	r, err := http.NewRequest("GET", c.APIUrl+relativePath, nil)
 	if err != nil {
 		return nil, fmt.Errorf("can't create http GET Request: %s", err)
@@ -111,7 +112,7 @@ func (c *HubStaff) requestGet(relativePath string) (*http.Request, error) {
 	return r, nil
 }
 
-func (c *HubStaff) requestPost(relativePath string, body io.Reader) (*http.Request, error) {
+func (c *Hubstaff) requestPost(relativePath string, body io.Reader) (*http.Request, error) {
 	r, err := http.NewRequest("POST", c.APIUrl+relativePath, body)
 	if err != nil {
 		return nil, fmt.Errorf("can't create http POST Request: %s", err)

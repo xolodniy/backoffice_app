@@ -1,18 +1,20 @@
 package config
 
 import (
+	"fmt"
+
 	"backoffice_app/clients"
 	"backoffice_app/types"
-	"fmt"
 
 	"github.com/jinzhu/configor"
 )
 
+// Config is template to storing of all configuration settings needed
 type Config struct {
 	WorkedTimeSendTime string
 	Jira               types.Jira
 	Slack              clients.Slack
-	HubStaff           types.HubStaff
+	Hubstaff           types.Hubstaff
 }
 
 func GetConfig() (*Config, error) {

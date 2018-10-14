@@ -1,5 +1,4 @@
 workedtimesendtime: 00 56 18 * * *
-
 jira:
   apiurl: https://theflow.atlassian.net
   auth:

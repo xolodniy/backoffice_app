@@ -14,20 +14,20 @@ import (
 )
 
 type service struct {
-	HubStaff *clients.HubStaff
+	Hubstaff *clients.Hubstaff
 	Slack    *clients.Slack
 	Jira     *jira.Client
 }
 
 func New(config *config.Config) (*service, error) {
-	hubstuff := &clients.HubStaff{
+	Hubstaff := &clients.Hubstaff{
 		HTTPClient: http.DefaultClient,
-		AppToken:   config.HubStaff.Auth.AppToken,
-		APIUrl:     config.HubStaff.APIUrl,
+		AppToken:   config.Hubstaff.Auth.AppToken,
+		APIUrl:     config.Hubstaff.APIUrl,
 	}
 
-	if err := hubstuff.Authorize(config.HubStaff.Auth); err != nil {
-		return nil, fmt.Errorf("HubStaff error: %v", err)
+	if err := Hubstaff.Authorize(config.Hubstaff.Auth); err != nil {
+		return nil, fmt.Errorf("Hubstaff error: %v", err)
 	}
 
 	jira, err := jira.NewClient(config.Jira.Auth.Client(), config.Jira.APIUrl)
@@ -47,7 +47,7 @@ func New(config *config.Config) (*service, error) {
 		},
 	}
 
-	return &service{hubstuff, slack, jira}, nil
+	return &service{Hubstaff, slack, jira}, nil
 
 }
 
@@ -56,7 +56,7 @@ func (s *service) Hubstaff_GetWorkersTimeByOrganization(dateOfWorkdaysStart time
 	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
 	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
 
-	orgsRaw, err := s.HubStaff.Request(
+	orgsRaw, err := s.Hubstaff.Request(
 		fmt.Sprintf(
 			"/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
 			dateStart,
@@ -96,7 +96,7 @@ func (s *service) Jira_IssuesSearch(searchParams types.JiraIssueSearchParams) ([
 func (s *service) GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart time.Time, dateOfWorkdaysEnd time.Time, orgID int64) {
 	orgsList, err := s.Hubstaff_GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd, orgID)
 	if err != nil {
-		panic(fmt.Sprintf("HubStaff error: %v", err))
+		panic(fmt.Sprintf("Hubstaff error: %v", err))
 	}
 
 	if len(orgsList) == 0 {
@@ -106,7 +106,7 @@ func (s *service) GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart time.Ti
 		}
 	}
 
-	fmt.Printf("\nHubStaff output: %v\n", orgsList)
+	fmt.Printf("\nHubstaff output: %v\n", orgsList)
 
 	var message = fmt.Sprintf(
 		"Work time report\n\nFrom: %v %v\nTo: %v %v\n",

@@ -11,6 +11,7 @@ import (
 	"backoffice_app/types"
 )
 
+// Slack is main Slack client app implementation
 type Slack struct {
 	Auth    types.SlackAuth
 	Channel types.SlackChannel

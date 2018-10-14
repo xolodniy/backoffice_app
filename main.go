@@ -31,7 +31,7 @@ func main() {
 	tm := task_manager.New(&wg)
 
 	tm.AddTask(cfg.WorkedTimeSendTime, func() {
-		services.GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart, dateOfWorkdaysEnd, cfg.HubStaff.OrgsID)
+		services.GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart, dateOfWorkdaysEnd, cfg.Hubstaff.OrgsID)
 	})
 
 	tm.AddTask("@every 15m", func() {
