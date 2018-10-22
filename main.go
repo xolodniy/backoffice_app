@@ -34,13 +34,13 @@ func main() {
 		services.GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart, dateOfWorkdaysEnd, cfg.Hubstaff.OrgsID)
 	})
 
-	tm.AddTask("@every 15m", func() {
+	/*tm.AddTask("@every 15m", func() {
 		jiraAllIssues, _, err := services.Jira_IssuesSearch(cfg.Jira.IssueSearchParams)
 		if err != nil {
 			panic(err)
 		}
 		log.Printf("jiraAllIssues quantity: %v\n", len(jiraAllIssues))
-	})
+	})*/
 
 	tm.Start()
 
