@@ -22,19 +22,17 @@ func GetConfig() (*Config, error) {
 	//configor.New(&configor.Config{Debug: true}).Load(&config, "config/config.yml")
 	configor.Load(&config, "config/config.yml")
 
-	var defCfg Config
-
-	if config.Jira.Auth.Username == defCfg.Jira.Auth.Username {
+	if config.Jira.Auth.Username == "" {
 		return nil, fmt.Errorf("Username configuration field is not set. Please set it in configuration file «config/config.yml».")
 	}
-	if config.Jira.Auth.Password == defCfg.Jira.Auth.Password {
+	if config.Jira.Auth.Password == "" {
 		return nil, fmt.Errorf("Password configuration field is not set. Please set it in configuration file «config/config.yml».")
 	}
 
-	if config.Slack.Auth.InToken == defCfg.Slack.Auth.InToken {
+	if config.Slack.Auth.InToken == "" {
 		return nil, fmt.Errorf("SlackInToken configuration field is not set. Please set it in configuration file «config/config.yml».")
 	}
-	if config.Slack.Auth.OutToken == defCfg.Slack.Auth.OutToken {
+	if config.Slack.Auth.OutToken == "" {
 		return nil, fmt.Errorf("SlackOutToken configuration field is not set. Please set it in configuration file «config/config.yml».")
 	}
 
