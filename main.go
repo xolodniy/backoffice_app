@@ -1,7 +1,6 @@
 package main
 
 import (
-	"backoffice_app/libs/task_manager"
 	"context"
 	"log"
 	"os"
@@ -10,43 +9,99 @@ import (
 	"time"
 
 	"backoffice_app/config"
+	"backoffice_app/libs/task_manager"
 	"backoffice_app/services"
+
+	"github.com/jinzhu/now"
+	"github.com/urfave/cli"
 )
 
 var dateOfWorkdaysStart = time.Date(2018, 9, 10, 0, 0, 0, 0, time.Local)
 var dateOfWorkdaysEnd = time.Date(2018, 9, 11, 23, 59, 59, 0, time.Local)
 
 func main() {
-	cfg, err := config.GetConfig()
-	if err != nil {
-		panic(err)
-	}
+	{
+		now.WeekStartDay = time.Monday // Set Monday as first day, default is Sunday
 
-	services, err := services.New(cfg)
-	if err != nil {
-		panic(err)
-	}
+		app := cli.NewApp()
+		app.Name = "Backoffice App"
+		app.Usage = "It's the best application for real time workers day and week progress."
 
-	wg := sync.WaitGroup{}
-	tm := task_manager.New(&wg)
+		app.Action = func(c *cli.Context) {
+			cfg, err := config.GetConfig()
+			if err != nil {
+				panic(err)
+			}
+			services, err := services.New(cfg)
+			if err != nil {
+				panic(err)
+			}
 
-	tm.AddTask(cfg.WorkedTimeSendTime, func() {
-		services.GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart, dateOfWorkdaysEnd, cfg.Hubstaff.OrgsID)
-	})
+			wg := sync.WaitGroup{}
+			tm := task_manager.New(&wg)
 
-	/*tm.AddTask("@every 15m", func() {
-		jiraAllIssues, _, err := services.Jira_IssuesSearch(cfg.Jira.IssueSearchParams)
-		if err != nil {
-			panic(err)
+			tm.AddTask(cfg.WorkedTimeSendTime, func() {
+				services.GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart, dateOfWorkdaysEnd, cfg.Hubstaff.OrgsID)
+			})
+
+			/*tm.AddTask("@every 15m", func() {
+				jiraAllIssues, _, err := services.Jira_IssuesSearch(cfg.Jira.IssueSearchParams)
+				if err != nil {
+					panic(err)
+				}
+				log.Printf("jiraAllIssues quantity: %v\n", len(jiraAllIssues))
+			})*/
+
+			tm.Start()
+
+			log.Println("Task scheduler started.")
+
+			gracefulClosing(tm.Stop, &wg)
 		}
-		log.Printf("jiraAllIssues quantity: %v\n", len(jiraAllIssues))
-	})*/
 
-	tm.Start()
+		app.Commands = []cli.Command{
+			{
+				Name:  "make-weekly-report-now",
+				Usage: "Sends weekly report to slack channel",
+				Action: func(c *cli.Context) {
+					cfg, err := config.GetConfig()
+					if err != nil {
+						panic(err)
+					}
 
-	log.Println("Task scheduler started.")
+					services, err := services.New(cfg)
+					if err != nil {
+						panic(err)
+					}
 
-	gracefulClosing(tm.Stop, &wg)
+					services.GetWorkersWorkedTimeAndSendToSlack(now.BeginningOfWeek(), now.EndOfWeek(), cfg.Hubstaff.OrgsID)
+
+				},
+			},
+		}
+
+		app.Commands = []cli.Command{
+			{
+				Name:  "make-daily-report-now",
+				Usage: "Sends daily report to slack channel",
+				Action: func(c *cli.Context) {
+					cfg, err := config.GetConfig()
+					if err != nil {
+						panic(err)
+					}
+
+					services, err := services.New(cfg)
+					if err != nil {
+						panic(err)
+					}
+
+					services.GetWorkersWorkedTimeAndSendToSlack(now.BeginningOfDay(), now.EndOfDay(), cfg.Hubstaff.OrgsID)
+
+				},
+			},
+		}
+		app.Run(os.Args)
+	}
 
 }
 
