@@ -2,28 +2,14 @@ workedtimesendtime: 00 56 18 * * *
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
-    username: @gmail.com
-    password:
-
-  issuesearchparams:
-    jql: project = "CRA" AND Sprint = "24"
-    options:
-      startat: 0
-      maxresults: 1000
-      validatequery: strict
-      fields:
-      - customfield_10010
-      - timespent
-      - timeoriginalestimate
-      - summary
-      - status
-      - issuetype
+    username: b0s.at.works@gmail.com
+    password: 9a0a6d53724cbdda0eee6e59d01abea1
 
 slack:
   apiurl: https://slack.com/api
   auth:
-    intoken:
-    outtoken:
+    intoken: ITYgHVRVRhOIZfvDpVgCS6CM
+    outtoken: xoxp-350508480163-349912767072-369584053265-53086c6f7643871d6ab6c4eda69e5ebc
 
   channel:
     id: leads-bot-development
@@ -32,9 +18,8 @@ slack:
 hubstaff:
   apiurl: https://api.hubstaff.com
   auth:
-    token:
+    token: 9mNJD2Jfom7FCwvvjlil8OP6pSb6bfKUZDDYmK-J2uE
     apptoken: yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ
-    login: @gmail.com
-    password:
-
+    login: b0s.at.works@gmail.com
+    password: ckhw1yr6ne7g90rn5ocdt4hdnext3nhi
   orgsid: 60470

@@ -3,18 +3,40 @@ package config
 import (
 	"fmt"
 
-	"backoffice_app/clients"
-	"backoffice_app/types"
-
+	"github.com/andygrunwald/go-jira"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/jinzhu/configor"
 )
 
 // Main is template to storing of all configuration settings needed
 type Main struct {
 	WorkedTimeSendTime string
-	Jira               types.Jira
-	Slack              clients.Slack
-	Hubstaff           types.Hubstaff
+	Jira               struct {
+		Auth   jira.BasicAuthTransport
+		APIUrl string
+	}
+	Slack struct {
+		Auth struct {
+			InToken  string
+			OutToken string
+		}
+		Channel struct {
+			BotName string
+			ID      string
+		}
+		APIUrl string
+	}
+	Hubstaff struct {
+		APIUrl string
+		Auth   struct {
+			Token    string
+			AppToken string
+
+			Login    string
+			Password string
+		}
+		OrgsID int64
+	}
 }
 
 func GetConfig(skipFieldsFilledCheck bool) (*Main, error) {
@@ -25,7 +47,7 @@ func GetConfig(skipFieldsFilledCheck bool) (*Main, error) {
 
 	}
 
-	//spew.Dump(config)
+	spew.Dump(config)
 	//fmt.Printf("config: %+v\n", config)
 
 	if !skipFieldsFilledCheck {
@@ -59,21 +81,4 @@ func (config *Main) checkConfig() error {
 	//fmt.Printf("config: %+v\n", config)
 
 	return nil
-}
-
-// SlackAuth is template to store authorization tokens to send and receive messages from Slack and in Slack
-type SlackAuth struct {
-	InToken  string `default:"someSlackInToken"`
-	OutToken string `default:"someSlackOutToken"`
-}
-
-// SlackChannel is template for user name and ID of the channel to send message there
-type SlackChannel struct {
-	BotName string `default:"someSlackBotName"`
-	ID      string `default:"someSlackChannelID"`
-}
-
-// SlackToken is template for Slack token which is using in authorization process
-type SlackToken struct {
-	slackToken string
 }

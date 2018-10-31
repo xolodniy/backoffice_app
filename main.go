@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"backoffice_app/app"
 	"backoffice_app/config"
 	"backoffice_app/libs/task_manager"
-	"backoffice_app/services"
 
 	"github.com/jinzhu/now"
 	"github.com/urfave/cli"
@@ -25,17 +25,17 @@ func main() {
 	{
 		now.WeekStartDay = time.Monday // Set Monday as first day, default is Sunday
 
-		app := cli.NewApp()
-		app.Name = "Backoffice App"
-		app.Usage = "It's the best application for real time workers day and week progress."
+		cliApp := cli.NewApp()
+		cliApp.Name = "Backoffice App"
+		cliApp.Usage = "It's the best application for real time workers day and week progress."
 
-		app.Action = func(c *cli.Context) {
+		cliApp.Action = func(c *cli.Context) {
 			cfg, err := config.GetConfig(true)
 			if err != nil {
 				panic(err)
 			}
 
-			services, err := services.New(cfg)
+			app, err := app.New(cfg)
 			if err != nil {
 				panic(err)
 			}
@@ -43,11 +43,11 @@ func main() {
 			tm := task_manager.New(&wg)
 
 			tm.AddTask(cfg.WorkedTimeSendTime, func() {
-				services.GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart, dateOfWorkdaysEnd, cfg.Hubstaff.OrgsID)
+				app.GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart, dateOfWorkdaysEnd, cfg.Hubstaff.OrgsID)
 			})
 
 			/*tm.AddTask("@every 15m", func() {
-				jiraAllIssues, _, err := services.Jira_IssuesSearch(cfg.Jira.IssueSearchParams)
+				jiraAllIssues, _, err := cliApp.IssuesSearch(cfg.Jira.IssueSearchParams)
 				if err != nil {
 					panic(err)
 				}
@@ -61,7 +61,7 @@ func main() {
 			gracefulClosing(tm.Stop, &wg)
 		}
 
-		app.Commands = []cli.Command{
+		cliApp.Commands = []cli.Command{
 			{
 				Name:  "make-weekly-report-now",
 				Usage: "Sends weekly report to slack channel",
@@ -71,7 +71,7 @@ func main() {
 						panic(err)
 					}
 
-					services, err := services.New(cfg)
+					services, err := app.New(cfg)
 					if err != nil {
 						panic(err)
 					}
@@ -89,7 +89,7 @@ func main() {
 						panic(err)
 					}
 
-					services, err := services.New(cfg)
+					services, err := app.New(cfg)
 					if err != nil {
 						panic(err)
 					}
@@ -107,7 +107,7 @@ func main() {
 						panic(err)
 					}
 
-					services, err := services.New(cfg)
+					services, err := app.New(cfg)
 					if err != nil {
 						panic(err)
 					}
@@ -119,7 +119,7 @@ func main() {
 				},
 			},
 		}
-		app.Run(os.Args)
+		cliApp.Run(os.Args)
 	}
 
 }
@@ -128,20 +128,20 @@ func gracefulClosing(cancel context.CancelFunc, servicesWg *sync.WaitGroup) {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
 	<-sig
-	log.Println("stopping services... (Double enter Ctrl + C to force close)")
+	log.Println("stopping app... (Double enter Ctrl + C to force close)")
 	cancel()
 
 	quit := make(chan struct{})
 	go func() {
 		<-sig
 		<-sig
-		log.Println("services unsafe stopped")
+		log.Println("app unsafe stopped")
 		<-quit
 	}()
 
 	go func() {
 		servicesWg.Wait()
-		log.Println("services gracefully stopped")
+		log.Println("app gracefully stopped")
 		<-quit
 	}()
 

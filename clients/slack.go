@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 
-	"backoffice_app/config"
 	"backoffice_app/types"
 
 	"github.com/davecgh/go-spew/spew"
@@ -18,9 +17,37 @@ const sendItJustInConsole = false
 
 // Slack is main Slack client app implementation
 type Slack struct {
-	Auth    config.SlackAuth
-	Channel config.SlackChannel
+	Auth    SlackAuth
+	Channel SlackChannel
 	APIUrl  string
+}
+type SlackAuth struct {
+	InToken  string `default:"someSlackInToken"`
+	OutToken string `default:"someSlackOutToken"`
+}
+
+// Channel is template for user name and ID of the channel to send message there
+type SlackChannel struct {
+	BotName string
+	ID      string
+}
+
+func (slack *Slack) SendStandardMessage(message, channelID, botName string) error {
+	if sendItJustInConsole {
+		slack.SendConsoleMessage(message)
+		return nil
+	}
+
+	_, err := slack.postChannelMessage(
+		message,
+		channelID,
+		false,
+		botName,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
@@ -54,7 +81,6 @@ func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
 
 	return string(body), nil
 }
-
 func (slack *Slack) sendPOSTMessage(message *types.PostChannelMessage) (string, error) {
 
 	b, err := json.Marshal(message)
@@ -69,6 +95,7 @@ func (slack *Slack) sendPOSTMessage(message *types.PostChannelMessage) (string, 
 
 	return resp, err
 }
+
 func (slack *Slack) postChannelMessage(text string, channelID string, asUser bool, username string) (string, error) {
 	var msg = &types.PostChannelMessage{
 		Token:    slack.Auth.OutToken,
@@ -86,22 +113,5 @@ func (slack *Slack) SendConsoleMessage(message string) error {
 	fmt.Println(
 		message,
 	)
-	return nil
-}
-func (slack *Slack) SendStandardMessage(message string) error {
-	if sendItJustInConsole {
-		slack.SendConsoleMessage(message)
-		return nil
-	}
-
-	_, err := slack.postChannelMessage(
-		message,
-		slack.Channel.ID,
-		false,
-		slack.Channel.BotName,
-	)
-	if err != nil {
-		return err
-	}
 	return nil
 }
