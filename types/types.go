@@ -31,23 +31,6 @@ type HubstaffAuth struct {
 	Password string
 }
 
-// SlackAuth is template to store authorization tokens to send and receive messages from Slack and in Slack
-type SlackAuth struct {
-	InToken  string `default:"someSlackInToken"`
-	OutToken string `default:"someSlackOutToken"`
-}
-
-// SlackChannel is template for user name and ID of the channel to send message there
-type SlackChannel struct {
-	BotName string `default:"someSlackBotName"`
-	ID      string `default:"someSlackChannelID"`
-}
-
-// SlackToken is template for Slack token which is using in authorization process
-type SlackToken struct {
-	slackToken string
-}
-
 // Attachment used to make append and attachment to a simple message
 type Attachment struct {
 	Text string `json:"text"`

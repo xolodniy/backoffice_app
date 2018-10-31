@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -20,6 +21,7 @@ var dateOfWorkdaysStart = time.Date(2018, 9, 10, 0, 0, 0, 0, time.Local)
 var dateOfWorkdaysEnd = time.Date(2018, 9, 11, 23, 59, 59, 0, time.Local)
 
 func main() {
+
 	{
 		now.WeekStartDay = time.Monday // Set Monday as first day, default is Sunday
 
@@ -28,15 +30,15 @@ func main() {
 		app.Usage = "It's the best application for real time workers day and week progress."
 
 		app.Action = func(c *cli.Context) {
-			cfg, err := config.GetConfig()
-			if err != nil {
-				panic(err)
-			}
-			services, err := services.New(cfg)
+			cfg, err := config.GetConfig(true)
 			if err != nil {
 				panic(err)
 			}
 
+			services, err := services.New(cfg)
+			if err != nil {
+				panic(err)
+			}
 			wg := sync.WaitGroup{}
 			tm := task_manager.New(&wg)
 
@@ -64,7 +66,7 @@ func main() {
 				Name:  "make-weekly-report-now",
 				Usage: "Sends weekly report to slack channel",
 				Action: func(c *cli.Context) {
-					cfg, err := config.GetConfig()
+					cfg, err := config.GetConfig(true)
 					if err != nil {
 						panic(err)
 					}
@@ -78,14 +80,11 @@ func main() {
 
 				},
 			},
-		}
-
-		app.Commands = []cli.Command{
 			{
 				Name:  "make-daily-report-now",
 				Usage: "Sends daily report to slack channel",
 				Action: func(c *cli.Context) {
-					cfg, err := config.GetConfig()
+					cfg, err := config.GetConfig(true)
 					if err != nil {
 						panic(err)
 					}
@@ -97,6 +96,26 @@ func main() {
 
 					services.GetWorkersWorkedTimeAndSendToSlack(now.BeginningOfDay(), now.EndOfDay(), cfg.Hubstaff.OrgsID)
 
+				},
+			},
+			{
+				Name:  "obtain-hubstaff-token",
+				Usage: "Obtains Hubstaff authorization token.",
+				Action: func(c *cli.Context) {
+					cfg, err := config.GetConfig(true)
+					if err != nil {
+						panic(err)
+					}
+
+					services, err := services.New(cfg)
+					if err != nil {
+						panic(err)
+					}
+					authToken, err := services.Hubstaff.ObtainAuthToken(cfg.Hubstaff.Auth)
+					if err != nil {
+						panic(err)
+					}
+					fmt.Printf("Hubstaff auth token is:\n%s\n", authToken)
 				},
 			},
 		}

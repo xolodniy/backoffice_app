@@ -18,7 +18,7 @@ type Hubstaff struct {
 	// HSAppToken created at https://developer.hubstaff.com/my_apps
 	AppToken string
 
-	// (optional) HSAuthToken, previously obtained through obtainAuthToken
+	// (optional) HSAuthToken, previously obtained through ObtainAuthToken
 	AuthToken string
 
 	// HTTPClient is required to be passed. Pass http.DefaultClient if not sure
@@ -27,21 +27,13 @@ type Hubstaff struct {
 
 // Retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
-func (c *Hubstaff) Authorize(auth types.HubstaffAuth) error {
-	if c.AuthToken == "" {
-		authToken, err := c.obtainAuthToken(auth)
-		if err != nil {
-			return err
-		}
-		c.AuthToken = authToken
-	}
-
-	return nil
+func (c *Hubstaff) SetAuthToken(authToken string) {
+	c.AuthToken = authToken
 }
 
 // Retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
-func (c *Hubstaff) obtainAuthToken(auth types.HubstaffAuth) (string, error) {
+func (c *Hubstaff) ObtainAuthToken(auth types.HubstaffAuth) (string, error) {
 	form := url.Values{}
 	form.Add("email", auth.Login)
 	form.Add("password", auth.Password)

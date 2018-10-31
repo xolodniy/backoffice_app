@@ -8,13 +8,18 @@ import (
 	"log"
 	"net/http"
 
+	"backoffice_app/config"
 	"backoffice_app/types"
+
+	"github.com/davecgh/go-spew/spew"
 )
+
+const sendItJustInConsole = false
 
 // Slack is main Slack client app implementation
 type Slack struct {
-	Auth    types.SlackAuth
-	Channel types.SlackChannel
+	Auth    config.SlackAuth
+	Channel config.SlackChannel
 	APIUrl  string
 }
 
@@ -57,7 +62,8 @@ func (slack *Slack) sendPOSTMessage(message *types.PostChannelMessage) (string, 
 		return "", err
 	}
 
-	log.Printf("sendPOSTMessage JSON: \n%+v:\n", string(b))
+	log.Printf("sendPOSTMessage message: \n")
+	spew.Dump(message)
 
 	resp, err := slack.postJSONMessage(b)
 
@@ -83,6 +89,11 @@ func (slack *Slack) SendConsoleMessage(message string) error {
 	return nil
 }
 func (slack *Slack) SendStandardMessage(message string) error {
+	if sendItJustInConsole {
+		slack.SendConsoleMessage(message)
+		return nil
+	}
+
 	_, err := slack.postChannelMessage(
 		message,
 		slack.Channel.ID,

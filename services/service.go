@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"net/http"
 	"time"
 
@@ -19,16 +20,13 @@ type service struct {
 	Jira     *jira.Client
 }
 
-func New(config *config.Config) (*service, error) {
+func New(config *config.Main) (*service, error) {
 	Hubstaff := &clients.Hubstaff{
 		HTTPClient: http.DefaultClient,
 		AppToken:   config.Hubstaff.Auth.AppToken,
 		APIUrl:     config.Hubstaff.APIUrl,
 	}
-
-	if err := Hubstaff.Authorize(config.Hubstaff.Auth); err != nil {
-		return nil, fmt.Errorf("Hubstaff error: %v", err)
-	}
+	Hubstaff.SetAuthToken(config.Hubstaff.Auth.Token)
 
 	jiraClient, err := jira.NewClient(config.Jira.Auth.Client(), config.Jira.APIUrl)
 	if err != nil {
@@ -37,11 +35,11 @@ func New(config *config.Config) (*service, error) {
 
 	slack := &clients.Slack{
 		APIUrl: config.Slack.APIUrl,
-		Auth: types.SlackAuth{
+		Auth: config.SlackAuth{
 			InToken:  config.Slack.Auth.InToken,
 			OutToken: config.Slack.Auth.OutToken,
 		},
-		Channel: types.SlackChannel{
+		Channel: config.SlackChannel{
 			BotName: config.Slack.Channel.BotName,
 			ID:      "#" + config.Slack.Channel.ID,
 		},
@@ -99,30 +97,36 @@ func (s *service) GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart time.Ti
 		panic(fmt.Sprintf("Hubstaff error: %v", err))
 	}
 
+	var message = fmt.Sprintf(
+		"Work time report\n\n"+
+			"From: %v %v\n"+
+			"To: %v %v\n",
+		dateOfWorkdaysStart.Format("02.01.06"), "00:00:00",
+		dateOfWorkdaysEnd.Format("02.01.06"), "23:59:59",
+	)
+
 	if len(orgsList) == 0 {
 		err := s.Slack.SendStandardMessage("No tracked time for now or no organization found")
 		if err != nil {
 			panic(fmt.Sprintf("Slack error: %s", err))
 		}
+		return
 	}
 
-	fmt.Printf("\nHubstaff output: %v\n", orgsList)
+	fmt.Println("Hubstaff output:")
+	spew.Dump(orgsList)
 
-	var message = fmt.Sprintf(
-		"Work time report\n\nFrom: %v %v\nTo: %v %v\n",
-		dateOfWorkdaysStart.Format("02.01.06"), "00:00:00",
-		dateOfWorkdaysEnd.Format("02.01.06"), "23:59:59",
-	)
-	for _, worker := range orgsList[0].Workers {
-		message += fmt.Sprintf(
-			"\n%s %s",
-			secondsToClockTime(worker.TimeWorked),
-			worker.Name,
-		)
-	}
-
+	// Only one organization needed for now
 	if len(orgsList[0].Workers) == 0 {
 		message = "No tracked time for now or no workers found"
+	} else {
+		for _, worker := range orgsList[0].Workers {
+			message += fmt.Sprintf(
+				"\n%s %s",
+				secondsToClockTime(worker.TimeWorked),
+				worker.Name,
+			)
+		}
 	}
 
 	if err := s.Slack.SendStandardMessage(message); err != nil {
