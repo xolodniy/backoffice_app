@@ -67,7 +67,7 @@ func (a *app) GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart time.Time, 
 			a.Slack.Channel.ID,
 			a.Slack.Channel.BotName)
 		if err != nil {
-			panic(fmt.Sprintf("Slack error: %a", err))
+			panic(fmt.Sprintf("Slack error: %s", err))
 		}
 		return
 	}
@@ -81,7 +81,7 @@ func (a *app) GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart time.Time, 
 	} else {
 		for _, worker := range orgsList[0].Workers {
 			message += fmt.Sprintf(
-				"\n%a %a",
+				"\n%s %s",
 				secondsToClockTime(worker.TimeWorked),
 				worker.Name,
 			)
@@ -91,7 +91,7 @@ func (a *app) GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart time.Time, 
 	if err := a.Slack.SendStandardMessage(message,
 		a.Slack.Channel.ID,
 		a.Slack.Channel.BotName); err != nil {
-		panic(fmt.Sprintf("Slack error: %a", err))
+		panic(fmt.Sprintf("Slack error: %s", err))
 	}
 
 }

@@ -29,7 +29,7 @@ func (a *app) IssuesSearch(searchParams types.JiraIssueSearchParams) ([]jira.Iss
 	)
 
 	if err != nil {
-		return nil, response, fmt.Errorf("can't create jira client: %a", err)
+		return nil, response, fmt.Errorf("can't create jira client: %s", err)
 	}
 
 	return allIssues, response, nil

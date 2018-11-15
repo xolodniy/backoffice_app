@@ -15,7 +15,7 @@ func (a *app) GetWorkersTimeByOrganization(dateOfWorkdaysStart time.Time, dateOf
 
 	orgsRaw, err := a.Hubstaff.Request(
 		fmt.Sprintf(
-			"/v1/custom/by_member/team/?start_date=%a&end_date=%a&organizations=%d",
+			"/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
 			dateStart,
 			dateEnd,
 			OrgID),
@@ -30,7 +30,7 @@ func (a *app) GetWorkersTimeByOrganization(dateOfWorkdaysStart time.Time, dateOf
 	}{}
 
 	if err = json.Unmarshal(orgsRaw, &orgs); err != nil {
-		return nil, fmt.Errorf("can't decode response: %a", err)
+		return nil, fmt.Errorf("can't decode response: %s", err)
 	}
 	return orgs.List, nil
 }
