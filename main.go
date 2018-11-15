@@ -72,6 +72,36 @@ func main() {
 		}
 
 		cliApp.Commands = []cli.Command{
+
+			{
+				Name:  "get-jira-exceedions-now",
+				Usage: "Gets jira exceedions right now",
+				Action: func(c *cli.Context) {
+					cfg, err := config.GetConfig(true)
+					if err != nil {
+						panic(err)
+					}
+
+					services, err := app.New(cfg)
+					if err != nil {
+						panic(err)
+					}
+
+					allIssues, _, err := services.IssuesSearch()
+					if err != nil {
+						panic(err)
+					}
+					for index, issue := range allIssues {
+						if issue.Fields.TimeSpent > issue.Fields.TimeOriginalEstimate {
+							fmt.Printf("%d. %s - %s",
+								index, issue.Key, issue.Fields.Summary,
+							)
+
+						}
+
+					}
+				},
+			},
 			{
 				Name:  "make-weekly-report-now",
 				Usage: "Sends weekly report to slack channel",
