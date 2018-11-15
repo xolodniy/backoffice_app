@@ -4,14 +4,14 @@ import (
 	"fmt"
 
 	"github.com/andygrunwald/go-jira"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/jinzhu/configor"
 )
 
 // Main is template to storing of all configuration settings needed
 type Main struct {
-	WorkedTimeSendTime string
-	Jira               struct {
+	DailyReportCronTime  string
+	WeeklyReportCronTime string
+	Jira                 struct {
 		Auth   jira.BasicAuthTransport
 		APIUrl string
 	}
@@ -47,7 +47,7 @@ func GetConfig(skipFieldsFilledCheck bool) (*Main, error) {
 
 	}
 
-	spew.Dump(config)
+	//spew.Dump(config)
 	//fmt.Printf("config: %+v\n", config)
 
 	if !skipFieldsFilledCheck {

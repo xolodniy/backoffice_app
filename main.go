@@ -42,12 +42,22 @@ func main() {
 			wg := sync.WaitGroup{}
 			tm := task_manager.New(&wg)
 
-			tm.AddTask(cfg.WorkedTimeSendTime, func() {
-				app.GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart, dateOfWorkdaysEnd, cfg.Hubstaff.OrgsID)
+			tm.AddTask(cfg.DailyReportCronTime, func() {
+				app.GetWorkersWorkedTimeAndSendToSlack(
+					now.BeginningOfDay().AddDate(0, 0, -1),
+					now.EndOfDay().AddDate(0, 0, -1),
+					cfg.Hubstaff.OrgsID)
+			})
+
+			tm.AddTask(cfg.WeeklyReportCronTime, func() {
+				app.GetWorkersWorkedTimeAndSendToSlack(
+					now.BeginningOfWeek().AddDate(0, 0, -1),
+					now.EndOfWeek().AddDate(0, 0, -1),
+					cfg.Hubstaff.OrgsID)
 			})
 
 			/*tm.AddTask("@every 15m", func() {
-				jiraAllIssues, _, err := cliApp.IssuesSearch(cfg.Jira.IssueSearchParams)
+				jiraAllIssues, _, err := app.IssuesSearch(cfg.Jira.IssueSearchParams)
 				if err != nil {
 					panic(err)
 				}

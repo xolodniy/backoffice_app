@@ -1,4 +1,5 @@
-workedtimesendtime: 00 56 18 * * *
+dailyreportcrontime: 00 00 07 * * *
+weeklyreportcrontime: 00 00 07 * * *
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
