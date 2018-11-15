@@ -13,14 +13,19 @@ func (a *app) GetWorkersTimeByOrganization(dateOfWorkdaysStart time.Time, dateOf
 	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
 	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
 
+	apiURL := fmt.Sprintf(
+		"/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
+		dateStart,
+		dateEnd,
+		OrgID)
+
 	orgsRaw, err := a.Hubstaff.Request(
-		fmt.Sprintf(
-			"/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
-			dateStart,
-			dateEnd,
-			OrgID),
+		apiURL,
 		nil,
 	)
+
+	fmt.Println("Hubstuff request URL will be:", apiURL)
+
 	if err != nil {
 		return nil, fmt.Errorf("error on getting workers worked time: %v", err)
 	}
