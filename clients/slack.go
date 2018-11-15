@@ -61,6 +61,7 @@ func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	log.Println("Slack request body:", string(jsonData))
 	log.Println("Slack response Status:", resp.Status)
 	//fmt.Println("response Headers:", resp.Header)
 	body, _ := ioutil.ReadAll(resp.Body)
