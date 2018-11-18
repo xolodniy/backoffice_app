@@ -10,10 +10,10 @@ slack:
   apiurl: https://slack.com/api
   auth:
     intoken: ITYgHVRVRhOIZfvDpVgCS6CM
-    outtoken: xoxp-350508480163-349912767072-369584053265-53086c6f7643871d6ab6c4eda69e5ebc
+    outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
 
   channel:
-    id: leads-bot-development
+    id: back-office-app
     botname: Back Office Bot
 
 hubstaff:

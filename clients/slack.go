@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"backoffice_app/types"
 
-	"github.com/davecgh/go-spew/spew"
+	"github.com/sirupsen/logrus"
 )
 
 const sendItJustInConsole = false
@@ -53,7 +52,7 @@ func (slack *Slack) SendStandardMessage(message, channelID, botName string) erro
 func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
 	req, err := http.NewRequest("POST", slack.APIUrl+"/chat.postMessage", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %slack", slack.Auth.OutToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", slack.Auth.OutToken))
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -61,8 +60,8 @@ func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	log.Println("Slack request body:", string(jsonData))
-	log.Println("Slack response Status:", resp.Status)
+	logrus.Info("Slack request body:", string(jsonData))
+	logrus.Info("Slack response Status:", resp.Status)
 	//fmt.Println("response Headers:", resp.Header)
 	body, _ := ioutil.ReadAll(resp.Body)
 
@@ -89,15 +88,15 @@ func (slack *Slack) sendPOSTMessage(message *types.PostChannelMessage) (string, 
 		return "", err
 	}
 
-	log.Printf("sendPOSTMessage message: \n")
-	spew.Dump(message)
+	//log.Printf("sendPOSTMessage message: \n")
+	//spew.Dump(message)
 
 	resp, err := slack.postJSONMessage(b)
 
 	return resp, err
 }
 
-func (slack *Slack) postChannelMessage(text string, channelID string, asUser bool, username string) (string, error) {
+func (slack *Slack) postChannelMessage(text, channelID string, asUser bool, username string) (string, error) {
 	var msg = &types.PostChannelMessage{
 		Token:    slack.Auth.OutToken,
 		Channel:  channelID,

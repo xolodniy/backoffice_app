@@ -3,13 +3,14 @@ package app
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"time"
 
 	"backoffice_app/clients"
 	"backoffice_app/config"
 
 	"github.com/andygrunwald/go-jira"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/sirupsen/logrus"
 )
 
 type app struct {
@@ -22,9 +23,9 @@ func New(config *config.Main) (*app, error) {
 	Hubstaff := &clients.Hubstaff{
 		HTTPClient: http.DefaultClient,
 		AppToken:   config.Hubstaff.Auth.AppToken,
+		AuthToken:  config.Hubstaff.Auth.Token,
 		APIUrl:     config.Hubstaff.APIUrl,
 	}
-	Hubstaff.SetAuthToken(config.Hubstaff.Auth.Token)
 
 	jiraClient, err := jira.NewClient(config.Jira.Auth.Client(), config.Jira.APIUrl)
 	if err != nil {
@@ -47,16 +48,17 @@ func New(config *config.Main) (*app, error) {
 
 }
 
-func (a *app) GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart time.Time, dateOfWorkdaysEnd time.Time, orgID int64) {
+func (a *app) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, orgID int64) {
 	orgsList, err := a.GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd, orgID)
 	if err != nil {
 		panic(fmt.Sprintf("Hubstaff error: %v", err))
 	}
 
 	var message = fmt.Sprintf(
-		"Work time report\n\n"+
+		"%s:\n\n"+
 			"From: %v %v\n"+
 			"To: %v %v\n",
+		prefix,
 		dateOfWorkdaysStart.Format("02.01.06"), "00:00:00",
 		dateOfWorkdaysEnd.Format("02.01.06"), "23:59:59",
 	)
@@ -72,17 +74,22 @@ func (a *app) GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart time.Time, 
 		return
 	}
 
-	fmt.Println("Hubstaff output:")
-	spew.Dump(orgsList)
+	//fmt.Println("Hubstaff output:")
+	//spew.Dump(orgsList)
 
 	// Only one organization needed for now
 	if len(orgsList[0].Workers) == 0 {
 		message = "No tracked time for now or no workers found"
 	} else {
 		for _, worker := range orgsList[0].Workers {
+			t, err := a.SecondsToClockTime(worker.TimeWorked)
+			if err != nil {
+				logrus.Errorf("time conversion: regexp error: %v", err)
+				continue
+			}
 			message += fmt.Sprintf(
 				"\n%s %s",
-				secondsToClockTime(worker.TimeWorked),
+				t,
 				worker.Name,
 			)
 		}
@@ -96,11 +103,17 @@ func (a *app) GetWorkersWorkedTimeAndSendToSlack(dateOfWorkdaysStart time.Time, 
 
 }
 
-func secondsToClockTime(durationInSeconds int) string {
-	workTime := time.Second * time.Duration(durationInSeconds)
+func (_ *app) SecondsToClockTime(durationInSeconds int) (string, error) {
+	var someTime time.Time
+	r, err := regexp.Compile(` ([0-9]{2,2}:[0-9]{2,2}):[0-9]{2,2}`)
+	if err != nil {
+		return "", fmt.Errorf("time conversion: regexp error: %v", err)
+	}
 
-	Hours := int(workTime.Hours())
-	Minutes := int(workTime.Minutes())
+	occurrences := r.FindStringSubmatch(someTime.Add(time.Second * time.Duration(durationInSeconds)).String())
+	if len(occurrences) != 2 && &occurrences[1] == nil {
+		return "", fmt.Errorf("time conversion: no time after unix time parsing")
+	}
 
-	return fmt.Sprintf("%d%d:%d%d", Hours/10, Hours%10, Minutes/10, Minutes%10)
+	return occurrences[1], nil
 }

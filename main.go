@@ -14,11 +14,12 @@ import (
 	"backoffice_app/libs/task_manager"
 
 	"github.com/jinzhu/now"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
-var dateOfWorkdaysStart = time.Date(2018, 9, 10, 0, 0, 0, 0, time.Local)
-var dateOfWorkdaysEnd = time.Date(2018, 9, 11, 23, 59, 59, 0, time.Local)
+//var dateOfWorkdaysStart = time.Date(2018, 9, 10, 0, 0, 0, 0, time.Local)
+//var dateOfWorkdaysEnd = time.Date(2018, 9, 11, 23, 59, 59, 0, time.Local)
 
 func main() {
 
@@ -44,6 +45,7 @@ func main() {
 
 			tm.AddTask(cfg.DailyReportCronTime, func() {
 				app.GetWorkersWorkedTimeAndSendToSlack(
+					"Daily work time report",
 					now.BeginningOfDay().AddDate(0, 0, -1),
 					now.EndOfDay().AddDate(0, 0, -1),
 					cfg.Hubstaff.OrgsID)
@@ -51,18 +53,46 @@ func main() {
 
 			tm.AddTask(cfg.WeeklyReportCronTime, func() {
 				app.GetWorkersWorkedTimeAndSendToSlack(
+					"Weekly work time report",
 					now.BeginningOfWeek().AddDate(0, 0, -1),
 					now.EndOfWeek().AddDate(0, 0, -1),
 					cfg.Hubstaff.OrgsID)
 			})
 
-			/*tm.AddTask("@every 15m", func() {
-				jiraAllIssues, _, err := app.IssuesSearch(cfg.Jira.IssueSearchParams)
+			tm.AddTask("@every 1h", func() {
+				allIssues, _, err := app.IssuesSearch()
 				if err != nil {
 					panic(err)
 				}
-				log.Printf("jiraAllIssues quantity: %v\n", len(jiraAllIssues))
-			})*/
+				var msgBody = "Employees have exceeded tasks:\n"
+				for index, issue := range allIssues {
+					if issue.Fields.TimeSpent > issue.Fields.TimeOriginalEstimate {
+						ts, err := app.SecondsToClockTime(issue.Fields.TimeSpent)
+						if err != nil {
+							logrus.Errorf("time spent conversion: regexp error: %v", err)
+							continue
+						}
+
+						te, err := app.SecondsToClockTime(issue.Fields.TimeOriginalEstimate)
+						if err != nil {
+							logrus.Errorf("time spent conversion: regexp error: %v", err)
+							continue
+						}
+
+						msgBody += fmt.Sprintf("%d. %s - %s: %v из %v\n",
+							index, issue.Key, issue.Fields.Summary, ts, te,
+						)
+
+					}
+
+				}
+
+				app.Slack.SendStandardMessage(
+					msgBody,
+					app.Slack.Channel.ID,
+					app.Slack.Channel.BotName,
+				)
+			})
 
 			tm.Start()
 
@@ -91,15 +121,29 @@ func main() {
 					if err != nil {
 						panic(err)
 					}
+					var msgBody = "Employees have exceeded tasks:\n"
 					for index, issue := range allIssues {
 						if issue.Fields.TimeSpent > issue.Fields.TimeOriginalEstimate {
-							fmt.Printf("%d. %s - %s",
-								index, issue.Key, issue.Fields.Summary,
+							ts, err := services.SecondsToClockTime(issue.Fields.TimeSpent)
+							te, err := services.SecondsToClockTime(issue.Fields.TimeOriginalEstimate)
+							if err != nil {
+								logrus.Errorf("time conversion: regexp error: %v", err)
+								continue
+							}
+
+							msgBody += fmt.Sprintf("%d. %s - %s: %v из %v\n",
+								index, issue.Key, issue.Fields.Summary, ts, te,
 							)
 
 						}
 
 					}
+
+					services.Slack.SendStandardMessage(
+						msgBody,
+						services.Slack.Channel.ID,
+						services.Slack.Channel.BotName,
+					)
 				},
 			},
 			{
@@ -116,7 +160,10 @@ func main() {
 						panic(err)
 					}
 
-					services.GetWorkersWorkedTimeAndSendToSlack(now.BeginningOfWeek(), now.EndOfWeek(), cfg.Hubstaff.OrgsID)
+					services.GetWorkersWorkedTimeAndSendToSlack(
+						"Weekly work time report",
+						now.BeginningOfWeek(),
+						now.EndOfWeek(), cfg.Hubstaff.OrgsID)
 
 				},
 			},
@@ -134,7 +181,10 @@ func main() {
 						panic(err)
 					}
 
-					services.GetWorkersWorkedTimeAndSendToSlack(now.BeginningOfDay(), now.EndOfDay(), cfg.Hubstaff.OrgsID)
+					services.GetWorkersWorkedTimeAndSendToSlack(
+						"Daily work time report",
+						now.BeginningOfDay(),
+						now.EndOfDay(), cfg.Hubstaff.OrgsID)
 
 				},
 			},

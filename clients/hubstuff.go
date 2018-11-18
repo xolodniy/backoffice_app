@@ -3,7 +3,6 @@ package clients
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -27,18 +26,15 @@ type Hubstaff struct {
 
 // Retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
-func (c *Hubstaff) SetAuthToken(authToken string) {
-	c.AuthToken = authToken
-}
-
-// Retrieves auth token which must be sent along with appToken,
-// see https://support.hubstaff.com/time-tracking-api/ for details
 func (c *Hubstaff) ObtainAuthToken(auth types.HubstaffAuth) (string, error) {
 	form := url.Values{}
 	form.Add("email", auth.Login)
 	form.Add("password", auth.Password)
 
-	request, err := c.requestPost("/v1/auth", strings.NewReader(form.Encode()))
+	request, err := http.NewRequest("POST", c.APIUrl+"/v1/auth", strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", fmt.Errorf("can't create http POST Request: %s", err)
+	}
 	if err != nil {
 		return "", err
 	}
@@ -70,9 +66,9 @@ func (c *Hubstaff) ObtainAuthToken(auth types.HubstaffAuth) (string, error) {
 }
 
 func (c *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
-	request, err := c.requestGet(path)
+	request, err := http.NewRequest("GET", c.APIUrl+path, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't create http GET Request: %s", err)
 	}
 
 	request.Header.Set("App-Token", c.AppToken)
@@ -94,20 +90,4 @@ func (c *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
 	}
 	s, err := ioutil.ReadAll(response.Body)
 	return s, err
-}
-
-func (c *Hubstaff) requestGet(relativePath string) (*http.Request, error) {
-	r, err := http.NewRequest("GET", c.APIUrl+relativePath, nil)
-	if err != nil {
-		return nil, fmt.Errorf("can't create http GET Request: %s", err)
-	}
-	return r, nil
-}
-
-func (c *Hubstaff) requestPost(relativePath string, body io.Reader) (*http.Request, error) {
-	r, err := http.NewRequest("POST", c.APIUrl+relativePath, body)
-	if err != nil {
-		return nil, fmt.Errorf("can't create http POST Request: %s", err)
-	}
-	return r, nil
 }
