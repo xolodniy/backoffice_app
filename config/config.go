@@ -9,9 +9,10 @@ import (
 
 // Main is template to storing of all configuration settings needed
 type Main struct {
-	DailyReportCronTime  string
-	WeeklyReportCronTime string
-	Jira                 struct {
+	DailyReportCronTime             string
+	WeeklyReportCronTime            string
+	TaskTimeExceedionReportCronTime string
+	Jira                            struct {
 		Auth   jira.BasicAuthTransport
 		APIUrl string
 	}

@@ -59,7 +59,7 @@ func main() {
 					cfg.Hubstaff.OrgsID)
 			})
 
-			tm.AddTask("@every 1h", func() {
+			tm.AddTask(cfg.TaskTimeExceedionReportCronTime, func() {
 				allIssues, _, err := app.IssuesSearch()
 				if err != nil {
 					panic(err)

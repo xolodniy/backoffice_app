@@ -1,5 +1,6 @@
-dailyreportcrontime: 00 00 07 * * *
-weeklyreportcrontime: 00 00 07 * * *
+dailyreportcrontime: "00 00 07 * * *"
+weeklyreportcrontime: "00 00 07 * * *"
+tasktimeexceedionreportcrontime: "@every 1h"
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
