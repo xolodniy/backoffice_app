@@ -11,6 +11,7 @@ import (
 	"backoffice_app/types"
 )
 
+// Hubstaff is main Hubstaff implementation
 type Hubstaff struct {
 	APIUrl string
 
@@ -65,6 +66,7 @@ func (c *Hubstaff) ObtainAuthToken(auth types.HubstaffAuth) (string, error) {
 	return t.User.AuthToken, nil
 }
 
+// Request is main API GET request method
 func (c *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
 	request, err := http.NewRequest("GET", c.APIUrl+path, nil)
 	if err != nil {

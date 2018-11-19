@@ -40,6 +40,7 @@ type Main struct {
 	}
 }
 
+// GetConfig return config parsed from config/config.yml
 func GetConfig(skipFieldsFilledCheck bool) (*Main, error) {
 	var config Main
 	//configor.New(&configor.Main{Debug: true}).Load(&config, "config/config.yml")

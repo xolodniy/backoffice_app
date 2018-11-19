@@ -19,6 +19,7 @@ type app struct {
 	Jira     *jira.Client
 }
 
+// New is main app constructor
 func New(config *config.Main) (*app, error) {
 	Hubstaff := &clients.Hubstaff{
 		HTTPClient: http.DefaultClient,
@@ -48,6 +49,7 @@ func New(config *config.Main) (*app, error) {
 
 }
 
+// GetWorkersWorkedTimeAndSendToSlack gather workers work time made through period between dates and send it to Slack channel
 func (a *app) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, orgID int64) {
 	orgsList, err := a.GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd, orgID)
 	if err != nil {
@@ -103,6 +105,7 @@ func (a *app) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 
 }
 
+// SecondsToClockTime converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
 func (_ *app) SecondsToClockTime(durationInSeconds int) (string, error) {
 	var someTime time.Time
 	r, err := regexp.Compile(` ([0-9]{2,2}:[0-9]{2,2}):[0-9]{2,2}`)

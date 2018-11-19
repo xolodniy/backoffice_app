@@ -8,6 +8,7 @@ import (
 	"backoffice_app/types"
 )
 
+// GetWorkersTimeByOrganization returning workers times by organization id
 func (a *app) GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, OrgID int64) (types.Organizations, error) {
 
 	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")

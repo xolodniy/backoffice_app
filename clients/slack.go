@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// sendItJustInConsole defines whether the app should send messages just in console, but not in Slack channel (needs while further development work)
 const sendItJustInConsole = false
 
 // Slack is main Slack client app implementation
@@ -20,17 +21,20 @@ type Slack struct {
 	Channel SlackChannel
 	APIUrl  string
 }
+
+// SlackAuth is Slack Authorization data storage used for API and Webhook requests
 type SlackAuth struct {
 	InToken  string `default:"someSlackInToken"`
 	OutToken string `default:"someSlackOutToken"`
 }
 
-// Channel is template for user name and ID of the channel to send message there
+// SlackChannel is template for user name and ID of the channel to send message there
 type SlackChannel struct {
 	BotName string
 	ID      string
 }
 
+// SendStandardMessage is main message sending method
 func (slack *Slack) SendStandardMessage(message, channelID, botName string) error {
 	if sendItJustInConsole {
 		slack.SendConsoleMessage(message)
@@ -108,7 +112,7 @@ func (slack *Slack) postChannelMessage(text, channelID string, asUser bool, user
 	return slack.sendPOSTMessage(msg)
 }
 
-//Temporarily added. Will be deleted after basic development stage will be finished.
+// SendConsoleMessage instead of message to Slack. Used while testing or development.
 func (slack *Slack) SendConsoleMessage(message string) error {
 	fmt.Println(
 		message,
