@@ -9,6 +9,7 @@ import (
 
 // Main is template to storing of all configuration settings needed
 type Main struct {
+	GinPort                         string
 	DailyReportCronTime             string
 	WeeklyReportCronTime            string
 	TaskTimeExceedionReportCronTime string

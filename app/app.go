@@ -13,14 +13,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type app struct {
+type App struct {
 	Hubstaff *clients.Hubstaff
 	Slack    *clients.Slack
 	Jira     *jira.Client
+	Config   config.Main
 }
 
-// New is main app constructor
-func New(config *config.Main) (*app, error) {
+// New is main App constructor
+func New(config *config.Main) (*App, error) {
 	Hubstaff := &clients.Hubstaff{
 		HTTPClient: http.DefaultClient,
 		AppToken:   config.Hubstaff.Auth.AppToken,
@@ -45,12 +46,12 @@ func New(config *config.Main) (*app, error) {
 		},
 	}
 
-	return &app{Hubstaff, slack, jiraClient}, nil
+	return &App{Hubstaff, slack, jiraClient, *config}, nil
 
 }
 
 // GetWorkersWorkedTimeAndSendToSlack gather workers work time made through period between dates and send it to Slack channel
-func (a *app) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, orgID int64) {
+func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, orgID int64) {
 	orgsList, err := a.GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd, orgID)
 	if err != nil {
 		panic(fmt.Sprintf("Hubstaff error: %v", err))
@@ -106,7 +107,7 @@ func (a *app) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 }
 
 // SecondsToClockTime converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
-func (_ *app) SecondsToClockTime(durationInSeconds int) (string, error) {
+func (_ *App) SecondsToClockTime(durationInSeconds int) (string, error) {
 	var someTime time.Time
 	r, err := regexp.Compile(` ([0-9]{2,2}:[0-9]{2,2}):[0-9]{2,2}`)
 	if err != nil {

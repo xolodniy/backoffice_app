@@ -11,6 +11,7 @@ import (
 
 	"backoffice_app/app"
 	"backoffice_app/config"
+	"backoffice_app/controller"
 	"backoffice_app/libs/task_manager"
 
 	"github.com/jinzhu/now"
@@ -40,6 +41,9 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
+
+			controller.New(*cfg).Start()
+
 			wg := sync.WaitGroup{}
 			tm := task_manager.New(&wg)
 
