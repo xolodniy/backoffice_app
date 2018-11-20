@@ -1,6 +1,9 @@
+ginport: 1234
+
 dailyreportcrontime: "00 00 07 * * *"
 weeklyreportcrontime: "00 00 07 * * *"
 tasktimeexceedionreportcrontime: "@every 1h"
+gittoken:
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
@@ -14,7 +17,8 @@ slack:
     outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
 
   channel:
-    id: back-office-app
+    migrationsid: migrations
+    backofficeappid: back-office-app
     botname: Back Office Bot
 
 hubstaff:

@@ -50,6 +50,7 @@ type PostChannelMessage struct {
 	Text        string                         `json:"text"`
 	Username    string                         `json:"username"`
 	Attachments []PostChannelMessageAttachment `json:"attachments"`
+	IconURL     string                         `json:"icon_url"`
 }
 
 // Message is template to make a simple message

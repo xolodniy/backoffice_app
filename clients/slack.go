@@ -28,7 +28,7 @@ type SlackAuth struct {
 	OutToken string `default:"someSlackOutToken"`
 }
 
-// SlackChannel is template for user name and ID of the channel to send message there
+// SlackChannel is template for user name and BackOfficeAppID of the channel to send message there
 type SlackChannel struct {
 	BotName string
 	ID      string
@@ -46,6 +46,27 @@ func (slack *Slack) SendStandardMessage(message, channelID, botName string) erro
 		channelID,
 		false,
 		botName,
+		"",
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// SendStandardMessage is main message sending method
+func (slack *Slack) SendStandardMessageWithIcon(message, channelID, botName string, iconURL string) error {
+	if sendItJustInConsole {
+		slack.SendConsoleMessage(message)
+		return nil
+	}
+
+	_, err := slack.postChannelMessage(
+		message,
+		channelID,
+		false,
+		botName,
+		iconURL,
 	)
 	if err != nil {
 		return err
@@ -100,13 +121,14 @@ func (slack *Slack) sendPOSTMessage(message *types.PostChannelMessage) (string, 
 	return resp, err
 }
 
-func (slack *Slack) postChannelMessage(text, channelID string, asUser bool, username string) (string, error) {
+func (slack *Slack) postChannelMessage(text, channelID string, asUser bool, username string, iconURL string) (string, error) {
 	var msg = &types.PostChannelMessage{
 		Token:    slack.Auth.OutToken,
 		Channel:  channelID,
 		AsUser:   asUser,
 		Text:     text,
 		Username: username,
+		IconURL:  iconURL,
 	}
 
 	return slack.sendPOSTMessage(msg)

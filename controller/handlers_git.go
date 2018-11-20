@@ -1,9 +1,14 @@
 package controller
 
 import (
-	"github.com/davecgh/go-spew/spew"
+	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 )
+
+var r, _ = regexp.Compile(`/((etc|db)/migrations/[0-9]{4,}([0-9a-zA-Z_]+)?\.sql)`)
 
 type File string
 
@@ -17,96 +22,93 @@ type req struct {
 	EventName  string `json:"object_kind" binding:"required"`
 	BranchPath string `json:"ref"    binding:"required"`
 
+	Project struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
+
 	UserAvatar string `json:"user_avatar"`
 	UserName   string `json:"user_name"`
 
-	Commits []Commit `json:"commits"`
+	Commits           []Commit `json:"commits"`
+	TotalCommitsCount int      `json:"total_commits_count"`
 }
 
 func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 
 	var req req
-	var _ = gitExample
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		c.respondBindingError(ctx, err, req)
 		return
 	}
 
-	for i, c := range req.Commits {
+	if req.EventName != "push" {
+		c.respondError(ctx, fmt.Errorf("Only push event will be accepted."))
+		return
+	}
 
-		spew.Dump(i, c)
+	var message string
+	if req.TotalCommitsCount > 20 {
+		message += "*Warning! Some migration can be skipped which are in commits placed beyond the 20 commit barrier*\n"
+	}
+	for _, commit := range req.Commits {
+		for _, f := range commit.Added {
+			if occurrences := r.FindStringSubmatch(string(f)); len(occurrences) > 0 {
+
+				//git.SetBaseURL("https://git.mydomain.com/api/v3")
+				//users, _, err := git.Users.ListUsers()
+				// TODO Define iteration order to find where is the most actual migration
+				// TODO take only last one file version through all commits
+				message += req.Project.Name + ", " + req.BranchPath + ", " + occurrences[0] + ":" + "\n"
+				if fileContents, err := c.App.GitGetFile(
+					req.Project.ID,
+					strings.Replace(occurrences[0], "/", "", 1),
+					req.BranchPath,
+				); err != nil {
+					message += fmt.Sprintf("Error occurred: %v", err)
+				} else {
+					message += fmt.Sprintf("```%s```", fileContents)
+				}
+
+				c.App.Slack.SendStandardMessageWithIcon(
+					message,
+					c.Config.Slack.Channel.BackOfficeAppID,
+					req.UserName+" (bot)",
+					req.UserAvatar,
+				)
+				//fmt.Println(message)
+			}
+		}
+		for _, f := range commit.Modified {
+			if occurrences := r.FindStringSubmatch(string(f)); len(occurrences) > 0 {
+
+				//git.SetBaseURL("https://git.mydomain.com/api/v3")
+				//users, _, err := git.Users.ListUsers()
+
+				// TODO Define iteration order to find where is the most actual migration
+				// TODO take only last one file version through all commits
+				message += req.Project.Name + ", " + req.BranchPath + ", " + occurrences[0] + ":" + "\n"
+				if fileContents, err := c.App.GitGetFile(
+					req.Project.ID,
+					strings.Replace(occurrences[0], "/", "", 1),
+					req.BranchPath,
+				); err != nil {
+					message += fmt.Sprintf("Error occurred: %v", err)
+				} else {
+					message += fmt.Sprintf("```%s```", fileContents)
+				}
+
+				c.App.Slack.SendStandardMessageWithIcon(
+					message,
+					c.Config.Slack.Channel.BackOfficeAppID,
+					req.UserName+" (bot)",
+					req.UserAvatar,
+				)
+				//fmt.Println(message)
+			}
+		}
 
 	}
+
 	//c.respondOK(ctx, "ok")
 }
-
-var gitExample = `
-{
-  "object_kind": "push",
-  "before": "95790bf891e76fee5e1747ab589903a6a1f80f22",
-  "after": "da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
-  "ref": "refs/heads/master",
-  "checkout_sha": "da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
-  "user_id": 4,
-  "user_name": "John Smith",
-  "user_username": "jsmith",
-  "user_email": "john@example.com",
-  "user_avatar": "https://s.gravatar.com/avatar/d4c74594d841139328695756648b6bd6?s=8://s.gravatar.com/avatar/d4c74594d841139328695756648b6bd6?s=80",
-  "project_id": 15,
-  "project":{
-    "id": 15,
-    "name":"Diaspora",
-    "description":"",
-    "web_url":"http://example.com/mike/diaspora",
-    "avatar_url":null,
-    "git_ssh_url":"git@example.com:mike/diaspora.git",
-    "git_http_url":"http://example.com/mike/diaspora.git",
-    "namespace":"Mike",
-    "visibility_level":0,
-    "path_with_namespace":"mike/diaspora",
-    "default_branch":"master",
-    "homepage":"http://example.com/mike/diaspora",
-    "url":"git@example.com:mike/diaspora.git",
-    "ssh_url":"git@example.com:mike/diaspora.git",
-    "http_url":"http://example.com/mike/diaspora.git"
-  },
-  "repository":{
-    "name": "Diaspora",
-    "url": "git@example.com:mike/diaspora.git",
-    "description": "",
-    "homepage": "http://example.com/mike/diaspora",
-    "git_http_url":"http://example.com/mike/diaspora.git",
-    "git_ssh_url":"git@example.com:mike/diaspora.git",
-    "visibility_level":0
-  },
-  "Commits": [
-    {
-      "id": "b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327",
-      "message": "Update Catalan translation to e38cb41.",
-      "timestamp": "2011-12-12T14:27:31+02:00",
-      "url": "http://example.com/mike/diaspora/Commit/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327",
-      "author": {
-        "name": "Jordi Mallach",
-        "email": "jordi@softcatala.org"
-      },
-      "added": ["CHANGELOG"],
-      "modified": ["app/controller/application.rb"],
-      "removed": []
-    },
-    {
-      "id": "da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
-      "message": "fixed readme",
-      "timestamp": "2012-01-03T23:36:29+02:00",
-      "url": "http://example.com/mike/diaspora/Commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
-      "author": {
-        "name": "GitLab dev user",
-        "email": "gitlabdev@dv6700.(none)"
-      },
-      "added": ["CHANGELOG"],
-      "modified": ["app/controller/application.rb"],
-      "removed": []
-    }
-  ],
-  "total_commits_count": 4
-}
-`

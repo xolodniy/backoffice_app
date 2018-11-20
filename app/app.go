@@ -11,12 +11,14 @@ import (
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/sirupsen/logrus"
+	"github.com/xanzy/go-gitlab"
 )
 
 type App struct {
 	Hubstaff *clients.Hubstaff
 	Slack    *clients.Slack
 	Jira     *jira.Client
+	Git      *gitlab.Client
 	Config   config.Main
 }
 
@@ -42,11 +44,13 @@ func New(config *config.Main) (*App, error) {
 		},
 		Channel: clients.SlackChannel{
 			BotName: config.Slack.Channel.BotName,
-			ID:      "#" + config.Slack.Channel.ID,
+			ID:      "#" + config.Slack.Channel.BackOfficeAppID,
 		},
 	}
 
-	return &App{Hubstaff, slack, jiraClient, *config}, nil
+	git := gitlab.NewClient(nil, config.GitToken)
+
+	return &App{Hubstaff, slack, jiraClient, git, *config}, nil
 
 }
 
@@ -70,7 +74,8 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		err := a.Slack.SendStandardMessage(
 			"No tracked time for now or no organization found",
 			a.Slack.Channel.ID,
-			a.Slack.Channel.BotName)
+			a.Slack.Channel.BotName,
+		)
 		if err != nil {
 			panic(fmt.Sprintf("Slack error: %s", err))
 		}
@@ -98,7 +103,8 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		}
 	}
 
-	if err := a.Slack.SendStandardMessage(message,
+	if err := a.Slack.SendStandardMessage(
+		message,
 		a.Slack.Channel.ID,
 		a.Slack.Channel.BotName); err != nil {
 		panic(fmt.Sprintf("Slack error: %s", err))
