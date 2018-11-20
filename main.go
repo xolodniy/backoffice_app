@@ -1,244 +1,240 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"strings"
+	"log"
+	"os"
+	"os/signal"
+	"sync"
 	"time"
 
-	"backoffice_app/types"
+	"backoffice_app/app"
+	"backoffice_app/config"
+	"backoffice_app/libs/task_manager"
+
+	"github.com/jinzhu/now"
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli"
 )
 
-var HSAuthToken = ""
-var HSAppToken = "yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ"
-var HSLogin = ""
-var HSPassword = ""
-var HSOursOrgsID = 60470
-
-var SlackOutToken = ""
-var SlackChannelID = "#leads-bot-development"
-var SlackBotName = "Back Office Bot"
-
-var dateOfWorkdaysStart = time.Date(2018, 9, 10, 0, 0, 0, 0, time.Local)
-var dateOfWorkdaysEnd = time.Date(2018, 9, 11, 23, 59, 59, 0, time.Local)
-
-type Client struct {
-	// HSAppToken created at https://developer.hubstaff.com/my_apps
-	AppToken string
-
-	// (optional) HSAuthToken, previously obtained through ObtainAuthToken
-	AuthToken string
-
-	// HTTPClient is required to be passed. Pass http.DefaultClient if not sure
-	HTTPClient *http.Client
-}
+//var dateOfWorkdaysStart = time.Date(2018, 9, 10, 0, 0, 0, 0, time.Local)
+//var dateOfWorkdaysEnd = time.Date(2018, 9, 11, 23, 59, 59, 0, time.Local)
 
 func main() {
-	hubstaff := Client{
-		AppToken:   HSAppToken,
-		AuthToken:  HSAuthToken, // Set it if already known. If not, see below how to obtain it.
-		HTTPClient: http.DefaultClient,
-	}
 
-	if HSAuthToken == "" {
-		var err error
-		HSAuthToken, err = hubstaff.ObtainAuthToken(HSLogin, HSPassword)
-		if err != nil {
-			panic(err)
+	{
+		now.WeekStartDay = time.Monday // Set Monday as first day, default is Sunday
+
+		cliApp := cli.NewApp()
+		cliApp.Name = "Backoffice App"
+		cliApp.Usage = "It's the best application for real time workers day and week progress."
+
+		cliApp.Action = func(c *cli.Context) {
+			cfg, err := config.GetConfig(true)
+			if err != nil {
+				panic(err)
+			}
+
+			app, err := app.New(cfg)
+			if err != nil {
+				panic(err)
+			}
+			wg := sync.WaitGroup{}
+			tm := task_manager.New(&wg)
+
+			tm.AddTask(cfg.DailyReportCronTime, func() {
+				app.GetWorkersWorkedTimeAndSendToSlack(
+					"Daily work time report",
+					now.BeginningOfDay().AddDate(0, 0, -1),
+					now.EndOfDay().AddDate(0, 0, -1),
+					cfg.Hubstaff.OrgsID)
+			})
+
+			tm.AddTask(cfg.WeeklyReportCronTime, func() {
+				app.GetWorkersWorkedTimeAndSendToSlack(
+					"Weekly work time report",
+					now.BeginningOfWeek().AddDate(0, 0, -1),
+					now.EndOfWeek().AddDate(0, 0, -1),
+					cfg.Hubstaff.OrgsID)
+			})
+
+			tm.AddTask(cfg.TaskTimeExceedionReportCronTime, func() {
+				allIssues, _, err := app.IssuesSearch()
+				if err != nil {
+					panic(err)
+				}
+				var msgBody = "Employees have exceeded tasks:\n"
+				for index, issue := range allIssues {
+					if issue.Fields.TimeSpent > issue.Fields.TimeOriginalEstimate {
+						ts, err := app.SecondsToClockTime(issue.Fields.TimeSpent)
+						if err != nil {
+							logrus.Errorf("time spent conversion: regexp error: %v", err)
+							continue
+						}
+
+						te, err := app.SecondsToClockTime(issue.Fields.TimeOriginalEstimate)
+						if err != nil {
+							logrus.Errorf("time spent conversion: regexp error: %v", err)
+							continue
+						}
+
+						msgBody += fmt.Sprintf("%d. %s - %s: %v из %v\n",
+							index, issue.Key, issue.Fields.Summary, ts, te,
+						)
+
+					}
+
+				}
+
+				app.Slack.SendStandardMessage(
+					msgBody,
+					app.Slack.Channel.ID,
+					app.Slack.Channel.BotName,
+				)
+			})
+
+			tm.Start()
+
+			log.Println("Task scheduler started.")
+
+			gracefulClosing(tm.Stop, &wg)
 		}
 
-		fmt.Printf("Your «HSAuthToken» is:\n%v\n", HSAuthToken)
-		return
-	}
+		cliApp.Commands = []cli.Command{
 
-	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
-	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
-	orgsRaw, err := hubstaff.doRequest(fmt.Sprintf(
-		"/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
-		dateStart,
-		dateEnd,
-		HSOursOrgsID), nil)
-	if err != nil {
-		panic(err)
-	}
+			{
+				Name:  "get-jira-exceedions-now",
+				Usage: "Gets jira exceedions right now",
+				Action: func(c *cli.Context) {
+					cfg, err := config.GetConfig(true)
+					if err != nil {
+						panic(err)
+					}
 
-	orgs := struct {
-		List types.Organizations `json:"organizations"`
-	}{}
-	err = json.Unmarshal(orgsRaw, &orgs)
-	if err != nil {
-		panic(fmt.Sprintf("can't decode response: %s", err))
-	}
+					services, err := app.New(cfg)
+					if err != nil {
+						panic(err)
+					}
 
-	if len(orgs.List) == 0 {
-		err := sendStandardMessage("No tracked time for now or no organization found")
-		if err != nil {
-			panic(fmt.Sprintf("can't decode response: %s", err))
+					allIssues, _, err := services.IssuesSearch()
+					if err != nil {
+						panic(err)
+					}
+					var msgBody = "Employees have exceeded tasks:\n"
+					for index, issue := range allIssues {
+						if issue.Fields.TimeSpent > issue.Fields.TimeOriginalEstimate {
+							ts, err := services.SecondsToClockTime(issue.Fields.TimeSpent)
+							te, err := services.SecondsToClockTime(issue.Fields.TimeOriginalEstimate)
+							if err != nil {
+								logrus.Errorf("time conversion: regexp error: %v", err)
+								continue
+							}
+
+							msgBody += fmt.Sprintf("%d. %s - %s: %v из %v\n",
+								index, issue.Key, issue.Fields.Summary, ts, te,
+							)
+
+						}
+
+					}
+
+					services.Slack.SendStandardMessage(
+						msgBody,
+						services.Slack.Channel.ID,
+						services.Slack.Channel.BotName,
+					)
+				},
+			},
+			{
+				Name:  "make-weekly-report-now",
+				Usage: "Sends weekly report to slack channel",
+				Action: func(c *cli.Context) {
+					cfg, err := config.GetConfig(true)
+					if err != nil {
+						panic(err)
+					}
+
+					services, err := app.New(cfg)
+					if err != nil {
+						panic(err)
+					}
+
+					services.GetWorkersWorkedTimeAndSendToSlack(
+						"Weekly work time report",
+						now.BeginningOfWeek(),
+						now.EndOfWeek(), cfg.Hubstaff.OrgsID)
+
+				},
+			},
+			{
+				Name:  "make-daily-report-now",
+				Usage: "Sends daily report to slack channel",
+				Action: func(c *cli.Context) {
+					cfg, err := config.GetConfig(true)
+					if err != nil {
+						panic(err)
+					}
+
+					services, err := app.New(cfg)
+					if err != nil {
+						panic(err)
+					}
+
+					services.GetWorkersWorkedTimeAndSendToSlack(
+						"Daily work time report",
+						now.BeginningOfDay(),
+						now.EndOfDay(), cfg.Hubstaff.OrgsID)
+
+				},
+			},
+			{
+				Name:  "obtain-hubstaff-token",
+				Usage: "Obtains Hubstaff authorization token.",
+				Action: func(c *cli.Context) {
+					cfg, err := config.GetConfig(true)
+					if err != nil {
+						panic(err)
+					}
+
+					services, err := app.New(cfg)
+					if err != nil {
+						panic(err)
+					}
+					authToken, err := services.Hubstaff.ObtainAuthToken(cfg.Hubstaff.Auth)
+					if err != nil {
+						panic(err)
+					}
+					fmt.Printf("Hubstaff auth token is:\n%s\n", authToken)
+				},
+			},
 		}
+		cliApp.Run(os.Args)
 	}
-
-	var message = fmt.Sprintf(
-		"Work time report\n\nFrom: %v %v\nTo: %v %v\n",
-		dateOfWorkdaysStart.Format("02.01.06"), "00:00:00",
-		dateOfWorkdaysEnd.Format("02.01.06"), "23:59:59",
-	)
-	for _, worker := range orgs.List[0].Workers {
-		message += fmt.Sprintf(
-			"\n%s %s",
-			secondsToClockTime(worker.TimeWorked),
-			worker.Name,
-		)
-	}
-
-	if len(orgs.List[0].Workers) == 0 {
-		message = "No tracked time for now or no workers found"
-	}
-
-	if err := sendStandardMessage(message); err != nil {
-		panic(err)
-	}
-}
-
-func secondsToClockTime(durationInSeconds int) string {
-	workTime := time.Second * time.Duration(durationInSeconds)
-
-	Hours := int(workTime.Hours())
-	Minutes := int(workTime.Minutes())
-
-	return fmt.Sprintf("%d%d:%d%d", Hours/10, Hours%10, Minutes/10, Minutes%10)
 
 }
 
-// Retrieves auth token which must be sent along with appToken,
-// see https://support.hubstaff.com/time-tracking-api/ for details
-func (c *Client) ObtainAuthToken(email, password string) (string, error) {
-	form := url.Values{}
-	form.Add("email", email)
-	form.Add("password", password)
+func gracefulClosing(cancel context.CancelFunc, servicesWg *sync.WaitGroup) {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt)
+	<-sig
+	log.Println("stopping app... (Double enter Ctrl + C to force close)")
+	cancel()
 
-	r, err := http.NewRequest("POST", "https://api.hubstaff.com/v1/auth", strings.NewReader(form.Encode()))
-	if err != nil {
-		return "", fmt.Errorf("can't create http request: %s", err)
-	}
-	r.Header.Set("App-Token", HSAppToken)
-	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := c.HTTPClient.Do(r)
-	if err != nil {
-		return "", fmt.Errorf("can't send http request: %s", err)
-	}
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("invalid response code: %d", resp.StatusCode)
-	}
-	defer resp.Body.Close()
+	quit := make(chan struct{})
+	go func() {
+		<-sig
+		<-sig
+		log.Println("app unsafe stopped")
+		<-quit
+	}()
 
-	t := struct {
-		User struct {
-			ID           int    `json:"id"`
-			AuthToken    string `json:"auth_token"`
-			Name         string `json:"name"`
-			LastActivity string `json:"last_activity"`
-		} `json:"user"`
-	}{}
-	if err := json.NewDecoder(resp.Body).Decode(&t); err != nil {
-		return "", fmt.Errorf("can't decode response: %s", err)
-	}
-	return t.User.AuthToken, nil
-}
+	go func() {
+		servicesWg.Wait()
+		log.Println("app gracefully stopped")
+		<-quit
+	}()
 
-func (c *Client) doRequest(path string, q map[string]string) ([]byte, error) {
-	r, err := http.NewRequest("GET", "https://api.hubstaff.com"+path, nil)
-	if err != nil {
-		return nil, fmt.Errorf("can't create http request: %s", err)
-	}
-
-	r.Header.Set("App-Token", HSAppToken)
-	r.Header.Set("Auth-Token", HSAuthToken)
-
-	if len(q) > 0 {
-		qs := r.URL.Query()
-		for k, v := range q {
-			qs.Add(k, v)
-		}
-		r.URL.RawQuery = qs.Encode()
-	}
-	resp, err := c.HTTPClient.Do(r)
-	if err != nil {
-		return nil, fmt.Errorf("can't send http request: %s", err)
-	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("invalid response code: %d", resp.StatusCode)
-	}
-	s, err := ioutil.ReadAll(resp.Body)
-	return s, err
-}
-
-func postJSONMessage(jsonData []byte) (string, error) {
-	var url = "https://slack.com/api/chat.postMessage"
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", SlackOutToken))
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	fmt.Println("response Status:", resp.Status)
-	//fmt.Println("response Headers:", resp.Header)
-	body, _ := ioutil.ReadAll(resp.Body)
-	//fmt.Println("response Body:", string(body))
-
-	return string(body), nil
-}
-func sendPOSTMessage(message *types.PostChannelMessage) (string, error) {
-
-	b, err := json.Marshal(message)
-	if err != nil {
-		fmt.Printf("Error: %s", err)
-		return "", err
-	}
-
-	fmt.Printf("JSON IS %+v:\n", string(b))
-
-	resp, err := postJSONMessage(b)
-
-	return resp, err
-}
-func postChannelMessage(text string, channelID string, asUser bool, username string) (string, error) {
-	var msg = &types.PostChannelMessage{
-		Token:    SlackOutToken,
-		Channel:  channelID,
-		AsUser:   asUser,
-		Text:     text,
-		Username: username,
-	}
-
-	return sendPOSTMessage(msg)
-}
-
-//Temporarily added. Will be deleted after basic development stage will be finished.
-func sendConsoleMessage(message string) error {
-	fmt.Println(
-		message,
-	)
-	return nil
-}
-func sendStandardMessage(message string) error {
-	_, err := postChannelMessage(
-		message,
-		SlackChannelID,
-		false,
-		SlackBotName,
-	)
-	if err != nil {
-		fmt.Printf("Error: %s", err)
-		return err
-	}
-	return nil
+	quit <- struct{}{}
+	close(quit)
 }
