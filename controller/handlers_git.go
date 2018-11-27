@@ -51,14 +51,18 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 	if req.TotalCommitsCount > 20 {
 		message += "*Warning! Some migration can be skipped which are in commits placed beyond the 20 commit barrier*\n"
 	}
+
+	c.App.Slack.SendStandardMessageWithIcon(
+		message,
+		c.Config.Slack.Channel.BackOfficeAppID,
+		req.UserName+" (bot)",
+		req.UserAvatar,
+	)
+
 	for _, commit := range req.Commits {
 		for _, f := range commit.Added {
+			message := "ADDED:\n"
 			if occurrences := r.FindStringSubmatch(string(f)); len(occurrences) > 0 {
-
-				//git.SetBaseURL("https://git.mydomain.com/api/v3")
-				//users, _, err := git.Users.ListUsers()
-				// TODO Define iteration order to find where is the most actual migration
-				// TODO take only last one file version through all commits
 				message += req.Project.Name + ", " + req.BranchPath + ", " + occurrences[0] + ":" + "\n"
 				if fileContents, err := c.App.GitGetFile(
 					req.Project.ID,
@@ -80,13 +84,8 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 			}
 		}
 		for _, f := range commit.Modified {
+			message := "MODIFIED:\n"
 			if occurrences := r.FindStringSubmatch(string(f)); len(occurrences) > 0 {
-
-				//git.SetBaseURL("https://git.mydomain.com/api/v3")
-				//users, _, err := git.Users.ListUsers()
-
-				// TODO Define iteration order to find where is the most actual migration
-				// TODO take only last one file version through all commits
 				message += req.Project.Name + ", " + req.BranchPath + ", " + occurrences[0] + ":" + "\n"
 				if fileContents, err := c.App.GitGetFile(
 					req.Project.ID,
@@ -97,18 +96,15 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 				} else {
 					message += fmt.Sprintf("```%s```", fileContents)
 				}
-
 				c.App.Slack.SendStandardMessageWithIcon(
 					message,
 					c.Config.Slack.Channel.BackOfficeAppID,
 					req.UserName+" (bot)",
 					req.UserAvatar,
 				)
-				//fmt.Println(message)
 			}
 		}
-
 	}
 
-	//c.respondOK(ctx, "ok")
+	c.respondOK(ctx, "ok")
 }

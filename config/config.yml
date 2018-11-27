@@ -7,8 +7,8 @@ gittoken:
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
-    username: b0s.at.works@gmail.com
-    password: 9a0a6d53724cbdda0eee6e59d01abea1
+    username:
+    password:
 
 slack:
   apiurl: https://slack.com/api
@@ -24,8 +24,8 @@ slack:
 hubstaff:
   apiurl: https://api.hubstaff.com
   auth:
-    token: 9mNJD2Jfom7FCwvvjlil8OP6pSb6bfKUZDDYmK-J2uE
+    token:
     apptoken: yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ
-    login: b0s.at.works@gmail.com
-    password: ckhw1yr6ne7g90rn5ocdt4hdnext3nhi
+    login:
+    password:
   orgsid: 60470
