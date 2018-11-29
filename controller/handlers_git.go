@@ -6,18 +6,20 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
-var r, _ = regexp.Compile(`/((etc|db)/migrations/[0-9]{4,}([0-9a-zA-Z_]+)?\.sql)`)
-
-type File string
-
+// Commit contain files list separated to Added, Modified and Removed slices
 type Commit struct {
-	Added    []File `json:"added"`
-	Modified []File `json:"modified"`
-	Removed  []File `json:"removed"`
+	// Added contain list of files which were added to a branch
+	Added []string `json:"added"`
+	// Modified contain list of files which were modified in a branch
+	Modified []string `json:"modified"`
+	// Removed contain list of files which were removed in a branch
+	Removed []string `json:"removed"`
 }
 
+// req is main GitLab Webhook request data parsing structure
 type req struct {
 	EventName  string `json:"object_kind" binding:"required"`
 	BranchPath string `json:"ref"    binding:"required"`
@@ -38,6 +40,9 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 
 	var req req
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		logrus.WithError(err).
+			WithField("req", req).
+			Error("can't parse GitLab WebHook data. Probably GitLab are changed their contract and the app have to be updated.")
 		c.respondBindingError(ctx, err, req)
 		return
 	}
@@ -58,6 +63,8 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 		req.UserName+" (bot)",
 		req.UserAvatar,
 	)
+
+	var r, _ = regexp.Compile(`/((etc|db)/migrations/[0-9]{4,}([0-9a-zA-Z_]+)?\.sql)`)
 
 	for _, commit := range req.Commits {
 		for _, f := range commit.Added {

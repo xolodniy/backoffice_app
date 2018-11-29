@@ -45,6 +45,7 @@ func (c *Controller) initRoutes() {
 		ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
 	})
 
+	// this endpoint will be used to receive data about Push actions made on GitLab on pushing local changes to remote branch on GitLab repository
 	c.Gin.POST("/api/v1/git/onevent/push", c.gitHandlerOnEventPush)
 
 }
