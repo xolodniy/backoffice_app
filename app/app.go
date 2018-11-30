@@ -11,16 +11,19 @@ import (
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/sirupsen/logrus"
+	"github.com/xanzy/go-gitlab"
 )
 
-type app struct {
+type App struct {
 	Hubstaff *clients.Hubstaff
 	Slack    *clients.Slack
 	Jira     *jira.Client
+	Git      *gitlab.Client
+	Config   config.Main
 }
 
-// New is main app constructor
-func New(config *config.Main) (*app, error) {
+// New is main App constructor
+func New(config *config.Main) (*App, error) {
 	Hubstaff := &clients.Hubstaff{
 		HTTPClient: http.DefaultClient,
 		AppToken:   config.Hubstaff.Auth.AppToken,
@@ -41,16 +44,18 @@ func New(config *config.Main) (*app, error) {
 		},
 		Channel: clients.SlackChannel{
 			BotName: config.Slack.Channel.BotName,
-			ID:      "#" + config.Slack.Channel.ID,
+			ID:      "#" + config.Slack.Channel.BackOfficeAppID,
 		},
 	}
 
-	return &app{Hubstaff, slack, jiraClient}, nil
+	git := gitlab.NewClient(nil, config.GitToken)
+
+	return &App{Hubstaff, slack, jiraClient, git, *config}, nil
 
 }
 
 // GetWorkersWorkedTimeAndSendToSlack gather workers work time made through period between dates and send it to Slack channel
-func (a *app) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, orgID int64) {
+func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, orgID int64) {
 	orgsList, err := a.GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd, orgID)
 	if err != nil {
 		panic(fmt.Sprintf("Hubstaff error: %v", err))
@@ -69,7 +74,8 @@ func (a *app) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		err := a.Slack.SendStandardMessage(
 			"No tracked time for now or no organization found",
 			a.Slack.Channel.ID,
-			a.Slack.Channel.BotName)
+			a.Slack.Channel.BotName,
+		)
 		if err != nil {
 			panic(fmt.Sprintf("Slack error: %s", err))
 		}
@@ -97,7 +103,8 @@ func (a *app) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		}
 	}
 
-	if err := a.Slack.SendStandardMessage(message,
+	if err := a.Slack.SendStandardMessage(
+		message,
 		a.Slack.Channel.ID,
 		a.Slack.Channel.BotName); err != nil {
 		panic(fmt.Sprintf("Slack error: %s", err))
@@ -106,7 +113,7 @@ func (a *app) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 }
 
 // SecondsToClockTime converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
-func (_ *app) SecondsToClockTime(durationInSeconds int) (string, error) {
+func (_ *App) SecondsToClockTime(durationInSeconds int) (string, error) {
 	var someTime time.Time
 	r, err := regexp.Compile(` ([0-9]{2,2}:[0-9]{2,2}):[0-9]{2,2}`)
 	if err != nil {

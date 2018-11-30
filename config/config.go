@@ -9,9 +9,12 @@ import (
 
 // Main is template to storing of all configuration settings needed
 type Main struct {
+	LogLevel                        string
+	GinPort                         string
 	DailyReportCronTime             string
 	WeeklyReportCronTime            string
 	TaskTimeExceedionReportCronTime string
+	GitToken                        string
 	Jira                            struct {
 		Auth   jira.BasicAuthTransport
 		APIUrl string
@@ -22,8 +25,9 @@ type Main struct {
 			OutToken string
 		}
 		Channel struct {
-			BotName string
-			ID      string
+			BotName         string
+			BackOfficeAppID string
+			MigrationsID    string
 		}
 		APIUrl string
 	}

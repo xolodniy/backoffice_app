@@ -7,7 +7,7 @@ import (
 )
 
 // IssuesSearch searches Issues in all sprints which opened now and returning list with issues in this sprints list
-func (a *app) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
+func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
 	// allIssues including issues from other sprints and not closed
 	allIssues, response, err := a.Jira.Issue.Search(
 		`Sprint IN openSprints()`,

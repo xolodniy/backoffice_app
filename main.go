@@ -11,8 +11,10 @@ import (
 
 	"backoffice_app/app"
 	"backoffice_app/config"
+	"backoffice_app/controller"
 	"backoffice_app/libs/task_manager"
 
+	"github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -24,6 +26,42 @@ import (
 func main() {
 
 	{
+		cfg, err := config.GetConfig(true)
+		if err != nil {
+			panic(err)
+		}
+
+		switch cfg.LogLevel {
+		case "debug":
+			logrus.SetLevel(logrus.DebugLevel)
+		case "info":
+			logrus.SetLevel(logrus.InfoLevel)
+		case "warn":
+			logrus.SetLevel(logrus.WarnLevel)
+		case "error":
+			logrus.SetLevel(logrus.ErrorLevel)
+		case "fatal":
+			logrus.SetLevel(logrus.FatalLevel)
+		case "panic":
+			logrus.SetLevel(logrus.PanicLevel)
+		default:
+			panic("invalid logLevel \"" + cfg.LogLevel + "\"in cfg. available levels:\n" +
+				"\t- debug\n" +
+				"\t- info\n" +
+				"\t- warn\n" +
+				"\t- error\n" +
+				"\t- fatal\n" +
+				"\t- panic")
+		}
+
+		// Log as JSON instead of the default ASCII formatter, but wrapped with the runtime Formatter.
+		formatter := runtime.Formatter{ChildFormatter: &logrus.TextFormatter{}}
+		// Enable line number logging as well
+		formatter.Line = true
+
+		// Replace the default Logrus Formatter with our runtime Formatter
+		logrus.SetFormatter(&formatter)
+
 		now.WeekStartDay = time.Monday // Set Monday as first day, default is Sunday
 
 		cliApp := cli.NewApp()
@@ -31,15 +69,13 @@ func main() {
 		cliApp.Usage = "It's the best application for real time workers day and week progress."
 
 		cliApp.Action = func(c *cli.Context) {
-			cfg, err := config.GetConfig(true)
-			if err != nil {
-				panic(err)
-			}
-
 			app, err := app.New(cfg)
 			if err != nil {
 				panic(err)
 			}
+
+			controller.New(*cfg).Start()
+
 			wg := sync.WaitGroup{}
 			tm := task_manager.New(&wg)
 
@@ -107,11 +143,6 @@ func main() {
 				Name:  "get-jira-exceedions-now",
 				Usage: "Gets jira exceedions right now",
 				Action: func(c *cli.Context) {
-					cfg, err := config.GetConfig(true)
-					if err != nil {
-						panic(err)
-					}
-
 					services, err := app.New(cfg)
 					if err != nil {
 						panic(err)
@@ -150,11 +181,6 @@ func main() {
 				Name:  "make-weekly-report-now",
 				Usage: "Sends weekly report to slack channel",
 				Action: func(c *cli.Context) {
-					cfg, err := config.GetConfig(true)
-					if err != nil {
-						panic(err)
-					}
-
 					services, err := app.New(cfg)
 					if err != nil {
 						panic(err)
@@ -171,11 +197,6 @@ func main() {
 				Name:  "make-daily-report-now",
 				Usage: "Sends daily report to slack channel",
 				Action: func(c *cli.Context) {
-					cfg, err := config.GetConfig(true)
-					if err != nil {
-						panic(err)
-					}
-
 					services, err := app.New(cfg)
 					if err != nil {
 						panic(err)
@@ -192,10 +213,6 @@ func main() {
 				Name:  "obtain-hubstaff-token",
 				Usage: "Obtains Hubstaff authorization token.",
 				Action: func(c *cli.Context) {
-					cfg, err := config.GetConfig(true)
-					if err != nil {
-						panic(err)
-					}
 
 					services, err := app.New(cfg)
 					if err != nil {

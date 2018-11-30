@@ -9,7 +9,7 @@ import (
 )
 
 // GetWorkersTimeByOrganization returning workers times by organization id
-func (a *app) GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, OrgID int64) (types.Organizations, error) {
+func (a *App) GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, OrgID int64) (types.Organizations, error) {
 
 	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
 	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
