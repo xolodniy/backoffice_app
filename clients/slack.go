@@ -12,9 +12,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// sendItJustInConsole defines whether the app should send messages just in console, but not in Slack channel (needs while further development work)
-const sendItJustInConsole = false
-
 // Slack is main Slack client app implementation
 type Slack struct {
 	Auth    SlackAuth
@@ -36,10 +33,7 @@ type SlackChannel struct {
 
 // SendStandardMessage is main message sending method
 func (slack *Slack) SendStandardMessage(message, channelID, botName string) error {
-	if sendItJustInConsole {
-		slack.SendConsoleMessage(message)
-		return nil
-	}
+	logrus.Debug("Slack standard message sent:\n %+v", message)
 
 	_, err := slack.postChannelMessage(
 		message,
@@ -56,10 +50,7 @@ func (slack *Slack) SendStandardMessage(message, channelID, botName string) erro
 
 // SendStandardMessage is main message sending method
 func (slack *Slack) SendStandardMessageWithIcon(message, channelID, botName string, iconURL string) error {
-	if sendItJustInConsole {
-		slack.SendConsoleMessage(message)
-		return nil
-	}
+	logrus.Debug("Slack standard message with icon sent:\n %+v", message)
 
 	_, err := slack.postChannelMessage(
 		message,
