@@ -18,6 +18,14 @@
   version = "v1.5.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:2943b37228f15f48757416661541cd25fec4fda2807a9fdae0b2ddced87a341d"
+  name = "github.com/banzaicloud/logrus-runtime-formatter"
+  packages = ["."]
+  pruneopts = ""
+  revision = "12df4a18567f1e9635135cdc241c6917795e2cc7"
+
+[[projects]]
   digest = "1:55848e643a99a9dfceb19e090ce67111328fbb1780f34c62a0430994ff85fb90"
   name = "github.com/fatih/structs"
   packages = ["."]
@@ -255,6 +263,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/andygrunwald/go-jira",
+    "github.com/banzaicloud/logrus-runtime-formatter",
     "github.com/gin-gonic/gin",
     "github.com/jinzhu/configor",
     "github.com/jinzhu/now",

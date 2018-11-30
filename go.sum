@@ -3,6 +3,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/andygrunwald/go-jira v1.5.0/go.mod h1:yNYQrX3nGSrVdcVsM2mWz2pm7tTeDtYfRyVEkc3VUiY=
 github.com/andygrunwald/go-jira v1.6.0 h1:3MnayaTwpkoFxClyRlrAfOAH83wCWjaZoZcW76Kly+o=
 github.com/andygrunwald/go-jira v1.6.0/go.mod h1:yNYQrX3nGSrVdcVsM2mWz2pm7tTeDtYfRyVEkc3VUiY=
+github.com/banzaicloud/logrus-runtime-formatter v0.0.0-20180617171254-12df4a18567f h1:WeGZeO6I+lI1IG2vm1iXTeMrHLcMUjfoYm+rubBM5c4=
+github.com/banzaicloud/logrus-runtime-formatter v0.0.0-20180617171254-12df4a18567f/go.mod h1:2GxaTh0YYmhQEMQ4wJ8Izr7sBecWZtnXlDzybR1hSO8=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/fatih/structs v1.0.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga6PJ7M=
