@@ -22,6 +22,7 @@ type App struct {
 	Config   config.Main
 }
 
+// test
 // New is main App constructor
 func New(config *config.Main) (*App, error) {
 	Hubstaff := &clients.Hubstaff{
