@@ -22,7 +22,6 @@ type App struct {
 	Config   config.Main
 }
 
-// test
 // New is main App constructor
 func New(config *config.Main) (*App, error) {
 	Hubstaff := &clients.Hubstaff{
@@ -84,6 +83,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	}
 
 	//fmt.Println("Hubstaff output:")
+	
 	//spew.Dump(orgsList)
 
 	// Only one organization needed for now
