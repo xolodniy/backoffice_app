@@ -83,6 +83,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	}
 
 	//fmt.Println("Hubstaff output:")
+	
 	//spew.Dump(orgsList)
 
 	// Only one organization needed for now
