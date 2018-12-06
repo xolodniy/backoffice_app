@@ -12,7 +12,6 @@ pipelines:
         script:
           - go build
         artifacts:
-          paths:
           - backoffice_app
     - step:
         name: test backend
