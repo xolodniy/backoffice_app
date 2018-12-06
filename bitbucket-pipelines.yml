@@ -1,8 +1,3 @@
-# This is a sample build configuration for Go.
-# Check our guides at https://confluence.atlassian.com/x/5Q4SMw for more examples.
-# Only use spaces to indent your .yml configuration.
-# -----
-# You can specify a custom docker image from Docker Hub as your build environment.
 image: golang:1.11
 
 pipelines:
@@ -13,8 +8,6 @@ pipelines:
           - go build
           - mv backoffice_app backoffice_app_$BITBUCKET_BRANCH
           - curl -H "Authorization:Basic c21vcm96b3ZraTA5MTFAZ21haWwuY29tOjEyMTMxMjEz" -X POST "https://api.bitbucket.org/2.0/repositories/theflowglobal/backoffice_app/downloads" --form files=@"backoffice_app_$BITBUCKET_BRANCH"
-        artifacts:
-          - backoffice_app
     - step:
         name: test backend
         script:
