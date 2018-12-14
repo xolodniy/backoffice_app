@@ -1,0 +1,6 @@
+# TODO: vault-encrypt these variables when used in production.
+---
+
+project_name: "backoffice_app"
+bitbucket_private_token: "c21vcm96b3ZraTA5MTFAZ21haWwuY29tOjEyMTMxMjEz" # TODO: Encrypt it.
+backend_port: 23799

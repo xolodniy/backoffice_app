@@ -1,0 +1,11 @@
+---
+- hosts: backoffice_app
+  vars:
+    - version: BOA-20-test-ci
+    - service_name: "api"
+    - command: ""
+  roles:
+    - common
+    - backend
+    - service
+
