@@ -11,6 +11,7 @@
     headers:
       Authorization: "Basic {{ bitbucket_private_token }}"
   register: output
+  failed_when: output.status != 302
 
 - name: fetch back-end artifacts
   uri:
