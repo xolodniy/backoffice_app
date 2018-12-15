@@ -4,12 +4,12 @@ ginport: {{ backend_port }}
 dailyreportcrontime: "00 00 07 * * *"
 weeklyreportcrontime: "00 00 07 * * *"
 tasktimeexceedionreportcrontime: "@every 1h"
-gittoken:
+gittoken: {{ gitlab_token }}
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
-    username:
-    password:
+    username: {{ jira_login }}
+    password: {{ jira_password }}
 
 slack:
   apiurl: https://slack.com/api
@@ -25,7 +25,7 @@ slack:
 hubstaff:
   apiurl: https://api.hubstaff.com
   auth:
-    token:
+    token: {{ hubstaff_token }}
     apptoken: yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ
     login:
     password:
