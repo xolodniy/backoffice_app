@@ -74,7 +74,10 @@ func main() {
 				panic(err)
 			}
 
-			controller.New(*cfg).Start()
+			go func(cfg *config.Main) {
+				controller.New(*cfg).Start()
+			}(cfg)
+			log.Println("Requests listener started.")
 
 			wg := sync.WaitGroup{}
 			tm := task_manager.New(&wg)
@@ -100,8 +103,9 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+				var index = 1
 				var msgBody = "Employees have exceeded tasks:\n"
-				for index, issue := range allIssues {
+				for _, issue := range allIssues {
 					if issue.Fields.TimeSpent > issue.Fields.TimeOriginalEstimate {
 						ts, err := app.SecondsToClockTime(issue.Fields.TimeSpent)
 						if err != nil {
@@ -115,9 +119,10 @@ func main() {
 							continue
 						}
 
-						msgBody += fmt.Sprintf("%d. %s - %s: %v из %v\n",
+						msgBody += fmt.Sprintf("%[1]d. <https://theflow.atlassian.net/browse/%[2]s|%[2]s - %[3]s>: %[4]v из %[5]v\n",
 							index, issue.Key, issue.Fields.Summary, ts, te,
 						)
+						index++
 
 					}
 
@@ -153,7 +158,8 @@ func main() {
 						panic(err)
 					}
 					var msgBody = "Employees have exceeded tasks:\n"
-					for index, issue := range allIssues {
+					var index = 1
+					for _, issue := range allIssues {
 						if issue.Fields.TimeSpent > issue.Fields.TimeOriginalEstimate {
 							ts, err := services.SecondsToClockTime(issue.Fields.TimeSpent)
 							te, err := services.SecondsToClockTime(issue.Fields.TimeOriginalEstimate)
@@ -162,9 +168,11 @@ func main() {
 								continue
 							}
 
-							msgBody += fmt.Sprintf("%d. %s - %s: %v из %v\n",
+							msgBody += fmt.Sprintf("%[1]d. <https://theflow.atlassian.net/browse/%[2]s|%[2]s - %[3]s>: %[4]v из %[5]v\n",
 								index, issue.Key, issue.Fields.Summary, ts, te,
 							)
+
+							index++
 
 						}
 

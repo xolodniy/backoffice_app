@@ -40,6 +40,7 @@ type Client struct {
 	Component      *ComponentService
 	Resolution     *ResolutionService
 	StatusCategory *StatusCategoryService
+	Filter         *FilterService
 }
 
 // NewClient returns a new JIRA API client.
@@ -81,6 +82,7 @@ func NewClient(httpClient *http.Client, baseURL string) (*Client, error) {
 	c.Component = &ComponentService{client: c}
 	c.Resolution = &ResolutionService{client: c}
 	c.StatusCategory = &StatusCategoryService{client: c}
+	c.Filter = &FilterService{client: c}
 
 	return c, nil
 }
@@ -375,7 +377,10 @@ func (t *CookieAuthTransport) RoundTrip(req *http.Request) (*http.Response, erro
 
 	req2 := cloneRequest(req) // per RoundTripper contract
 	for _, cookie := range t.SessionObject {
-		req2.AddCookie(cookie)
+		// Don't add an empty value cookie to the request
+		if cookie.Value != "" {
+			req2.AddCookie(cookie)
+		}
 	}
 
 	return t.transport().RoundTrip(req2)

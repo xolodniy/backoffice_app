@@ -22,6 +22,9 @@ func New(config config.Main) *Controller {
 	if err != nil {
 		panic(err)
 	}
+	if config.GinDebugMode != true {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	return &Controller{
 		Config: config,
 		Gin:    gin.Default(),

@@ -11,6 +11,7 @@ import (
 type Main struct {
 	LogLevel                        string
 	GinPort                         string
+	GinDebugMode                    bool
 	DailyReportCronTime             string
 	WeeklyReportCronTime            string
 	TaskTimeExceedionReportCronTime string
