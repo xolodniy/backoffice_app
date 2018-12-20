@@ -1,6 +1,6 @@
 loglevel: debug
 ginport: {{ backend_port }}
-
+gindebugmode: {{ gin_debug_mode }}
 dailyreportcrontime: "00 00 07 * * *"
 weeklyreportcrontime: "00 00 07 * * *"
 tasktimeexceedionreportcrontime: "@every 1h"
