@@ -17,6 +17,7 @@ func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
 			ValidateQuery: "strict",
 			Fields: []string{
 				"customfield_10010", // Sprint
+				"timetracking",
 				"timespent",
 				"timeoriginalestimate",
 				"summary",
@@ -31,4 +32,35 @@ func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
 	}
 
 	return allIssues, response, nil
+}
+
+func (a *App) IssueTimeExcisionWWithTimeCompare(issue jira.Issue, rowIndex int) (string, error) {
+	var listRow string
+	if issue.Fields.TimeSpent > issue.Fields.TimeOriginalEstimate {
+
+		ts, err := a.SecondsToClockTime(issue.Fields.TimeSpent)
+		te, err := a.SecondsToClockTime(issue.Fields.TimeOriginalEstimate)
+		if err != nil {
+			return listRow, fmt.Errorf("time conversion: regexp error: %v", err)
+
+		}
+
+		listRow = fmt.Sprintf("%[1]d. <https://theflow.atlassian.net/browse/%[2]s|%[2]s - %[3]s>: %[4]v из %[5]v\n",
+			rowIndex, issue.Key, issue.Fields.Summary, ts, te,
+		)
+
+	}
+
+	return listRow, nil
+}
+
+func (a *App) IssueTimeExcisionNoTimeRange(issue jira.Issue, rowIndex int) string {
+	var listRow string
+	if issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
+		listRow = fmt.Sprintf("%[1]d. <https://theflow.atlassian.net/browse/%[2]s|%[2]s - %[3]s>\n",
+			rowIndex, issue.Key, issue.Fields.Summary,
+		)
+	}
+
+	return listRow
 }

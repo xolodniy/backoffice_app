@@ -106,26 +106,15 @@ func main() {
 				var index = 1
 				var msgBody = "Employees have exceeded tasks:\n"
 				for _, issue := range allIssues {
-					if issue.Fields.TimeSpent > issue.Fields.TimeOriginalEstimate {
-						ts, err := app.SecondsToClockTime(issue.Fields.TimeSpent)
-						if err != nil {
-							logrus.Errorf("time spent conversion: regexp error: %v", err)
-							continue
-						}
-
-						te, err := app.SecondsToClockTime(issue.Fields.TimeOriginalEstimate)
-						if err != nil {
-							logrus.Errorf("time spent conversion: regexp error: %v", err)
-							continue
-						}
-
-						msgBody += fmt.Sprintf("%[1]d. <https://theflow.atlassian.net/browse/%[2]s|%[2]s - %[3]s>: %[4]v из %[5]v\n",
-							index, issue.Key, issue.Fields.Summary, ts, te,
-						)
+					/*listRow, err := services.IssueTimeExcisionWWithTimeCompare(issue, index)
+					if err != nil {
+						logrus.Error(err)
+						continue
+					}*/
+					if listRow := app.IssueTimeExcisionNoTimeRange(issue, index); listRow != "" {
+						msgBody += listRow
 						index++
-
 					}
-
 				}
 
 				app.Slack.SendStandardMessage(
@@ -160,22 +149,16 @@ func main() {
 					var msgBody = "Employees have exceeded tasks:\n"
 					var index = 1
 					for _, issue := range allIssues {
-						if issue.Fields.TimeSpent > issue.Fields.TimeOriginalEstimate {
-							ts, err := services.SecondsToClockTime(issue.Fields.TimeSpent)
-							te, err := services.SecondsToClockTime(issue.Fields.TimeOriginalEstimate)
-							if err != nil {
-								logrus.Errorf("time conversion: regexp error: %v", err)
-								continue
-							}
+						/*listRow, err := services.IssueTimeExcisionWWithTimeCompare(issue, index)
+						if err != nil {
+							logrus.Error(err)
+							continue
+						}*/
 
-							msgBody += fmt.Sprintf("%[1]d. <https://theflow.atlassian.net/browse/%[2]s|%[2]s - %[3]s>: %[4]v из %[5]v\n",
-								index, issue.Key, issue.Fields.Summary, ts, te,
-							)
-
+						if listRow := services.IssueTimeExcisionNoTimeRange(issue, index); listRow != "" {
+							msgBody += listRow
 							index++
-
 						}
-
 					}
 
 					services.Slack.SendStandardMessage(
