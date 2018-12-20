@@ -1,0 +1,39 @@
+---
+- name: name new relese
+  command: "date +{{ project_name }}-{{ version }}_%F_%H:%M:%S.%N"
+  register: cur_release_name
+
+# Two-step request for preventing auto-redirect and intersection of auth methods
+- name: retrieve location of back-end artifacts
+  uri:
+    url: "https://api.bitbucket.org/2.0/repositories/theflowglobal/{{ project_name }}/downloads/{{ project_name }}_{{ version }}"
+    follow_redirects: none
+    headers:
+      Authorization: "Basic {{ bitbucket_private_token }}"
+  register: output
+  failed_when: output.status != 302
+
+- name: fetch back-end artifacts
+  uri:
+    url: "{{ output.location }}"
+    dest: "/tmp/{{ cur_release_name.stdout }}"
+
+- name: copy the back-end binary
+  copy:
+    remote_src: yes
+    src: "/tmp/{{ cur_release_name.stdout }}"
+    dest: "/usr/local/bin/{{ project_name }}"
+    mode: 0755
+    force: yes
+
+- name: create config directory
+  file:
+    path: /etc/{{ project_name }}
+    state: directory
+
+- name: copy app configuration
+  template:
+    src: config.yml
+    dest: "/etc/{{ project_name }}/config.yml"
+    mode: 0755
+    force: yes
