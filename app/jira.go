@@ -11,7 +11,7 @@ func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
 	// allIssues including issues from other sprints and not closed
 	allIssues, response, err := a.Jira.Issue.Search(
 		/*`Sprint IN openSprints() AND (status NOT IN ("Closed", "IN PEER REVIEW", "TL REVIEW"))`,*/
-		`Sprint IN openSprints() AND (status NOT IN "Closed")`,
+		`assignee != "empty" AND Sprint IN openSprints() AND (status NOT IN ("Closed"))`,
 		&jira.SearchOptions{
 			StartAt:       0,
 			MaxResults:    1000,
@@ -58,8 +58,8 @@ func (a *App) IssueTimeExcisionWWithTimeCompare(issue jira.Issue, rowIndex int) 
 func (a *App) IssueTimeExcisionNoTimeRange(issue jira.Issue, rowIndex int) string {
 	var listRow string
 	if issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
-		listRow = fmt.Sprintf("%[1]d. <https://theflow.atlassian.net/browse/%[2]s|%[2]s - %[3]s>\n",
-			rowIndex, issue.Key, issue.Fields.Summary,
+		listRow = fmt.Sprintf("%[1]d. <https://theflow.atlassian.net/browse/%[2]s|%[2]s - %[3]s>: _%[4]s_\n",
+			rowIndex, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name,
 		)
 	}
 
