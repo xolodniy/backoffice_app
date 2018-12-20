@@ -10,7 +10,8 @@ import (
 func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
 	// allIssues including issues from other sprints and not closed
 	allIssues, response, err := a.Jira.Issue.Search(
-		`Sprint IN openSprints()`,
+		/*`Sprint IN openSprints() AND (status NOT IN ("Closed", "IN PEER REVIEW", "TL REVIEW"))`,*/
+		`Sprint IN openSprints() AND (status NOT IN "Closed")`,
 		&jira.SearchOptions{
 			StartAt:       0,
 			MaxResults:    1000,
