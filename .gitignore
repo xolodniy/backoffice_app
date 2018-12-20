@@ -1,2 +1,3 @@
+./etc/backoffice_app/config.dev.yml
 /vendor
 .idea/

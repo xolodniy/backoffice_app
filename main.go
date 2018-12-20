@@ -45,7 +45,7 @@ func main() {
 		case "panic":
 			logrus.SetLevel(logrus.PanicLevel)
 		default:
-			panic("invalid logLevel \"" + cfg.LogLevel + "\"in cfg. available levels:\n" +
+			panic("invalid logLevel \"" + cfg.LogLevel + "\" in cfg. available levels:\n" +
 				"\t- debug\n" +
 				"\t- info\n" +
 				"\t- warn\n" +
