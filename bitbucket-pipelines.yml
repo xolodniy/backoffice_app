@@ -7,7 +7,7 @@ pipelines:
         script:
           - go build
           - mv backoffice_app backoffice_app_$BITBUCKET_BRANCH
-          - curl -H "Authorization:Basic c21vcm96b3ZraTA5MTFAZ21haWwuY29tOjEyMTMxMjEz" -X POST "https://api.bitbucket.org/2.0/repositories/theflowglobal/backoffice_app/downloads" --form files=@"backoffice_app_$BITBUCKET_BRANCH"
+          - curl -H "Authorization:Basic c21vcm96b3ZraTA5MTFAZ21haWwuY29tOjEyMzEyMzEyMw==" -X POST "https://api.bitbucket.org/2.0/repositories/theflowglobal/backoffice_app/downloads" --form files=@"backoffice_app_$BITBUCKET_BRANCH"
     - step:
         name: test backend
         script:
