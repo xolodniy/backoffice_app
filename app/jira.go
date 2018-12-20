@@ -10,14 +10,15 @@ import (
 func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
 	// allIssues including issues from other sprints and not closed
 	allIssues, response, err := a.Jira.Issue.Search(
-		/*`Sprint IN openSprints() AND (status NOT IN ("Closed", "IN PEER REVIEW", "TL REVIEW"))`,*/
-		`assignee != "empty" AND Sprint IN openSprints() AND (status NOT IN ("Closed"))`,
+		/*`Sprint IN openSprints() AND (status NOT IN ("Closed", "IN PEER REVIEW", "TL REVIEW")) AND (type NOT IN ("Story"))`,*/
+		`assignee != "empty" AND Sprint IN openSprints() AND (status NOT IN ("Closed")) AND issuetype IN subTaskIssueTypes()`,
 		&jira.SearchOptions{
 			StartAt:       0,
 			MaxResults:    1000,
 			ValidateQuery: "strict",
 			Fields: []string{
-				"customfield_10010", // Sprint
+				"customfield_10026", // Sprint
+				/*"customfield_10010",*/ // Sprint
 				"timetracking",
 				"timespent",
 				"timeoriginalestimate",
@@ -58,8 +59,16 @@ func (a *App) IssueTimeExcisionWWithTimeCompare(issue jira.Issue, rowIndex int) 
 func (a *App) IssueTimeExceededNoTimeRange(issue jira.Issue, rowIndex int) string {
 	var listRow string
 	if issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
-		listRow = fmt.Sprintf("%[1]d. <https://theflow.atlassian.net/browse/%[2]s|%[2]s - %[3]s>: _%[4]s_\n",
-			rowIndex, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name,
+
+		var developer string
+		if developerMap, err := issue.Fields.Unknowns.MarshalMap("customfield_10026"); err == nil && developerMap != nil {
+			developer = developerMap["displayName"].(string)
+		} else {
+			developer = "No developer"
+		}
+
+		listRow = fmt.Sprintf("%[1]d. %[2]s - <https://theflow.atlassian.net/browse/%[3]s|%[3]s - %[4]s>: _%[5]s_\n",
+			rowIndex, developer, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name,
 		)
 	}
 
