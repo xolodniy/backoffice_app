@@ -55,7 +55,7 @@ func (a *App) IssueTimeExcisionWWithTimeCompare(issue jira.Issue, rowIndex int) 
 	return listRow, nil
 }
 
-func (a *App) IssueTimeExcisionNoTimeRange(issue jira.Issue, rowIndex int) string {
+func (a *App) IssueTimeExceededNoTimeRange(issue jira.Issue, rowIndex int) string {
 	var listRow string
 	if issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
 		listRow = fmt.Sprintf("%[1]d. <https://theflow.atlassian.net/browse/%[2]s|%[2]s - %[3]s>: _%[4]s_\n",

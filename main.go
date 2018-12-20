@@ -111,7 +111,7 @@ func main() {
 						logrus.Error(err)
 						continue
 					}*/
-					if listRow := app.IssueTimeExcisionNoTimeRange(issue, index); listRow != "" {
+					if listRow := app.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
 						msgBody += listRow
 						index++
 					}
@@ -155,7 +155,7 @@ func main() {
 							continue
 						}*/
 
-						if listRow := services.IssueTimeExcisionNoTimeRange(issue, index); listRow != "" {
+						if listRow := services.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
 							msgBody += listRow
 							index++
 						}
