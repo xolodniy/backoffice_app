@@ -33,7 +33,7 @@ type SlackChannel struct {
 
 // SendStandardMessage is main message sending method
 func (slack *Slack) SendStandardMessage(message, channelID, botName string) error {
-	logrus.Debug("Slack standard message sent:\n %+v", message)
+	logrus.Debugf("Slack standard message sent:\n %v", message)
 
 	_, err := slack.postChannelMessage(
 		message,
@@ -50,7 +50,7 @@ func (slack *Slack) SendStandardMessage(message, channelID, botName string) erro
 
 // SendStandardMessage is main message sending method
 func (slack *Slack) SendStandardMessageWithIcon(message, channelID, botName string, iconURL string) error {
-	logrus.Debug("Slack standard message with icon sent:\n %+v", message)
+	logrus.Debugf("Slack standard message with icon sent:\n %v", message)
 
 	_, err := slack.postChannelMessage(
 		message,

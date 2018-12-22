@@ -1,0 +1,23 @@
+---
+- name: copy systemd configuration
+  template:
+    src: project.service
+    dest: /usr/lib/systemd/system/{{ project_name }}_{{ service_name }}.service
+    force: yes
+
+- name: restart {{ project_name }}_{{ service_name }} service
+  systemd:
+    name: "{{ project_name }}_{{ service_name }}"
+    state: restarted
+    daemon_reload: yes
+
+- name: scan {{ project_name }}_{{ service_name }} status
+  command: "systemctl status {{ project_name }}_{{ service_name }}"
+  register: result
+  failed_when: false
+
+- name: aborting if {{ project_name }}_{{ service_name }} is not running
+  when: result.rc != 0
+  debug:
+    var: result.stdout_lines
+  failed_when: true

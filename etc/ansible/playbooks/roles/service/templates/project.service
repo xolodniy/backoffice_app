@@ -1,0 +1,8 @@
+[Unit]
+Description={{ project_name }} {{ service_name }}
+
+[Service]
+ExecStart=/usr/local/bin/{{ project_name }} {{ command }}
+
+[Install]
+WantedBy=default.target

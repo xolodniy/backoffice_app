@@ -1,0 +1,14 @@
+# TODO: vault-encrypt these variables when used in production.
+---
+
+project_name: backoffice_app
+backend_port: 23799
+
+bitbucket_private_token: c21vcm96b3ZraTA5MTFAZ21haWwuY29tOjEyMzEyMzEyMw== # login:password in base64 TODO: Encrypt it.
+
+gitlab_token: JmzCVZJ7xxssy55sv7eS # Maintainer's token
+
+jira_login: smorozovki0911@gmail.com # TODO: special account with full read access
+jira_password: 123123123
+
+hubstaff_token: BhC8BzeH31pemX-iR2KffMnYm5JmkoJ2_lt6oN4Ma_c # TODO: improve obtaining, currently available until 15.01.2019

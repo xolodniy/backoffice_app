@@ -48,7 +48,7 @@ type Main struct {
 func GetConfig(skipFieldsFilledCheck bool) (*Main, error) {
 	var config Main
 	//configor.New(&configor.Main{Debug: true}).Load(&config, "config/config.yml")
-	if err := configor.Load(&config, "config/config.yml"); err != nil {
+	if err := configor.Load(&config, "/etc/backoffice_app/config.yml"); err != nil {
 		return &Main{}, err
 
 	}
