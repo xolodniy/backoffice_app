@@ -74,9 +74,8 @@ func main() {
 				panic(err)
 			}
 
-			go func(cfg *config.Main) {
-				controller.New(*cfg).Start()
-			}(cfg)
+			go controller.New(*cfg).Start()
+
 			log.Println("Requests listener started.")
 
 			wg := sync.WaitGroup{}
