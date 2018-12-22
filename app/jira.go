@@ -8,17 +8,14 @@ import (
 
 // IssuesSearch searches Issues in all sprints which opened now and returning list with issues in this sprints list
 func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
-	// allIssues including issues from other sprints and not closed
 	allIssues, response, err := a.Jira.Issue.Search(
-		/*`Sprint IN openSprints() AND (status NOT IN ("Closed", "IN PEER REVIEW", "TL REVIEW")) AND (type NOT IN ("Story"))`,*/
 		`assignee != "empty" AND Sprint IN openSprints() AND (status NOT IN ("Closed")) AND issuetype IN subTaskIssueTypes()`,
 		&jira.SearchOptions{
 			StartAt:       0,
 			MaxResults:    1000,
 			ValidateQuery: "strict",
 			Fields: []string{
-				"customfield_10026", // Sprint
-				/*"customfield_10010",*/ // Sprint
+				"customfield_10026",
 				"timetracking",
 				"timespent",
 				"timeoriginalestimate",

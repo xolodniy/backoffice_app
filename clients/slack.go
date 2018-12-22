@@ -78,7 +78,6 @@ func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
 
 	logrus.Info("Slack request body:", string(jsonData))
 	logrus.Info("Slack response Status:", resp.Status)
-	//fmt.Println("response Headers:", resp.Header)
 	body, _ := ioutil.ReadAll(resp.Body)
 
 	var responseBody struct {
@@ -103,9 +102,6 @@ func (slack *Slack) sendPOSTMessage(message *types.PostChannelMessage) (string, 
 	if err != nil {
 		return "", err
 	}
-
-	//log.Printf("sendPOSTMessage message: \n")
-	//spew.Dump(message)
 
 	resp, err := slack.postJSONMessage(b)
 

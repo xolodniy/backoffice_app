@@ -48,14 +48,10 @@ type Main struct {
 // GetConfig return config parsed from config/config.yml
 func GetConfig(skipFieldsFilledCheck bool) (*Main, error) {
 	var config Main
-	//configor.New(&configor.Main{Debug: true}).Load(&config, "config/config.yml")
 	if err := configor.Load(&config, "/etc/backoffice_app/config.yml"); err != nil {
 		return &Main{}, err
 
 	}
-
-	//spew.Dump(config)
-	//fmt.Printf("config: %+v\n", config)
 
 	if !skipFieldsFilledCheck {
 		if err := config.checkConfig(); err != nil {
@@ -85,7 +81,6 @@ func (config *Main) checkConfig() error {
 	if config.Hubstaff.Auth.Token == "" {
 		return fmt.Errorf("Hubstaff Auth Token is not specified. You can obtain it with \"obtain-hubstaff-token\" option, and then please set it in configuration file «config/config.yml».")
 	}
-	//fmt.Printf("config: %+v\n", config)
 
 	return nil
 }

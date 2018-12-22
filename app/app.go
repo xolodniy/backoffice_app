@@ -82,11 +82,6 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		return
 	}
 
-	//fmt.Println("Hubstaff output:")
-	
-	//spew.Dump(orgsList)
-
-	// Only one organization needed for now
 	if len(orgsList[0].Workers) == 0 {
 		message = "No tracked time for now or no workers found"
 	} else {

@@ -20,9 +20,6 @@ import (
 	"github.com/urfave/cli"
 )
 
-//var dateOfWorkdaysStart = time.Date(2018, 9, 10, 0, 0, 0, 0, time.Local)
-//var dateOfWorkdaysEnd = time.Date(2018, 9, 11, 23, 59, 59, 0, time.Local)
-
 func main() {
 
 	{
@@ -54,15 +51,12 @@ func main() {
 				"\t- panic")
 		}
 
-		// Log as JSON instead of the default ASCII formatter, but wrapped with the runtime Formatter.
 		formatter := runtime.Formatter{ChildFormatter: &logrus.TextFormatter{}}
-		// Enable line number logging as well
 		formatter.Line = true
 
-		// Replace the default Logrus Formatter with our runtime Formatter
 		logrus.SetFormatter(&formatter)
 
-		now.WeekStartDay = time.Monday // Set Monday as first day, default is Sunday
+		now.WeekStartDay = time.Monday
 
 		cliApp := cli.NewApp()
 		cliApp.Name = "Backoffice App"
@@ -105,11 +99,6 @@ func main() {
 				var index = 1
 				var msgBody = "Employees have exceeded tasks:\n"
 				for _, issue := range allIssues {
-					/*listRow, err := services.IssueTimeExcisionWWithTimeCompare(issue, index)
-					if err != nil {
-						logrus.Error(err)
-						continue
-					}*/
 					if listRow := app.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
 						msgBody += listRow
 						index++
@@ -148,12 +137,6 @@ func main() {
 					var msgBody = "Employees have exceeded tasks:\n"
 					var index = 1
 					for _, issue := range allIssues {
-						/*listRow, err := services.IssueTimeExcisionWWithTimeCompare(issue, index)
-						if err != nil {
-							logrus.Error(err)
-							continue
-						}*/
-
 						if listRow := services.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
 							msgBody += listRow
 							index++

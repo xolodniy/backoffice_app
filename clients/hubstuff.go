@@ -15,13 +15,8 @@ import (
 type Hubstaff struct {
 	APIUrl string
 
-	// HSAppToken created at https://developer.hubstaff.com/my_apps
-	AppToken string
-
-	// (optional) HSAuthToken, previously obtained through ObtainAuthToken
-	AuthToken string
-
-	// HTTPClient is required to be passed. Pass http.DefaultClient if not sure
+	AppToken   string
+	AuthToken  string
 	HTTPClient *http.Client
 }
 

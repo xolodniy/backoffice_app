@@ -11,12 +11,9 @@ import (
 
 // Commit contain files list separated to Added, Modified and Removed slices
 type Commit struct {
-	// Added contain list of files which were added to a branch
-	Added []string `json:"added"`
-	// Modified contain list of files which were modified in a branch
+	Added    []string `json:"added"`
 	Modified []string `json:"modified"`
-	// Removed contain list of files which were removed in a branch
-	Removed []string `json:"removed"`
+	Removed  []string `json:"removed"`
 }
 
 // req is main GitLab Webhook request data parsing structure
@@ -87,7 +84,6 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 					req.UserName+" (bot)",
 					req.UserAvatar,
 				)
-				//fmt.Println(message)
 			}
 		}
 		for _, f := range commit.Modified {
