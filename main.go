@@ -105,11 +105,19 @@ func main() {
 					}
 				}
 
-				app.Slack.SendStandardMessage(
+				if err := app.Slack.SendStandardMessage(
 					msgBody,
 					app.Slack.Channel.ID,
 					app.Slack.Channel.BotName,
-				)
+				); err != nil {
+					logrus.WithError(err).
+						WithFields(logrus.Fields{
+							"msgBody":        msgBody,
+							"channelID":      app.Slack.Channel.ID,
+							"channelBotName": app.Slack.Channel.BotName,
+						}).
+						Error("can't send Jira work time exceeding message to Slack.")
+				}
 			})
 
 			tm.Start()
@@ -143,11 +151,19 @@ func main() {
 						}
 					}
 
-					services.Slack.SendStandardMessage(
+					if err := services.Slack.SendStandardMessage(
 						msgBody,
 						services.Slack.Channel.ID,
 						services.Slack.Channel.BotName,
-					)
+					); err != nil {
+						logrus.WithError(err).
+							WithFields(logrus.Fields{
+								"msgBody":        msgBody,
+								"channelID":      services.Slack.Channel.ID,
+								"channelBotName": services.Slack.Channel.BotName,
+							}).
+							Error("can't send Jira work time exceeding message to Slack.")
+					}
 				},
 			},
 			{

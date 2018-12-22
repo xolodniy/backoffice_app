@@ -54,12 +54,21 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 		message += "*Warning! Some migration can be skipped which are in commits placed beyond the 20 commit barrier*\n"
 	}
 
-	c.App.Slack.SendStandardMessageWithIcon(
+	if err := c.App.Slack.SendStandardMessageWithIcon(
 		message,
 		c.Config.Slack.Channel.BackOfficeAppID,
 		req.UserName+" (bot)",
 		req.UserAvatar,
-	)
+	); err != nil {
+		logrus.WithError(err).
+			WithFields(logrus.Fields{
+				"message":    message,
+				"userID":     c.Config.Slack.Channel.BackOfficeAppID,
+				"userName":   req.UserName + " (bot)",
+				"userAvatar": req.UserAvatar,
+			}).
+			Error("can't send message to Slack while GitLab WebHook added files data parsing.")
+	}
 
 	var r, _ = regexp.Compile(`/((etc|db)/migrations/[0-9]{4,}([0-9a-zA-Z_]+)?\.sql)`)
 
@@ -78,12 +87,21 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 					message += fmt.Sprintf("```%s```", fileContents)
 				}
 
-				c.App.Slack.SendStandardMessageWithIcon(
+				if err := c.App.Slack.SendStandardMessageWithIcon(
 					message,
 					c.Config.Slack.Channel.BackOfficeAppID,
 					req.UserName+" (bot)",
 					req.UserAvatar,
-				)
+				); err != nil {
+					logrus.WithError(err).
+						WithFields(logrus.Fields{
+							"message":    message,
+							"userID":     c.Config.Slack.Channel.BackOfficeAppID,
+							"userName":   req.UserName + " (bot)",
+							"userAvatar": req.UserAvatar,
+						}).
+						Error("can't send message to Slack while GitLab WebHook added files data parsing.")
+				}
 			}
 		}
 		for _, f := range commit.Modified {
@@ -99,12 +117,22 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 				} else {
 					message += fmt.Sprintf("```%s```", fileContents)
 				}
-				c.App.Slack.SendStandardMessageWithIcon(
+
+				if err := c.App.Slack.SendStandardMessageWithIcon(
 					message,
 					c.Config.Slack.Channel.BackOfficeAppID,
 					req.UserName+" (bot)",
 					req.UserAvatar,
-				)
+				); err != nil {
+					logrus.WithError(err).
+						WithFields(logrus.Fields{
+							"message":    message,
+							"userID":     c.Config.Slack.Channel.BackOfficeAppID,
+							"userName":   req.UserName + " (bot)",
+							"userAvatar": req.UserAvatar,
+						}).
+						Error("can't send message to Slack while GitLab WebHook modified files data parsing.")
+				}
 			}
 		}
 	}
