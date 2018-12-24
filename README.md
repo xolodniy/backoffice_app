@@ -1,112 +1,127 @@
 # Backoffice App
 
-## Application destination
+## **Application flow**
 
 1. Sending daily workers reports by CRON. Can be sent manually by command line switch using.
 2. Sending weekly workers reports by CRON Can be sent manually by command line switch using.
 3. Gets jira exceedions right now and sending it to some Slack channel that specified config
 
 
-## Command Line Switches
+## **Command Line Switches**
+*Get Jira exceedions and send them to Slack channel, immediately:*
 
-1. get-jira-exceedions-now - Gets jira exceedions right now
-2. make-weekly-report-now - Sends weekly report to slack channel
-3. make-daily-report-now - Sends daily report to slack channel
-4. obtain-hubstaff-token - Obtains Hubstaff authorization token
+    $ ./backoffice-app get-jira-exceedions-now
+
+*Send weekly report to Slack channel, immediately:*
+
+    $ ./backoffice-app make-weekly-report-now
+
+*Sends daily report to Slack channel, immediately:*
+
+    $ ./backoffice-app make-daily-report-now
+
+*Obtains Hubstaff authorization token:*
+
+    $ ./backoffice-app obtain-hubstaff-token
+
+## **Directory Structure**
+    app/          — Go application domain layer
+    controller/   — Go router layer
+    config/       — Go confg folder
+    vendor/       — Go 3rd-party libraries
+
+    main.go       — Main project file
+    go.mod        — `go mod` auto-generated file with project dependencies. Defines a tree of Go source files.
+    go.sum        — Defines a collection of checksums of each libraries for other programmers to check whether those libraries are hacked or not.
+    
+
+## **Running the Application**
+
+### **Prerequisites**
+You have to use *Go 1.11*, then it will load all dependencies needed to building by him self, but only if `go.mod` and `go.sum` stay's in project's root folder
 
 
-## Directory Structure
-
-    app/          - Go application domain layer
-    controller/   - Go router layer
-    config/       - Go confg folder
-    vendor/       - Go 3rd-party libraries
-
-    main.go              - Main project file
-    Gopkg.toml           - Auto-generated file with project dependencies
-    Gopkg.lock           - Hash-sum of project dependencies
-
-
-## Running the Application
-
-### Prerequisites
+### **How to BUILD**
 
 Now you can clone the application and prepare it for running:
 
-    Clone repository
-    $ git clone git@bitbucket.org:theflowglobal/backoffice_app.git
-    
-    Go to app directory
-    $ cd ./backoffice_app
-    
-    Use dep to load dependencies (if there is no dependencies in /vendor folder)
-    $ dep init
-    or if you already have some dependencies downloaded
-    $ dep ensure
-    
-    Build application with:
-    $ go build -o backoffice-app ./main.go
-    
-    Make application runnable in terminal
-    chmod +x ./backoffice-app
-    
-    Run the app
-    ./backoffice-app
+1. Clone repository
 
-### Where can I get creditionals
-#### gittoken
- 1. can be obtain only if you maintainer of the project as minimum (https://docs.gitlab.com/ce/user/permissions.html)
- 2. go to https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#creating-a-personal-access-token instruction to generate token 
+        $ git clone git@bitbucket.org:theflowglobal/backoffice_app.git
+    
+1. Go to app directory
+
+        $ cd ./backoffice_app
+    
+1. Build application with:
+ 
+        $ go build -o backoffice-app ./main.go
+
+1. Make application runnable in term
+
+        $ chmod +x ./backoffice-app
+    
+1. Run the app
+
+        $ ./backoffice-app
+        
+        
+### Where can I get credentials
+
+#### GIT
+* ##### gittoken
+  1. can be obtain only if you maintainer of the project as minimum (https://docs.gitlab.com/ce/user/permissions.html)
+  2. go to https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#creating-a-personal-access-token instruction to generate token 
 
 
 #### Jira
-##### apiurl
-API URL is always is on https://{orgname}.atlassian.net
-For "The flow" it will be https://theflow.atlassian.net
-##### username and password
-It's org maintainer or special account requisites that can view projects (but can't change them (more secured way))
+* ##### apiurl
+  API URL is always is on https://{orgname}.atlassian.net
+  For "The flow" it will be https://theflow.atlassian.net
+* ##### username and password
+  It's org maintainer or special account requisites that can view projects (but can't change them (more secured way))
 
 
 #### Slack:
-##### apiurl 
-API URL can be taken here: https://api.slack.com/web#basics
+* ##### apiurl 
+  API URL can be taken here: https://api.slack.com/web#basics
 
-##### intoken
-Token used to check requests from Slack to this application.
-Token can be generated here https://api.slack.com/docs/verifying-requests-from-slack
+* ##### intoken
+  Token used to check requests from Slack to this application.
+  Token can be generated here https://api.slack.com/docs/verifying-requests-from-slack
 
-##### outtoken
-outtoken is API token. It will be used to make requests to Slack API.
+* ##### outtoken
+  `outtoken` is API token. It will be used to make requests to Slack API.
 Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#legacy_token_generator
 
-##### migrationsid
-Slack channel id without hash in it
+* ##### migrationsid
+  Slack channel id without hash in it
 
-##### backofficeappid
-This App User ID of messages source in Slack
+* ##### backofficeappid
+  This App User ID of messages source in Slack
 
-##### botname
-This App User Name of messages source in Slack
+* ##### botname
+  This App User Name of messages source in Slack
 
 #### Hubstaff
-##### apiurl
-Can be taken from https://support.hubstaff.com/time-tracking-api/
-By default it's:  https://api.hubstaff.com
+* ##### apiurl
+  Can be taken from https://support.hubstaff.com/time-tracking-api/
+  By default it's: https://api.hubstaff.com
 
-##### token
-It's an OAuth token generated by Hubstaff within you Login and Password config fields.
-Must be obtained by using of APP CLI obtain-hubstaff-token parameter, after you've Login and Password config fields filled
+* ##### token
+  It's an OAuth token generated by Hubstaff within you Login and Password config fields.
+  Must be obtained by using of APP CLI obtain-hubstaff-token parameter, after you've Login and Password config fields filled
  
-##### apptoken 
-It's related to an Organisation, Hubstaff App Token which can be generated here:
-https://developer.hubstaff.com/my_apps
+* ##### apptoken 
+  It's related to an Organisation, Hubstaff App Token which can be generated here:
+  https://developer.hubstaff.com/my_apps
 
-##### orgsid
-It's numeric ID of some concrete organisation of Hubstaff account
-Must be obtained through using of Hubstaff API Tester interface here: https://developer.hubstaff.com/docs/api#!/organizations/getV1Organizations
+* ##### orgsid
+  It's numeric ID of some concrete organisation of Hubstaff account
+  Must be obtained through using of Hubstaff API Tester interface here: https://developer.hubstaff.com/docs/api#!/organizations/getV1Organizations
 
-##### username and password
-It's org maintainer or special account requisites that can view time records (but can't change them (more secured way))
+* ##### username and password
+  It's org maintainer or special account requisites that can view time records (but can't change them (more secured way))
      
 ### Start API with the custom config
 
@@ -121,7 +136,8 @@ Please see [Postman API documentation](https://lively-water-8721.postman.co/coll
 
 In case of any bugs , please, contact support@theflow.global
 
-## Deployment
+
+## Deployment with ANSIBLE
 
 ### Prerequisites
 
