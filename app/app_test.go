@@ -14,4 +14,3 @@ func TestSecondsToClockTime(t *testing.T) {
 	require.Equal(t, nil, err)
 	require.Equal(t, "02:02", str)
 }
-
