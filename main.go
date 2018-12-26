@@ -63,7 +63,7 @@ func main() {
 		cliApp.Usage = "It's the best application for real time workers day and week progress."
 
 		cliApp.Action = func(c *cli.Context) {
-			app, err := app.New(cfg)
+			services, err := app.New(cfg)
 			if err != nil {
 				panic(err)
 			}
@@ -76,7 +76,7 @@ func main() {
 			tm := taskmanager.New(&wg)
 
 			err = tm.AddTask(cfg.DailyReportCronTime, func() {
-				app.GetWorkersWorkedTimeAndSendToSlack(
+				services.GetWorkersWorkedTimeAndSendToSlack(
 					"Daily work time report",
 					now.BeginningOfDay().AddDate(0, 0, -1),
 					now.EndOfDay().AddDate(0, 0, -1),
@@ -87,7 +87,7 @@ func main() {
 			}
 
 			err = tm.AddTask(cfg.WeeklyReportCronTime, func() {
-				app.GetWorkersWorkedTimeAndSendToSlack(
+				services.GetWorkersWorkedTimeAndSendToSlack(
 					"Weekly work time report",
 					now.BeginningOfWeek().AddDate(0, 0, -1),
 					now.EndOfWeek().AddDate(0, 0, -1),
@@ -98,29 +98,29 @@ func main() {
 			}
 
 			err = tm.AddTask(cfg.TaskTimeExceedionReportCronTime, func() {
-				allIssues, _, err := app.IssuesSearch()
+				allIssues, _, err := services.IssuesSearch()
 				if err != nil {
 					panic(err)
 				}
 				var index = 1
 				var msgBody = "Employees have exceeded tasks:\n"
 				for _, issue := range allIssues {
-					if listRow := app.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
+					if listRow := services.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
 						msgBody += listRow
 						index++
 					}
 				}
 
-				if err := app.Slack.SendStandardMessage(
+				if err := services.Slack.SendStandardMessage(
 					msgBody,
-					app.Slack.Channel.ID,
-					app.Slack.Channel.BotName,
+					services.Slack.Channel.ID,
+					services.Slack.Channel.BotName,
 				); err != nil {
 					logrus.WithError(err).
 						WithFields(logrus.Fields{
 							"msgBody":        msgBody,
-							"channelID":      app.Slack.Channel.ID,
-							"channelBotName": app.Slack.Channel.BotName,
+							"channelID":      services.Slack.Channel.ID,
+							"channelBotName": services.Slack.Channel.BotName,
 						}).
 						Error("can't send Jira work time exceeding message to Slack.")
 				}
