@@ -67,6 +67,9 @@ func (slack *Slack) SendStandardMessageWithIcon(message, channelID, botName stri
 
 func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
 	req, err := http.NewRequest("POST", slack.APIUrl+"/chat.postMessage", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", err
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", slack.Auth.OutToken))
 	client := &http.Client{}

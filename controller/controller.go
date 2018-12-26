@@ -40,7 +40,10 @@ func (c *Controller) Start() {
 		Addr:    ":" + c.Config.GinPort,
 		Handler: c.Gin,
 	}
-	srv.ListenAndServe()
+
+	if err := srv.ListenAndServe(); err != nil {
+		panic(err)
+	}
 }
 
 func (c *Controller) initRoutes() {

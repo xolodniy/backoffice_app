@@ -42,10 +42,13 @@ func (a *App) IssueTimeExcisionWWithTimeCompare(issue jira.Issue, rowIndex int) 
 	}
 
 	ts, err := a.SecondsToClockTime(issue.Fields.TimeSpent)
+	if err != nil {
+		return listRow, fmt.Errorf("time conversion: regexp error: %v", err)
+	}
+
 	te, err := a.SecondsToClockTime(issue.Fields.TimeOriginalEstimate)
 	if err != nil {
 		return listRow, fmt.Errorf("time conversion: regexp error: %v", err)
-
 	}
 
 	listRow = fmt.Sprintf("%[1]d. <https://theflow.atlassian.net/browse/%[2]s|%[2]s - %[3]s>: %[4]v из %[5]v\n",
