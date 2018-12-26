@@ -20,7 +20,7 @@ type Hubstaff struct {
 	HTTPClient *http.Client
 }
 
-// Retrieves auth token which must be sent along with appToken,
+// ObtainAuthToken retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
 func (c *Hubstaff) ObtainAuthToken(auth types.HubstaffAuth) (string, error) {
 	form := url.Values{}

@@ -48,7 +48,7 @@ func (slack *Slack) SendStandardMessage(message, channelID, botName string) erro
 	return nil
 }
 
-// SendStandardMessage is main message sending method
+// SendStandardMessageWithIcon is main message sending method
 func (slack *Slack) SendStandardMessageWithIcon(message, channelID, botName string, iconURL string) error {
 	logrus.Debugf("Slack standard message with icon sent:\n %v", message)
 

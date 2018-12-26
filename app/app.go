@@ -14,6 +14,7 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
+// App is main App implementation
 type App struct {
 	Hubstaff *clients.Hubstaff
 	Slack    *clients.Slack

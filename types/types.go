@@ -79,7 +79,7 @@ type Organization struct {
 // Organizations used to store organizations list
 type Organizations []Organization
 
-// AddAttachment
+// AddAttachment used to add Attachement to Slack message
 func (m *Message) AddAttachment(text string) *Message {
 	m.Attachments = append(m.Attachments, Attachment{text})
 	return m
