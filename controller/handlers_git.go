@@ -16,8 +16,8 @@ type Commit struct {
 	Removed  []string `json:"removed"`
 }
 
-// req is main GitLab Webhook request data parsing structure
-type req struct {
+// gitLabReq is main GitLab Webhook request data parsing structure
+type gitLabReq struct {
 	EventName  string `json:"object_kind" binding:"required"`
 	BranchPath string `json:"ref"    binding:"required"`
 
@@ -34,8 +34,7 @@ type req struct {
 }
 
 func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
-
-	var req req
+	var req gitLabReq
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logrus.WithError(err).
 			WithField("req", req).
