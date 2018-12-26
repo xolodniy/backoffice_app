@@ -30,10 +30,10 @@ type Main struct {
 			BackOfficeAppID string
 			MigrationsID    string
 		}
-		APIUrl string
+		APIURL string
 	}
 	Hubstaff struct {
-		APIUrl string
+		APIURL string
 		Auth   struct {
 			Token    string
 			AppToken string

@@ -16,7 +16,7 @@ import (
 type Slack struct {
 	Auth    SlackAuth
 	Channel SlackChannel
-	APIUrl  string
+	APIURL  string
 }
 
 // SlackAuth is Slack Authorization data storage used for API and Webhook requests
@@ -66,7 +66,7 @@ func (slack *Slack) SendStandardMessageWithIcon(message, channelID, botName stri
 }
 
 func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
-	req, err := http.NewRequest("POST", slack.APIUrl+"/chat.postMessage", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", slack.APIURL+"/chat.postMessage", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return "", err
 	}

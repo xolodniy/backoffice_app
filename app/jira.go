@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+
 	"github.com/andygrunwald/go-jira"
 	"github.com/sirupsen/logrus"
 )
@@ -33,22 +34,30 @@ func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
 	return allIssues, response, nil
 }
 
-// IssueTimeExcisionWWithTimeCompare prepare employee worked time string with appending
-// of excess of time visually comparing current working time and original time
+// IssueTimeExcisionWWithTimeCompare prepares string with employee time excess
 func (a *App) IssueTimeExcisionWWithTimeCompare(issue jira.Issue, rowIndex int) (string, error) {
 	var listRow string
 	if issue.Fields.TimeSpent < issue.Fields.TimeOriginalEstimate {
 		return listRow, nil
 	}
 
-	ts, err := a.SecondsToClockTime(issue.Fields.TimeSpent)
+	ts, err := a.DurationString(issue.Fields.TimeSpent)
 	if err != nil {
-		return listRow, fmt.Errorf("time conversion: regexp error: %v", err)
+		logrus.
+			WithError(err).
+			WithField("time", issue.Fields.TimeSpent).
+			Error("error occurred on time conversion error")
+		return listRow, fmt.Errorf("time conversion: %v", err)
+
 	}
 
-	te, err := a.SecondsToClockTime(issue.Fields.TimeOriginalEstimate)
+	te, err := a.DurationString(issue.Fields.TimeOriginalEstimate)
 	if err != nil {
-		return listRow, fmt.Errorf("time conversion: regexp error: %v", err)
+		logrus.
+			WithError(err).
+			WithField("time", issue.Fields.TimeOriginalEstimate).
+			Error("error occurred on time conversion error")
+		return listRow, fmt.Errorf("time conversion: %v", err)
 	}
 
 	listRow = fmt.Sprintf("%[1]d. <https://theflow.atlassian.net/browse/%[2]s|%[2]s - %[3]s>: %[4]v из %[5]v\n",
@@ -58,7 +67,7 @@ func (a *App) IssueTimeExcisionWWithTimeCompare(issue jira.Issue, rowIndex int) 
 	return listRow, nil
 }
 
-// IssueTimeExceededNoTimeRange prepare employee worked time string without appending of excess of time
+// IssueTimeExceededNoTimeRange prepares string without employee time excess
 func (a *App) IssueTimeExceededNoTimeRange(issue jira.Issue, rowIndex int) string {
 	var listRow string
 	if issue.Fields.TimeTracking.RemainingEstimateSeconds != 0 {

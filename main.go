@@ -105,9 +105,11 @@ func main() {
 				var index = 1
 				var msgBody = "Employees have exceeded tasks:\n"
 				for _, issue := range allIssues {
-					if listRow := services.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
-						msgBody += listRow
-						index++
+					if issue.Fields != nil {
+						if listRow := services.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
+							msgBody += listRow
+							index++
+						}
 					}
 				}
 
@@ -154,9 +156,11 @@ func main() {
 					var msgBody = "Employees have exceeded tasks:\n"
 					var index = 1
 					for _, issue := range allIssues {
-						if listRow := services.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
-							msgBody += listRow
-							index++
+						if issue.Fields != nil {
+							if listRow := services.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
+								msgBody += listRow
+								index++
+							}
 						}
 					}
 

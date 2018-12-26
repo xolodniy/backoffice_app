@@ -9,7 +9,7 @@ import (
 func TestSecondsToClockTime(t *testing.T) {
 	var a App
 
-	str, err := a.SecondsToClockTime(7320)
+	str, err := a.DurationString(7320)
 
 	require.Equal(t, nil, err)
 	require.Equal(t, "02:02", str)

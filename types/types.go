@@ -12,12 +12,12 @@ type JiraIssueSearchParams struct {
 type Jira struct {
 	IssueSearchParams JiraIssueSearchParams
 	Auth              jira.BasicAuthTransport
-	APIUrl            string
+	APIURL            string
 }
 
 // Hubstaff is main implementation of Hubstaff app
 type Hubstaff struct {
-	APIUrl string
+	APIURL string
 	Auth   HubstaffAuth
 	OrgsID int64
 }

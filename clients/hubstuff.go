@@ -13,7 +13,7 @@ import (
 
 // Hubstaff is main Hubstaff implementation
 type Hubstaff struct {
-	APIUrl string
+	APIURL string
 
 	AppToken   string
 	AuthToken  string
@@ -27,7 +27,7 @@ func (c *Hubstaff) ObtainAuthToken(auth types.HubstaffAuth) (string, error) {
 	form.Add("email", auth.Login)
 	form.Add("password", auth.Password)
 
-	request, err := http.NewRequest("POST", c.APIUrl+"/v1/auth", strings.NewReader(form.Encode()))
+	request, err := http.NewRequest("POST", c.APIURL+"/v1/auth", strings.NewReader(form.Encode()))
 	if err != nil {
 		return "", fmt.Errorf("can't create http POST Request: %s", err)
 	}
@@ -63,7 +63,7 @@ func (c *Hubstaff) ObtainAuthToken(auth types.HubstaffAuth) (string, error) {
 
 // Request is main API GET request method
 func (c *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
-	request, err := http.NewRequest("GET", c.APIUrl+path, nil)
+	request, err := http.NewRequest("GET", c.APIURL+path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("can't create http GET Request: %s", err)
 	}
