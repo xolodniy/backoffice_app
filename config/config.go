@@ -65,21 +65,21 @@ func GetConfig(skipFieldsFilledCheck bool) (*Main, error) {
 func (config *Main) checkConfig() error {
 
 	if config.Jira.Auth.Username == "" {
-		return fmt.Errorf("Jira Username configuration field is not set. Please set it in configuration file «config/config.yml».")
+		return fmt.Errorf("Jira Username configuration field is not set. Please set it in configuration file «config/config.yml»")
 	}
 	if config.Jira.Auth.Password == "" {
-		return fmt.Errorf("Jira Password configuration field is not set. Please set it in configuration file «config/config.yml».")
+		return fmt.Errorf("Jira Password configuration field is not set. Please set it in configuration file «config/config.yml»")
 	}
 
 	if config.Slack.Auth.InToken == "" {
-		return fmt.Errorf("Slack InToken configuration field is not set. Please set it in configuration file «config/config.yml».")
+		return fmt.Errorf("Slack InToken configuration field is not set. Please set it in configuration file «config/config.yml»")
 	}
 	if config.Slack.Auth.OutToken == "" {
-		return fmt.Errorf("Slack OutToken configuration field is not set. Please set it in configuration file «config/config.yml».")
+		return fmt.Errorf("Slack OutToken configuration field is not set. Please set it in configuration file «config/config.yml»")
 	}
 
 	if config.Hubstaff.Auth.Token == "" {
-		return fmt.Errorf("Hubstaff Auth Token is not specified. You can obtain it with \"obtain-hubstaff-token\" option, and then please set it in configuration file «config/config.yml».")
+		return fmt.Errorf("Hubstaff Auth Token is not specified. You can obtain it with \"obtain-hubstaff-token\" option, and then please set it in configuration file «config/config.yml»")
 	}
 
 	return nil
