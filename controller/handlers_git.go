@@ -44,7 +44,7 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 	}
 
 	if req.EventName != "push" {
-		c.respondError(ctx, fmt.Errorf("Only push event will be accepted."))
+		c.respondError(ctx, fmt.Errorf("Only push event will be accepted"))
 		return
 	}
 
