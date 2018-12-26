@@ -15,7 +15,6 @@ import (
 	"backoffice_app/libs/taskmanager"
 
 	"github.com/banzaicloud/logrus-runtime-formatter"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -78,7 +77,7 @@ func main() {
 
 			err = tm.AddTask(cfg.DailyReportCronTime, func() {
 				services.GetWorkersWorkedTimeAndSendToSlack(
-					"Daily work time report (scheduled)",
+					"Daily work time report (auto)",
 					now.BeginningOfDay().AddDate(0, 0, -1),
 					now.EndOfDay().AddDate(0, 0, -1),
 					cfg.Hubstaff.OrgsID)
@@ -88,14 +87,10 @@ func main() {
 			}
 
 			err = tm.AddTask(cfg.WeeklyReportCronTime, func() {
-				// By cfg.WeeklyReportCronTime this func will be triggered at Monday of next week,
-				// but we need employee last week time. So we shift back date from current week Monday
-				// to previous week Sunday and using shifted date to find the beginning/end of previous week
-				previousWeekSunday := time.Now().AddDate(0, 0, -1)
 				services.GetWorkersWorkedTimeAndSendToSlack(
-					"Weekly work time report (scheduled)",
-					now.New(previousWeekSunday).BeginningOfWeek(),
-					now.New(previousWeekSunday).EndOfWeek(),
+					"Weekly work time report (auto)",
+					now.BeginningOfWeek().AddDate(0, 0, -1),
+					now.EndOfWeek().AddDate(0, 0, -1),
 					cfg.Hubstaff.OrgsID)
 			})
 			if err != nil {
@@ -184,8 +179,6 @@ func main() {
 				Name:  "make-weekly-report-now",
 				Usage: "Sends weekly report to slack channel",
 				Action: func(c *cli.Context) {
-					spew.Dump(cfg)
-
 					services, err := app.New(cfg)
 					if err != nil {
 						panic(err)
