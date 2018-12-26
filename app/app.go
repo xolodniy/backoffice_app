@@ -10,6 +10,7 @@ import (
 	"backoffice_app/config"
 
 	"github.com/andygrunwald/go-jira"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
 	"github.com/xanzy/go-gitlab"
 )
@@ -110,7 +111,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 }
 
 // SecondsToClockTime converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
-func (_ *App) SecondsToClockTime(durationInSeconds int) (string, error) {
+func (a *App) SecondsToClockTime(durationInSeconds int) (string, error) {
 	var someTime time.Time
 	r, err := regexp.Compile(` ([0-9]{2,2}:[0-9]{2,2}):[0-9]{2,2}`)
 	if err != nil {
