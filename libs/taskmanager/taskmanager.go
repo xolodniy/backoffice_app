@@ -4,7 +4,7 @@
 // Always no more than one task will be executing and no more than one task will be stayed in queue.
 // Similar tasks in queue will be skipped.
 
-package task_manager
+package taskmanager
 
 import (
 	"context"
@@ -34,11 +34,11 @@ func New(wg *sync.WaitGroup) *TaskManager {
 }
 
 // AddTask adds a func to the Cron to be run on the given schedule.
-func (tm *TaskManager) AddTask(spec string, cmd func()) {
+func (tm *TaskManager) AddTask(spec string, cmd func()) error {
 	var i int
 	m := sync.Mutex{}
 
-	tm.cron.AddFunc(spec, func() {
+	err := tm.cron.AddFunc(spec, func() {
 		tm.wg.Add(1)
 		defer tm.wg.Done()
 
@@ -58,6 +58,11 @@ func (tm *TaskManager) AddTask(spec string, cmd func()) {
 			i--
 		}
 	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Start taskManager

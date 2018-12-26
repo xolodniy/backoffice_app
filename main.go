@@ -12,7 +12,7 @@ import (
 	"backoffice_app/app"
 	"backoffice_app/config"
 	"backoffice_app/controller"
-	"backoffice_app/libs/task_manager"
+	"backoffice_app/libs/taskmanager"
 
 	"github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/jinzhu/now"
@@ -73,25 +73,31 @@ func main() {
 			log.Println("Requests listener started.")
 
 			wg := sync.WaitGroup{}
-			tm := task_manager.New(&wg)
+			tm := taskmanager.New(&wg)
 
-			tm.AddTask(cfg.DailyReportCronTime, func() {
+			err = tm.AddTask(cfg.DailyReportCronTime, func() {
 				app.GetWorkersWorkedTimeAndSendToSlack(
 					"Daily work time report",
 					now.BeginningOfDay().AddDate(0, 0, -1),
 					now.EndOfDay().AddDate(0, 0, -1),
 					cfg.Hubstaff.OrgsID)
 			})
+			if err != nil {
+				panic(err)
+			}
 
-			tm.AddTask(cfg.WeeklyReportCronTime, func() {
+			err = tm.AddTask(cfg.WeeklyReportCronTime, func() {
 				app.GetWorkersWorkedTimeAndSendToSlack(
 					"Weekly work time report",
 					now.BeginningOfWeek().AddDate(0, 0, -1),
 					now.EndOfWeek().AddDate(0, 0, -1),
 					cfg.Hubstaff.OrgsID)
 			})
+			if err != nil {
+				panic(err)
+			}
 
-			tm.AddTask(cfg.TaskTimeExceedionReportCronTime, func() {
+			err = tm.AddTask(cfg.TaskTimeExceedionReportCronTime, func() {
 				allIssues, _, err := app.IssuesSearch()
 				if err != nil {
 					panic(err)
@@ -119,6 +125,9 @@ func main() {
 						Error("can't send Jira work time exceeding message to Slack.")
 				}
 			})
+			if err != nil {
+				panic(err)
+			}
 
 			tm.Start()
 
