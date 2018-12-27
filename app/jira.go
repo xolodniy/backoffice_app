@@ -37,6 +37,12 @@ func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
 // IssueTimeExcisionWithTimeCompare prepares string with employee time excess
 // Not used now, but will be used further.
 func (a *App) IssueTimeExcisionWithTimeCompare(issue jira.Issue, rowIndex int) (string, error) {
+	if issue.Fields == nil {
+		logrus.
+			WithField("issue", issue).
+			Error("issue fields is empty")
+		return "", fmt.Errorf("issue fields is empty")
+	}
 	var listRow string
 	if issue.Fields.TimeSpent < issue.Fields.TimeOriginalEstimate {
 		return listRow, nil
@@ -70,6 +76,13 @@ func (a *App) IssueTimeExcisionWithTimeCompare(issue jira.Issue, rowIndex int) (
 
 // IssueTimeExceededNoTimeRange prepares string without employee time excess
 func (a *App) IssueTimeExceededNoTimeRange(issue jira.Issue, rowIndex int) string {
+	if issue.Fields == nil {
+		logrus.
+			WithField("issue", issue).
+			Error("issue fields is empty")
+		return ""
+	}
+
 	var listRow string
 	if issue.Fields.TimeTracking.RemainingEstimateSeconds != 0 {
 		return listRow
