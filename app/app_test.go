@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSecondsToClockTime(t *testing.T) {
+func TestDurationString(t *testing.T) {
 	var a App
 
 	str, err := a.DurationString(7320)
