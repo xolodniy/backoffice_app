@@ -34,8 +34,9 @@ func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
 	return allIssues, response, nil
 }
 
-// IssueTimeExcisionWWithTimeCompare prepares string with employee time excess
-func (a *App) IssueTimeExcisionWWithTimeCompare(issue jira.Issue, rowIndex int) (string, error) {
+// IssueTimeExcisionWithTimeCompare prepares string with employee time excess
+// Not used now, but will be used further.
+func (a *App) IssueTimeExcisionWithTimeCompare(issue jira.Issue, rowIndex int) (string, error) {
 	var listRow string
 	if issue.Fields.TimeSpent < issue.Fields.TimeOriginalEstimate {
 		return listRow, nil
