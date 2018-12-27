@@ -13,26 +13,21 @@ import (
 
 // Hubstaff is main Hubstaff implementation
 type Hubstaff struct {
-	APIUrl string
+	APIURL string
 
-	// HSAppToken created at https://developer.hubstaff.com/my_apps
-	AppToken string
-
-	// (optional) HSAuthToken, previously obtained through ObtainAuthToken
-	AuthToken string
-
-	// HTTPClient is required to be passed. Pass http.DefaultClient if not sure
+	AppToken   string
+	AuthToken  string
 	HTTPClient *http.Client
 }
 
-// Retrieves auth token which must be sent along with appToken,
+// ObtainAuthToken retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
 func (c *Hubstaff) ObtainAuthToken(auth types.HubstaffAuth) (string, error) {
 	form := url.Values{}
 	form.Add("email", auth.Login)
 	form.Add("password", auth.Password)
 
-	request, err := http.NewRequest("POST", c.APIUrl+"/v1/auth", strings.NewReader(form.Encode()))
+	request, err := http.NewRequest("POST", c.APIURL+"/v1/auth", strings.NewReader(form.Encode()))
 	if err != nil {
 		return "", fmt.Errorf("can't create http POST Request: %s", err)
 	}
@@ -68,7 +63,7 @@ func (c *Hubstaff) ObtainAuthToken(auth types.HubstaffAuth) (string, error) {
 
 // Request is main API GET request method
 func (c *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
-	request, err := http.NewRequest("GET", c.APIUrl+path, nil)
+	request, err := http.NewRequest("GET", c.APIURL+path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("can't create http GET Request: %s", err)
 	}
