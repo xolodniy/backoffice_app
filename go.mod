@@ -14,14 +14,9 @@ require (
 	github.com/robfig/cron v0.0.0-20180505203441-b41be1df6967
 	github.com/sirupsen/logrus v1.2.0
 	github.com/trivago/tgo v1.0.5 // indirect
-	github.com/ugorji/go/codec v0.0.0-20181206144755-e72634d4d386 // indirect
+	github.com/ugorji/go/codec v0.0.0-20181209151446-772ced7fd4c2 // indirect
 	github.com/urfave/cli v1.20.0
-	github.com/xanzy/go-gitlab v0.11.7
-	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9 // indirect
-	golang.org/x/net v0.0.0-20181201002055-351d144fa1fc // indirect
-	golang.org/x/oauth2 v0.0.0-20181203162652-d668ce993890 // indirect
-	golang.org/x/sys v0.0.0-20181206074257-70b957f3b65e // indirect
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
+	github.com/xanzy/go-gitlab v0.12.2
 	gopkg.in/go-playground/validator.v8 v8.18.2
 	gopkg.in/yaml.v2 v2.2.2 // indirect
 )
