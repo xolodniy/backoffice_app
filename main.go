@@ -14,6 +14,7 @@ import (
 	"backoffice_app/controller"
 	"backoffice_app/libs/taskmanager"
 
+	"github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"

@@ -11,6 +11,7 @@ import (
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/sirupsen/logrus"
+	"github.com/xanzy/go-gitlab"
 )
 
 // App is main App implementation
