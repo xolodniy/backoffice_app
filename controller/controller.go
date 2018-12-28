@@ -22,6 +22,9 @@ func New(config config.Main) *Controller {
 	if err != nil {
 		panic(err)
 	}
+	if !config.GinDebugMode {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	return &Controller{
 		Config: config,
 		Gin:    gin.Default(),
@@ -37,7 +40,10 @@ func (c *Controller) Start() {
 		Addr:    ":" + c.Config.GinPort,
 		Handler: c.Gin,
 	}
-	srv.ListenAndServe()
+
+	if err := srv.ListenAndServe(); err != nil {
+		panic(err)
+	}
 }
 
 func (c *Controller) initRoutes() {
@@ -45,7 +51,6 @@ func (c *Controller) initRoutes() {
 		ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
 	})
 
-	// this endpoint will be used to receive data about Push actions made on GitLab on pushing local changes to remote branch on GitLab repository
 	c.Gin.POST("/api/v1/git/onevent/push", c.gitHandlerOnEventPush)
 
 }

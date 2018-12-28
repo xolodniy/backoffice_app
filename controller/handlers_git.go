@@ -11,16 +11,13 @@ import (
 
 // Commit contain files list separated to Added, Modified and Removed slices
 type Commit struct {
-	// Added contain list of files which were added to a branch
-	Added []string `json:"added"`
-	// Modified contain list of files which were modified in a branch
+	Added    []string `json:"added"`
 	Modified []string `json:"modified"`
-	// Removed contain list of files which were removed in a branch
-	Removed []string `json:"removed"`
+	Removed  []string `json:"removed"`
 }
 
-// req is main GitLab Webhook request data parsing structure
-type req struct {
+// gitLabReq is main GitLab Webhook request data parsing structure
+type gitLabReq struct {
 	EventName  string `json:"object_kind" binding:"required"`
 	BranchPath string `json:"ref"    binding:"required"`
 
@@ -37,8 +34,7 @@ type req struct {
 }
 
 func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
-
-	var req req
+	var req gitLabReq
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		logrus.WithError(err).
 			WithField("req", req).
@@ -48,7 +44,7 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 	}
 
 	if req.EventName != "push" {
-		c.respondError(ctx, fmt.Errorf("Only push event will be accepted."))
+		c.respondError(ctx, fmt.Errorf("Only push event will be accepted"))
 		return
 	}
 
@@ -57,12 +53,21 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 		message += "*Warning! Some migration can be skipped which are in commits placed beyond the 20 commit barrier*\n"
 	}
 
-	c.App.Slack.SendStandardMessageWithIcon(
+	if err := c.App.Slack.SendStandardMessageWithIcon(
 		message,
 		c.Config.Slack.Channel.BackOfficeAppID,
 		req.UserName+" (bot)",
 		req.UserAvatar,
-	)
+	); err != nil {
+		logrus.WithError(err).
+			WithFields(logrus.Fields{
+				"message":    message,
+				"userID":     c.Config.Slack.Channel.BackOfficeAppID,
+				"userName":   req.UserName + " (bot)",
+				"userAvatar": req.UserAvatar,
+			}).
+			Error("can't send message to Slack while GitLab WebHook added files data parsing.")
+	}
 
 	var r, _ = regexp.Compile(`/((etc|db)/migrations/[0-9]{4,}([0-9a-zA-Z_]+)?\.sql)`)
 
@@ -81,13 +86,21 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 					message += fmt.Sprintf("```%s```", fileContents)
 				}
 
-				c.App.Slack.SendStandardMessageWithIcon(
+				if err := c.App.Slack.SendStandardMessageWithIcon(
 					message,
 					c.Config.Slack.Channel.BackOfficeAppID,
 					req.UserName+" (bot)",
 					req.UserAvatar,
-				)
-				//fmt.Println(message)
+				); err != nil {
+					logrus.WithError(err).
+						WithFields(logrus.Fields{
+							"message":    message,
+							"userID":     c.Config.Slack.Channel.BackOfficeAppID,
+							"userName":   req.UserName + " (bot)",
+							"userAvatar": req.UserAvatar,
+						}).
+						Error("can't send message to Slack while GitLab WebHook added files data parsing.")
+				}
 			}
 		}
 		for _, f := range commit.Modified {
@@ -103,12 +116,22 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 				} else {
 					message += fmt.Sprintf("```%s```", fileContents)
 				}
-				c.App.Slack.SendStandardMessageWithIcon(
+
+				if err := c.App.Slack.SendStandardMessageWithIcon(
 					message,
 					c.Config.Slack.Channel.BackOfficeAppID,
 					req.UserName+" (bot)",
 					req.UserAvatar,
-				)
+				); err != nil {
+					logrus.WithError(err).
+						WithFields(logrus.Fields{
+							"message":    message,
+							"userID":     c.Config.Slack.Channel.BackOfficeAppID,
+							"userName":   req.UserName + " (bot)",
+							"userAvatar": req.UserAvatar,
+						}).
+						Error("can't send message to Slack while GitLab WebHook modified files data parsing.")
+				}
 			}
 		}
 	}

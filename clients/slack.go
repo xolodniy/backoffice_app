@@ -16,7 +16,7 @@ import (
 type Slack struct {
 	Auth    SlackAuth
 	Channel SlackChannel
-	APIUrl  string
+	APIURL  string
 }
 
 // SlackAuth is Slack Authorization data storage used for API and Webhook requests
@@ -48,7 +48,7 @@ func (slack *Slack) SendStandardMessage(message, channelID, botName string) erro
 	return nil
 }
 
-// SendStandardMessage is main message sending method
+// SendStandardMessageWithIcon is main message sending method
 func (slack *Slack) SendStandardMessageWithIcon(message, channelID, botName string, iconURL string) error {
 	logrus.Debugf("Slack standard message with icon sent:\n %v", message)
 
@@ -66,7 +66,10 @@ func (slack *Slack) SendStandardMessageWithIcon(message, channelID, botName stri
 }
 
 func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
-	req, err := http.NewRequest("POST", slack.APIUrl+"/chat.postMessage", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", slack.APIURL+"/chat.postMessage", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", err
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", slack.Auth.OutToken))
 	client := &http.Client{}
@@ -78,7 +81,6 @@ func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
 
 	logrus.Info("Slack request body:", string(jsonData))
 	logrus.Info("Slack response Status:", resp.Status)
-	//fmt.Println("response Headers:", resp.Header)
 	body, _ := ioutil.ReadAll(resp.Body)
 
 	var responseBody struct {
@@ -103,9 +105,6 @@ func (slack *Slack) sendPOSTMessage(message *types.PostChannelMessage) (string, 
 	if err != nil {
 		return "", err
 	}
-
-	//log.Printf("sendPOSTMessage message: \n")
-	//spew.Dump(message)
 
 	resp, err := slack.postJSONMessage(b)
 

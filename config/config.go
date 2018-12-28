@@ -11,6 +11,7 @@ import (
 type Main struct {
 	LogLevel                        string
 	GinPort                         string
+	GinDebugMode                    bool
 	DailyReportCronTime             string
 	WeeklyReportCronTime            string
 	TaskTimeExceedionReportCronTime string
@@ -29,10 +30,10 @@ type Main struct {
 			BackOfficeAppID string
 			MigrationsID    string
 		}
-		APIUrl string
+		APIURL string
 	}
 	Hubstaff struct {
-		APIUrl string
+		APIURL string
 		Auth   struct {
 			Token    string
 			AppToken string
@@ -47,14 +48,10 @@ type Main struct {
 // GetConfig return config parsed from config/config.yml
 func GetConfig(skipFieldsFilledCheck bool) (*Main, error) {
 	var config Main
-	//configor.New(&configor.Main{Debug: true}).Load(&config, "config/config.yml")
 	if err := configor.Load(&config, "/etc/backoffice_app/config.yml"); err != nil {
 		return &Main{}, err
 
 	}
-
-	//spew.Dump(config)
-	//fmt.Printf("config: %+v\n", config)
 
 	if !skipFieldsFilledCheck {
 		if err := config.checkConfig(); err != nil {
@@ -68,23 +65,22 @@ func GetConfig(skipFieldsFilledCheck bool) (*Main, error) {
 func (config *Main) checkConfig() error {
 
 	if config.Jira.Auth.Username == "" {
-		return fmt.Errorf("Jira Username configuration field is not set. Please set it in configuration file «config/config.yml».")
+		return fmt.Errorf("Jira Username configuration field is not set. Please set it in configuration file «config/config.yml»")
 	}
 	if config.Jira.Auth.Password == "" {
-		return fmt.Errorf("Jira Password configuration field is not set. Please set it in configuration file «config/config.yml».")
+		return fmt.Errorf("Jira Password configuration field is not set. Please set it in configuration file «config/config.yml»")
 	}
 
 	if config.Slack.Auth.InToken == "" {
-		return fmt.Errorf("Slack InToken configuration field is not set. Please set it in configuration file «config/config.yml».")
+		return fmt.Errorf("Slack InToken configuration field is not set. Please set it in configuration file «config/config.yml»")
 	}
 	if config.Slack.Auth.OutToken == "" {
-		return fmt.Errorf("Slack OutToken configuration field is not set. Please set it in configuration file «config/config.yml».")
+		return fmt.Errorf("Slack OutToken configuration field is not set. Please set it in configuration file «config/config.yml»")
 	}
 
 	if config.Hubstaff.Auth.Token == "" {
-		return fmt.Errorf("Hubstaff Auth Token is not specified. You can obtain it with \"obtain-hubstaff-token\" option, and then please set it in configuration file «config/config.yml».")
+		return fmt.Errorf("Hubstaff Auth Token is not specified. You can obtain it with \"obtain-hubstaff-token\" option, and then please set it in configuration file «config/config.yml»")
 	}
-	//fmt.Printf("config: %+v\n", config)
 
 	return nil
 }

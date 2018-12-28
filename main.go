@@ -12,16 +12,12 @@ import (
 	"backoffice_app/app"
 	"backoffice_app/config"
 	"backoffice_app/controller"
-	"backoffice_app/libs/task_manager"
+	"backoffice_app/libs/taskmanager"
 
-	"github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
-
-//var dateOfWorkdaysStart = time.Date(2018, 9, 10, 0, 0, 0, 0, time.Local)
-//var dateOfWorkdaysEnd = time.Date(2018, 9, 11, 23, 59, 59, 0, time.Local)
 
 func main() {
 
@@ -45,7 +41,7 @@ func main() {
 		case "panic":
 			logrus.SetLevel(logrus.PanicLevel)
 		default:
-			panic("invalid logLevel \"" + cfg.LogLevel + "\"in cfg. available levels:\n" +
+			panic("invalid logLevel \"" + cfg.LogLevel + " \" in cfg. available levels:\n" +
 				"\t- debug\n" +
 				"\t- info\n" +
 				"\t- warn\n" +
@@ -54,81 +50,86 @@ func main() {
 				"\t- panic")
 		}
 
-		// Log as JSON instead of the default ASCII formatter, but wrapped with the runtime Formatter.
 		formatter := runtime.Formatter{ChildFormatter: &logrus.TextFormatter{}}
-		// Enable line number logging as well
 		formatter.Line = true
 
-		// Replace the default Logrus Formatter with our runtime Formatter
 		logrus.SetFormatter(&formatter)
 
-		now.WeekStartDay = time.Monday // Set Monday as first day, default is Sunday
+		now.WeekStartDay = time.Monday
 
 		cliApp := cli.NewApp()
 		cliApp.Name = "Backoffice App"
 		cliApp.Usage = "It's the best application for real time workers day and week progress."
 
 		cliApp.Action = func(c *cli.Context) {
-			app, err := app.New(cfg)
+			services, err := app.New(cfg)
 			if err != nil {
 				panic(err)
 			}
 
-			controller.New(*cfg).Start()
+			go controller.New(*cfg).Start()
+
+			log.Println("Requests listener started.")
 
 			wg := sync.WaitGroup{}
-			tm := task_manager.New(&wg)
+			tm := taskmanager.New(&wg)
 
-			tm.AddTask(cfg.DailyReportCronTime, func() {
-				app.GetWorkersWorkedTimeAndSendToSlack(
-					"Daily work time report",
+			err = tm.AddTask(cfg.DailyReportCronTime, func() {
+				services.GetWorkersWorkedTimeAndSendToSlack(
+					"Daily work time report (auto)",
 					now.BeginningOfDay().AddDate(0, 0, -1),
 					now.EndOfDay().AddDate(0, 0, -1),
 					cfg.Hubstaff.OrgsID)
 			})
+			if err != nil {
+				panic(err)
+			}
 
-			tm.AddTask(cfg.WeeklyReportCronTime, func() {
-				app.GetWorkersWorkedTimeAndSendToSlack(
-					"Weekly work time report",
+			err = tm.AddTask(cfg.WeeklyReportCronTime, func() {
+				services.GetWorkersWorkedTimeAndSendToSlack(
+					"Weekly work time report (auto)",
 					now.BeginningOfWeek().AddDate(0, 0, -1),
 					now.EndOfWeek().AddDate(0, 0, -1),
 					cfg.Hubstaff.OrgsID)
 			})
+			if err != nil {
+				panic(err)
+			}
 
-			tm.AddTask(cfg.TaskTimeExceedionReportCronTime, func() {
-				allIssues, _, err := app.IssuesSearch()
+			err = tm.AddTask(cfg.TaskTimeExceedionReportCronTime, func() {
+				allIssues, _, err := services.IssuesSearch()
 				if err != nil {
 					panic(err)
 				}
+				var index = 1
 				var msgBody = "Employees have exceeded tasks:\n"
-				for index, issue := range allIssues {
-					if issue.Fields.TimeSpent > issue.Fields.TimeOriginalEstimate {
-						ts, err := app.SecondsToClockTime(issue.Fields.TimeSpent)
-						if err != nil {
-							logrus.Errorf("time spent conversion: regexp error: %v", err)
-							continue
-						}
-
-						te, err := app.SecondsToClockTime(issue.Fields.TimeOriginalEstimate)
-						if err != nil {
-							logrus.Errorf("time spent conversion: regexp error: %v", err)
-							continue
-						}
-
-						msgBody += fmt.Sprintf("%d. %s - %s: %v из %v\n",
-							index, issue.Key, issue.Fields.Summary, ts, te,
-						)
-
+				for _, issue := range allIssues {
+					if issue.Fields != nil {
+						continue
 					}
-
+					if listRow := services.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
+						msgBody += listRow
+						index++
+					}
 				}
 
-				app.Slack.SendStandardMessage(
+				if err := services.Slack.SendStandardMessage(
 					msgBody,
-					app.Slack.Channel.ID,
-					app.Slack.Channel.BotName,
-				)
+					services.Slack.Channel.ID,
+					services.Slack.Channel.BotName,
+				); err != nil {
+					logrus.WithError(err).
+						WithFields(logrus.Fields{
+							"msgBody":        msgBody,
+							"channelID":      services.Slack.Channel.ID,
+							"channelBotName": services.Slack.Channel.BotName,
+						}).
+						Error("can't send Jira work time exceeding message to Slack.")
+				}
 			})
+			if err != nil {
+				panic(err)
+			}
 
 			tm.Start()
 
@@ -153,28 +154,30 @@ func main() {
 						panic(err)
 					}
 					var msgBody = "Employees have exceeded tasks:\n"
-					for index, issue := range allIssues {
-						if issue.Fields.TimeSpent > issue.Fields.TimeOriginalEstimate {
-							ts, err := services.SecondsToClockTime(issue.Fields.TimeSpent)
-							te, err := services.SecondsToClockTime(issue.Fields.TimeOriginalEstimate)
-							if err != nil {
-								logrus.Errorf("time conversion: regexp error: %v", err)
-								continue
-							}
-
-							msgBody += fmt.Sprintf("%d. %s - %s: %v из %v\n",
-								index, issue.Key, issue.Fields.Summary, ts, te,
-							)
-
+					var index = 1
+					for _, issue := range allIssues {
+						if issue.Fields != nil {
+							continue
 						}
-
+						if listRow := services.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
+							msgBody += listRow
+							index++
+						}
 					}
 
-					services.Slack.SendStandardMessage(
+					if err := services.Slack.SendStandardMessage(
 						msgBody,
 						services.Slack.Channel.ID,
 						services.Slack.Channel.BotName,
-					)
+					); err != nil {
+						logrus.WithError(err).
+							WithFields(logrus.Fields{
+								"msgBody":        msgBody,
+								"channelID":      services.Slack.Channel.ID,
+								"channelBotName": services.Slack.Channel.BotName,
+							}).
+							Error("can't send Jira work time exceeding message to Slack.")
+					}
 				},
 			},
 			{
@@ -187,9 +190,10 @@ func main() {
 					}
 
 					services.GetWorkersWorkedTimeAndSendToSlack(
-						"Weekly work time report",
+						"Weekly work time report (manual)",
 						now.BeginningOfWeek(),
-						now.EndOfWeek(), cfg.Hubstaff.OrgsID)
+						now.EndOfWeek(),
+						cfg.Hubstaff.OrgsID)
 
 				},
 			},
@@ -203,7 +207,7 @@ func main() {
 					}
 
 					services.GetWorkersWorkedTimeAndSendToSlack(
-						"Daily work time report",
+						"Daily work time report (manual)",
 						now.BeginningOfDay(),
 						now.EndOfDay(), cfg.Hubstaff.OrgsID)
 
@@ -226,7 +230,10 @@ func main() {
 				},
 			},
 		}
-		cliApp.Run(os.Args)
+
+		if err := cliApp.Run(os.Args); err != nil {
+			panic(err)
+		}
 	}
 
 }

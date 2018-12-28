@@ -33,9 +33,9 @@ func (c *Controller) respondError(ctx *gin.Context, err error) {
 	}
 
 	h := gin.H{"error": err.Error()}
-	if err == model.InternalError {
+	if err == model.ErrorInternal {
 		ctx.JSON(http.StatusInternalServerError, h)
-	} else if err == model.NotFoundError {
+	} else if err == model.ErrNotFound {
 		ctx.JSON(http.StatusNotFound, h)
 	} else {
 		ctx.JSON(http.StatusBadRequest, h)
