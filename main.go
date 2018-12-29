@@ -89,8 +89,8 @@ func main() {
 			err = tm.AddTask(cfg.WeeklyReportCronTime, func() {
 				services.GetWorkersWorkedTimeAndSendToSlack(
 					"Weekly work time report (auto)",
-					now.BeginningOfWeek().AddDate(0, 0, -1),
-					now.EndOfWeek().AddDate(0, 0, -1),
+					now.BeginningOfWeek().AddDate(0, 0, -7),
+					now.EndOfWeek().AddDate(0, 0, -7),
 					cfg.Hubstaff.OrgsID)
 			})
 			if err != nil {
