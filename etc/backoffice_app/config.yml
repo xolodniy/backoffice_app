@@ -2,7 +2,7 @@ loglevel: debug
 ginport: 1234
 gindebugmode: true
 dailyreportcrontime: "00 00 07 * * *"
-weeklyreportcrontime: "00 00 07 * * *"
+weeklyreportcrontime: "00 00 07 * * 1"
 tasktimeexceedionreportcrontime: "@every 1h"
 gittoken:
 jira:
