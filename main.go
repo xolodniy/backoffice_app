@@ -149,15 +149,21 @@ func main() {
 						panic(err)
 					}
 
-					files, err := services.Slack.ListFiles("10000")
-					if err != nil {
-						panic(err)
-					}
-					for _, f := range files {
-						if err := services.Slack.DeleteFile(f.ID); err != nil {
+					for {
+						files, err := services.Slack.ListFiles("50")
+						if len(files) == 0 {
+							// We finished.
+							return
+						}
+						if err != nil {
 							panic(err)
 						}
-						logrus.Info("deleted file " + f.ID)
+						for _, f := range files {
+							if err := services.Slack.DeleteFile(f.ID); err != nil {
+								panic(err)
+							}
+							logrus.Info("deleted file " + f.ID)
+						}
 					}
 				},
 			},
