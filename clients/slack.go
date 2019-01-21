@@ -10,6 +10,7 @@ import (
 	"backoffice_app/types"
 
 	"github.com/sirupsen/logrus"
+	"net/url"
 )
 
 // Slack is main Slack client app implementation
@@ -35,7 +36,7 @@ type SlackChannel struct {
 func (slack *Slack) SendStandardMessage(message, channelID, botName string) error {
 	logrus.Debugf("Slack standard message sent:\n %v", message)
 
-	_, err := slack.postChannelMessage(
+	err := slack.postChannelMessage(
 		message,
 		channelID,
 		false,
@@ -52,7 +53,7 @@ func (slack *Slack) SendStandardMessage(message, channelID, botName string) erro
 func (slack *Slack) SendStandardMessageWithIcon(message, channelID, botName string, iconURL string) error {
 	logrus.Debugf("Slack standard message with icon sent:\n %v", message)
 
-	_, err := slack.postChannelMessage(
+	err := slack.postChannelMessage(
 		message,
 		channelID,
 		false,
@@ -65,53 +66,123 @@ func (slack *Slack) SendStandardMessageWithIcon(message, channelID, botName stri
 	return nil
 }
 
-func (slack *Slack) postJSONMessage(jsonData []byte) (string, error) {
-	req, err := http.NewRequest("POST", slack.APIURL+"/chat.postMessage", bytes.NewBuffer(jsonData))
+func (slack *Slack) ListFiles(count string) ([]types.ListFilesResponseFile, error) {
+	// Prepare request.
+	data := url.Values{}
+	// For this to work, it should be a user token, not a bot token or something.
+	data.Set("token", slack.Auth.InToken)
+	data.Set("count", count)
+
+	u, _ := url.ParseRequestURI(slack.APIURL)
+	u.Path = "/api/files.list"
+	urlStr := u.String()
+
+	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
-		return "", err
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", slack.Auth.OutToken))
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	//logrus.Info("Slack request body:", string(body))
+	//logrus.Info("Slack response Status:", resp.Status)
+
+	// Process response.
+	if err != nil {
+		return nil, err
+	}
+	filesResp := types.ListFilesResponse{}
+	if err := json.Unmarshal(body, &filesResp); err != nil {
+		return nil, err
+	}
+	if !filesResp.Ok {
+		return nil, fmt.Errorf(filesResp.Error)
+	}
+
+	return filesResp.Files, nil
+}
+
+func (slack *Slack) DeleteFile(id string) error {
+	b, err := json.Marshal(types.DeleteFileMessage{
+		Token: slack.Auth.InToken,
+		File:  id,
+	})
+	if err != nil {
+		return err
+	}
+
+	respBody, err := slack.postJSONMessage("files.delete", b)
+	var responseBody struct {
+		Ok      bool   `json:"ok"`
+		Error   string `json:"error"`
+		Warning string `json:"warning"`
+	}
+	if err := json.Unmarshal(respBody, &responseBody); err != nil {
+		return err
+	}
+	if !responseBody.Ok {
+		return fmt.Errorf(responseBody.Error)
+	}
+
+	return err
+}
+
+func (slack *Slack) postJSONMessage(endpoint string, jsonData []byte) ([]byte, error) {
+	req, err := http.NewRequest("POST", slack.APIURL+"/"+endpoint, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", slack.Auth.OutToken))
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	logrus.Info("Slack request body:", string(jsonData))
-	logrus.Info("Slack response Status:", resp.Status)
+	logrus.Debug("Slack request body:", string(jsonData))
+	logrus.Debug("Slack response Status:", resp.Status)
 	body, _ := ioutil.ReadAll(resp.Body)
 
+	return body, nil
+}
+
+func (slack *Slack) sendPOSTMessage(message *types.PostChannelMessage) error {
+
+	b, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
+
+	respBody, err := slack.postJSONMessage("chat.postMessage", b)
 	var responseBody struct {
 		Ok      bool   `json:"ok"`
 		Error   string `json:"error"`
 		Warning string `json:"warning"`
 	}
-
-	if err := json.Unmarshal(body, &responseBody); err != nil {
-		return "", err
+	if err := json.Unmarshal(respBody, &responseBody); err != nil {
+		return err
 	}
-
 	if !responseBody.Ok {
-		return "", fmt.Errorf(responseBody.Error)
+		return fmt.Errorf(responseBody.Error)
 	}
 
-	return string(body), nil
-}
-func (slack *Slack) sendPOSTMessage(message *types.PostChannelMessage) (string, error) {
-
-	b, err := json.Marshal(message)
-	if err != nil {
-		return "", err
-	}
-
-	resp, err := slack.postJSONMessage(b)
-
-	return resp, err
+	return err
 }
 
-func (slack *Slack) postChannelMessage(text, channelID string, asUser bool, username string, iconURL string) (string, error) {
+func (slack *Slack) postChannelMessage(text, channelID string, asUser bool, username string, iconURL string) error {
 	var msg = &types.PostChannelMessage{
 		Token:    slack.Auth.OutToken,
 		Channel:  channelID,
