@@ -53,6 +53,25 @@ type PostChannelMessage struct {
 	IconURL     string                         `json:"icon_url"`
 }
 
+// ListFilesResponse is a response sent for ListFilesMessage request.
+type ListFilesResponse struct {
+	Ok      bool                    `json:"ok"`
+	Error   string                  `json:"error"`
+	Warning string                  `json:"warning"`
+	Files   []ListFilesResponseFile `json:"files"`
+}
+
+// ListFilesResponseFile is a single file in ListFilesResponse.
+type ListFilesResponseFile struct {
+	ID string `json:"id"`
+}
+
+// DeleteFileMessage is a request to delete a file.
+type DeleteFileMessage struct {
+	Token string `json:"token"`
+	File  string `json:"file"`
+}
+
 // Message is template to make a simple message
 type Message struct {
 	Text        string       `json:"text"`

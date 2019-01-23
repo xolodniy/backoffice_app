@@ -140,7 +140,33 @@ func main() {
 		}
 
 		cliApp.Commands = []cli.Command{
+			{
+				Name:  "remove-all-slack-attachments",
+				Usage: "Removes ABSOLUTELY ALL Slack attachments",
+				Action: func(c *cli.Context) {
+					services, err := app.New(cfg)
+					if err != nil {
+						panic(err)
+					}
 
+					for {
+						files, err := services.Slack.ListFiles("50")
+						if len(files) == 0 {
+							// We finished.
+							return
+						}
+						if err != nil {
+							panic(err)
+						}
+						for _, f := range files {
+							if err := services.Slack.DeleteFile(f.ID); err != nil {
+								panic(err)
+							}
+							logrus.Info("deleted file " + f.ID)
+						}
+					}
+				},
+			},
 			{
 				Name:  "get-jira-exceedions-now",
 				Usage: "Gets jira exceedions right now",
