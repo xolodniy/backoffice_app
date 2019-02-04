@@ -132,6 +132,36 @@ func main() {
 				panic(err)
 			}
 
+			err = tm.AddTask(cfg.DailyReportCronTime, func() {
+				allIssues, _, err := services.IssuesWithClosedSubtasks()
+				if err != nil {
+					panic(err)
+				}
+				var msgBody = "Issues have all closed subtasks:\n"
+				for _, issue := range allIssues {
+					msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>: _%[1]s_\n",
+						issue.Key,
+					)
+				}
+
+				if err := services.Slack.SendStandardMessage(
+					msgBody,
+					services.Slack.Channel.ID,
+					services.Slack.Channel.BotName,
+				); err != nil {
+					logrus.WithError(err).
+						WithFields(logrus.Fields{
+							"msgBody":        msgBody,
+							"channelID":      services.Slack.Channel.ID,
+							"channelBotName": services.Slack.Channel.BotName,
+						}).
+						Error("can't send Jira work time exceeding message to Slack.")
+				}
+			})
+			if err != nil {
+				panic(err)
+			}
+
 			tm.Start()
 
 			log.Println("Task scheduler started.")

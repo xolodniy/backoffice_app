@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-
 	"github.com/andygrunwald/go-jira"
 	"github.com/sirupsen/logrus"
 )
@@ -111,4 +110,52 @@ func (a *App) IssueTimeExceededNoTimeRange(issue jira.Issue, rowIndex int) strin
 	)
 
 	return listRow
+}
+
+// IssuesWithClosedSubtasks retrieves issues with closed subtasks
+func (a *App) IssuesWithClosedSubtasks() ([]jira.Issue, *jira.Response, error) {
+	var issuesWithSubtasks []jira.Issue
+	for i := 0; ; i += 100 {
+		allIssues, response, err := a.Jira.Issue.Search(
+			`(status NOT IN ("Closed")) `,
+			&jira.SearchOptions{
+				StartAt:       i,
+				MaxResults:    i + 100,
+				ValidateQuery: "strict",
+				Fields: []string{
+					"subtasks",
+				},
+			},
+		)
+		if len(allIssues) == 0 {
+			break
+		}
+
+		if err != nil {
+			logrus.
+				WithError(err).
+				WithField("issues", allIssues).
+				Error("can't take from jira all not closed issues")
+			return nil, response,  err
+		}
+
+		for _, issue := range allIssues {
+			if len(issue.Fields.Subtasks) != 0 {
+				issuesWithSubtasks = append(issuesWithSubtasks, issue)
+			}
+		}
+	}
+
+	var issuesWithClosedSubtasks []jira.Issue
+	for _, issue := range issuesWithSubtasks {
+		func() {
+			for _, subtask := range issue.Fields.Subtasks {
+				if subtask.Fields.Status.Name != "Closed" {
+					return
+				}
+			}
+			issuesWithClosedSubtasks = append(issuesWithClosedSubtasks, issue)
+		}()
+	}
+	return issuesWithClosedSubtasks, nil, nil
 }
