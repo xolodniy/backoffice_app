@@ -12,7 +12,7 @@ func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
 		`assignee != "empty" AND Sprint IN openSprints() AND (status NOT IN ("Closed")) AND issuetype IN subTaskIssueTypes()`,
 		&jira.SearchOptions{
 			StartAt:       0,
-			MaxResults:    1000,
+			MaxResults:    1000, //TODO: Test this func, because searching can return only 100 and it must be refactored
 			ValidateQuery: "strict",
 			Fields: []string{
 				"customfield_10026",
@@ -113,33 +113,32 @@ func (a *App) IssueTimeExceededNoTimeRange(issue jira.Issue, rowIndex int) strin
 }
 
 // IssuesWithClosedSubtasks retrieves issues with closed subtasks
-func (a *App) IssuesWithClosedSubtasks() ([]jira.Issue, *jira.Response, error) {
+func (a *App) IssuesWithClosedSubtasks() ([]jira.Issue, error) {
 	var issuesWithSubtasks []jira.Issue
 	for i := 0; ; i += 100 {
-		allIssues, response, err := a.Jira.Issue.Search(
+		issues, resp, err := a.Jira.Issue.Search(
 			`(status NOT IN ("Closed")) `,
 			&jira.SearchOptions{
 				StartAt:       i,
 				MaxResults:    i + 100,
-				ValidateQuery: "strict",
+				//Determines how to validate the JQL query and treat the validation results.
+				ValidateQuery: "strict", //strict Returns a 400 response code if any errors are found, along with a list of all errors (and warnings).
 				Fields: []string{
 					"subtasks",
 				},
 			},
 		)
-		if len(allIssues) == 0 {
+
+		if err != nil {
+			logrus.WithError(err).WithField("response", resp).Error("can't take from jira all not closed issues")
+			return nil, err
+		}
+
+		if len(issues) == 0 {
 			break
 		}
 
-		if err != nil {
-			logrus.
-				WithError(err).
-				WithField("issues", allIssues).
-				Error("can't take from jira all not closed issues")
-			return nil, response,  err
-		}
-
-		for _, issue := range allIssues {
+		for _, issue := range issues {
 			if len(issue.Fields.Subtasks) != 0 {
 				issuesWithSubtasks = append(issuesWithSubtasks, issue)
 			}
@@ -157,5 +156,5 @@ func (a *App) IssuesWithClosedSubtasks() ([]jira.Issue, *jira.Response, error) {
 			issuesWithClosedSubtasks = append(issuesWithClosedSubtasks, issue)
 		}()
 	}
-	return issuesWithClosedSubtasks, nil, nil
+	return issuesWithClosedSubtasks, nil
 }

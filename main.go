@@ -62,8 +62,12 @@ func main() {
 		cliApp.Name = "Backoffice App"
 		cliApp.Usage = "It's the best application for real time workers day and week progress."
 
+		HourCronPreference := "@every 1h"
+		DailyCronPreference := "00 00 07 * * *"
+		WeeklyCronPreference := "00 00 07 * * 1"
+
 		cliApp.Action = func(c *cli.Context) {
-			services, err := app.New(cfg)
+			application, err := app.New(cfg)
 			if err != nil {
 				panic(err)
 			}
@@ -75,8 +79,8 @@ func main() {
 			wg := sync.WaitGroup{}
 			tm := taskmanager.New(&wg)
 
-			err = tm.AddTask(cfg.DailyReportCronTime, func() {
-				services.GetWorkersWorkedTimeAndSendToSlack(
+			err = tm.AddTask(DailyCronPreference, func() {
+				application.GetWorkersWorkedTimeAndSendToSlack(
 					"Daily work time report (auto)",
 					now.BeginningOfDay().AddDate(0, 0, -1),
 					now.EndOfDay().AddDate(0, 0, -1),
@@ -86,8 +90,8 @@ func main() {
 				panic(err)
 			}
 
-			err = tm.AddTask(cfg.WeeklyReportCronTime, func() {
-				services.GetWorkersWorkedTimeAndSendToSlack(
+			err = tm.AddTask(WeeklyCronPreference, func() {
+				application.GetWorkersWorkedTimeAndSendToSlack(
 					"Weekly work time report (auto)",
 					now.BeginningOfWeek().AddDate(0, 0, -7),
 					now.EndOfWeek().AddDate(0, 0, -7),
@@ -97,67 +101,12 @@ func main() {
 				panic(err)
 			}
 
-			err = tm.AddTask(cfg.TaskTimeExceedionReportCronTime, func() {
-				allIssues, _, err := services.IssuesSearch()
-				if err != nil {
-					panic(err)
-				}
-				var index = 1
-				var msgBody = "Employees have exceeded tasks:\n"
-				for _, issue := range allIssues {
-					if issue.Fields != nil {
-						continue
-					}
-					if listRow := services.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
-						msgBody += listRow
-						index++
-					}
-				}
-
-				if err := services.Slack.SendStandardMessage(
-					msgBody,
-					services.Slack.Channel.ID,
-					services.Slack.Channel.BotName,
-				); err != nil {
-					logrus.WithError(err).
-						WithFields(logrus.Fields{
-							"msgBody":        msgBody,
-							"channelID":      services.Slack.Channel.ID,
-							"channelBotName": services.Slack.Channel.BotName,
-						}).
-						Error("can't send Jira work time exceeding message to Slack.")
-				}
-			})
+			err = tm.AddTask(HourCronPreference, application.ReportEmployeesHaveExceededTasks)
 			if err != nil {
 				panic(err)
 			}
 
-			err = tm.AddTask(cfg.DailyReportCronTime, func() {
-				allIssues, _, err := services.IssuesWithClosedSubtasks()
-				if err != nil {
-					panic(err)
-				}
-				var msgBody = "Issues have all closed subtasks:\n"
-				for _, issue := range allIssues {
-					msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>: _%[1]s_\n",
-						issue.Key,
-					)
-				}
-
-				if err := services.Slack.SendStandardMessage(
-					msgBody,
-					services.Slack.Channel.ID,
-					services.Slack.Channel.BotName,
-				); err != nil {
-					logrus.WithError(err).
-						WithFields(logrus.Fields{
-							"msgBody":        msgBody,
-							"channelID":      services.Slack.Channel.ID,
-							"channelBotName": services.Slack.Channel.BotName,
-						}).
-						Error("can't send Jira work time exceeding message to Slack.")
-				}
-			})
+			err = tm.AddTask(DailyCronPreference, application.ReportIsuuesWithClosedSubtasks)
 			if err != nil {
 				panic(err)
 			}
@@ -222,19 +171,11 @@ func main() {
 						}
 					}
 
-					if err := services.Slack.SendStandardMessage(
+					services.Slack.SendStandardMessage(
 						msgBody,
 						services.Slack.Channel.ID,
 						services.Slack.Channel.BotName,
-					); err != nil {
-						logrus.WithError(err).
-							WithFields(logrus.Fields{
-								"msgBody":        msgBody,
-								"channelID":      services.Slack.Channel.ID,
-								"channelBotName": services.Slack.Channel.BotName,
-							}).
-							Error("can't send Jira work time exceeding message to Slack.")
-					}
+					)
 				},
 			},
 			{

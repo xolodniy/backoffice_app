@@ -72,14 +72,11 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	)
 
 	if len(orgsList) == 0 {
-		err := a.Slack.SendStandardMessage(
+		a.Slack.SendStandardMessage(
 			"No tracked time for now or no organization found",
 			a.Slack.Channel.ID,
 			a.Slack.Channel.BotName,
 		)
-		if err != nil {
-			panic(fmt.Sprintf("Slack error: %s", err))
-		}
 		return
 	}
 
@@ -103,12 +100,11 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		}
 	}
 
-	if err := a.Slack.SendStandardMessage(
+	a.Slack.SendStandardMessage(
 		message,
 		a.Slack.Channel.ID,
-		a.Slack.Channel.BotName); err != nil {
-		panic(fmt.Sprintf("Slack error: %s", err))
-	}
+		a.Slack.Channel.BotName,
+	)
 
 }
 
@@ -126,4 +122,49 @@ func (a *App) DurationString(durationInSeconds int) (string, error) {
 	}
 
 	return occurrences[1], nil
+}
+
+// ReportIsuuesWithClosedSubtasks create report about issues woth closed subtasks
+func (a *App) ReportIsuuesWithClosedSubtasks() {
+	allIssues, err := a.IssuesWithClosedSubtasks()
+	if err != nil {
+		panic(err)
+	}
+	var msgBody = "Issues have all closed subtasks:\n"
+	for _, issue := range allIssues {
+		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>: _%[1]s_\n",
+			issue.Key,
+		)
+	}
+
+	a.Slack.SendStandardMessage(
+		msgBody,
+		a.Slack.Channel.ID,
+		a.Slack.Channel.BotName,
+	)
+}
+
+// ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
+func (a *App) ReportEmployeesHaveExceededTasks() {
+	allIssues, _, err := a.IssuesSearch()
+	if err != nil {
+		panic(err)
+	}
+	var index = 1
+	var msgBody = "Employees have exceeded tasks:\n"
+	for _, issue := range allIssues {
+		if issue.Fields != nil {
+			continue
+		}
+		if listRow := a.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
+			msgBody += listRow
+			index++
+		}
+	}
+
+	a.Slack.SendStandardMessage(
+		msgBody,
+		a.Slack.Channel.ID,
+		a.Slack.Channel.BotName,
+	)
 }
