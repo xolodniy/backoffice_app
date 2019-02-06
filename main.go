@@ -149,20 +149,13 @@ func main() {
 						}
 					}
 
-					err = application.Slack.SendMessage(
+					application.Slack.SendMessage(
 						msgBody,
 						application.Slack.ID,
 						application.Slack.BotName,
 						false,
 						"",
 					)
-					if err != nil {
-						logrus.WithError(err).WithFields(logrus.Fields{
-							"msgBody":        msgBody,
-							"channelID":      application.Slack.ID,
-							"channelBotName": application.Slack.BotName,
-						}).Error(err.Error())
-					}
 				},
 			},
 			{

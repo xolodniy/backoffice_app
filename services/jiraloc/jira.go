@@ -79,9 +79,7 @@ func (j *Jira) AssigneeOpenIssues() ([]Issue, error) {
 // IssueTimeExceededNoTimeRange prepares string without employee time excess
 func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 	if issue.Fields == nil {
-		logrus.
-			WithField("issue", issue).
-			Error("issue fields is empty")
+		logrus.WithField("issue", issue).Error("issue fields is empty")
 		return ""
 	}
 
@@ -93,15 +91,12 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 	var developer = "No developer"
 	developerMap, err := issue.Fields.Unknowns.MarshalMap("customfield_10026")
 	if err != nil {
-		logrus.
-			WithError(err).
-			WithField("developerMap", developerMap).
+		logrus.WithError(err).WithField("developerMap", developerMap).
 			Error("can't make customfield_10026 map marshaling")
 	} else if developerMap != nil {
 		displayName, ok := developerMap["displayName"].(string)
 		if !ok {
-			logrus.
-				WithField("displayName", developerMap["displayName"]).
+			logrus.WithField("displayName", developerMap["displayName"]).
 				Error("can't assert to string map displayName field")
 		} else {
 			developer = displayName

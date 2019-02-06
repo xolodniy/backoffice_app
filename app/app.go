@@ -41,7 +41,7 @@ func New(conf *config.Main) (*App, error) {
 func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, orgID int64) {
 	orgsList, err := a.GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd, orgID)
 	if err != nil {
-		panic(fmt.Sprintf("Hubstaff error: %v", err))
+		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
 	}
 
 	var message = fmt.Sprintf(
@@ -54,20 +54,13 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	)
 
 	if len(orgsList) == 0 {
-		err := a.Slack.SendMessage(
+		a.Slack.SendMessage(
 			"No tracked time for now or no organization found",
 			a.Slack.ID,
 			a.Slack.BotName,
 			false,
 			"",
 		)
-		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{
-				"msgBody":        "No tracked time for now or no organization found",
-				"channelID":      a.Slack.ID,
-				"channelBotName": a.Slack.BotName,
-			}).Error(err.Error())
-		}
 		return
 	}
 
@@ -77,9 +70,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		for _, worker := range orgsList[0].Workers {
 			t, err := a.DurationString(worker.TimeWorked)
 			if err != nil {
-				logrus.
-					WithError(err).
-					WithField("time", worker.TimeWorked).
+				logrus.WithError(err).WithField("time", worker.TimeWorked).
 					Error("error occurred on time conversion error")
 				continue
 			}
@@ -91,21 +82,13 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		}
 	}
 
-	err = a.Slack.SendMessage(
+	a.Slack.SendMessage(
 		message,
 		a.Slack.ID,
 		a.Slack.BotName,
 		false,
 		"",
 	)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"msgBody":        message,
-			"channelID":      a.Slack.ID,
-			"channelBotName": a.Slack.BotName,
-		}).Error(err.Error())
-	}
-
 }
 
 // DurationString converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
@@ -128,36 +111,29 @@ func (a *App) DurationString(durationInSeconds int) (string, error) {
 func (a *App) ReportIsuuesWithClosedSubtasks() {
 	allIssues, err := a.Jira.IssuesWithClosedSubtasks()
 	if err != nil {
-		panic(err)
+		logrus.WithError(err).Error("can't take information about closed subtasks from jira")
 	}
 	var msgBody = "Issues have all closed subtasks:\n"
 	for _, issue := range allIssues {
-		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>: _%[1]s_\n",
+		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n",
 			issue.Key,
 		)
 	}
 
-	err = a.Slack.SendMessage(
+	a.Slack.SendMessage(
 		msgBody,
 		a.Slack.ID,
 		a.Slack.BotName,
 		false,
 		"",
 	)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"msgBody":        msgBody,
-			"channelID":      a.Slack.ID,
-			"channelBotName": a.Slack.BotName,
-		}).Error(err.Error())
-	}
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
 func (a *App) ReportEmployeesHaveExceededTasks() {
 	allIssues, err := a.Jira.AssigneeOpenIssues()
 	if err != nil {
-		panic(err)
+		logrus.WithError(err).Error("can't take information about exceeded tasks of employees from jira")
 	}
 	var index = 1
 	var msgBody = "Employees have exceeded tasks:\n"
@@ -171,18 +147,11 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 		}
 	}
 
-	err = a.Slack.SendMessage(
+	a.Slack.SendMessage(
 		msgBody,
 		a.Slack.ID,
 		a.Slack.BotName,
 		false,
 		"",
 	)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"msgBody":        msgBody,
-			"channelID":      a.Slack.ID,
-			"channelBotName": a.Slack.BotName,
-		}).Error(err.Error())
-	}
 }

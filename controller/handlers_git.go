@@ -36,8 +36,7 @@ type gitLabReq struct {
 func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 	var req gitLabReq
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		logrus.WithError(err).
-			WithField("req", req).
+		logrus.WithError(err).WithField("req", req).
 			Error("can't parse GitLab WebHook data. Probably GitLab are changed their contract and the app have to be updated.")
 		c.respondBindingError(ctx, err, req)
 		return
@@ -53,22 +52,13 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 		message += "*Warning! Some migration can be skipped which are in commits placed beyond the 20 commit barrier*\n"
 	}
 
-	if err := c.App.Slack.SendMessage(
+	c.App.Slack.SendMessage(
 		message,
 		c.Config.Slack.Channel.BackOfficeAppID,
 		req.UserName+" (bot)",
 		false,
 		req.UserAvatar,
-	); err != nil {
-		logrus.WithError(err).
-			WithFields(logrus.Fields{
-				"message":    message,
-				"userID":     c.Config.Slack.Channel.BackOfficeAppID,
-				"userName":   req.UserName + " (bot)",
-				"userAvatar": req.UserAvatar,
-			}).
-			Error("can't send message to Slack while GitLab WebHook added files data parsing.")
-	}
+	)
 
 	var r, _ = regexp.Compile(`/((etc|db)/migrations/[0-9]{4,}([0-9a-zA-Z_]+)?\.sql)`)
 
@@ -87,22 +77,13 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 					message += fmt.Sprintf("```%s```", fileContents)
 				}
 
-				if err := c.App.Slack.SendMessage(
+				c.App.Slack.SendMessage(
 					message,
 					c.Config.Slack.Channel.BackOfficeAppID,
 					req.UserName+" (bot)",
 					false,
 					req.UserAvatar,
-				); err != nil {
-					logrus.WithError(err).
-						WithFields(logrus.Fields{
-							"message":    message,
-							"userID":     c.Config.Slack.Channel.BackOfficeAppID,
-							"userName":   req.UserName + " (bot)",
-							"userAvatar": req.UserAvatar,
-						}).
-						Error("can't send message to Slack while GitLab WebHook added files data parsing.")
-				}
+				)
 			}
 		}
 		for _, f := range commit.Modified {
@@ -119,22 +100,13 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 					message += fmt.Sprintf("```%s```", fileContents)
 				}
 
-				if err := c.App.Slack.SendMessage(
+				c.App.Slack.SendMessage(
 					message,
 					c.Config.Slack.Channel.BackOfficeAppID,
 					req.UserName+" (bot)",
 					false,
 					req.UserAvatar,
-				); err != nil {
-					logrus.WithError(err).
-						WithFields(logrus.Fields{
-							"message":    message,
-							"userID":     c.Config.Slack.Channel.BackOfficeAppID,
-							"userName":   req.UserName + " (bot)",
-							"userAvatar": req.UserAvatar,
-						}).
-						Error("can't send message to Slack while GitLab WebHook modified files data parsing.")
-				}
+				)
 			}
 		}
 	}
