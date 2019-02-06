@@ -36,7 +36,7 @@ func New(config *config.Slack) Slack {
 }
 
 // SendMessage is main message sending method
-func (s *Slack) SendMessage(text, channelID, botName string, asUser bool, iconURL string) error {
+func (s *Slack) SendMessage(text, channelID, botName string, asUser bool, iconURL string) {
 	var message = &types.PostChannelMessage{
 		Token:    s.OutToken,
 		Channel:  channelID,
@@ -48,7 +48,11 @@ func (s *Slack) SendMessage(text, channelID, botName string, asUser bool, iconUR
 
 	jsonMessage, err := json.Marshal(message)
 	if err != nil {
-		return err
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"msgBody":        text,
+			"channelID":      channelID,
+			"channelBotName": botName,
+		}).Error("can't decode to json")
 	}
 	var responseBody struct {
 		Ok      bool   `json:"ok"`
@@ -58,7 +62,11 @@ func (s *Slack) SendMessage(text, channelID, botName string, asUser bool, iconUR
 
 	respBody, err := s.jsonRequest("chat.postMessage", jsonMessage)
 	if err := json.Unmarshal(respBody, &responseBody); err != nil {
-		return err
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"msgBody":        text,
+			"channelID":      channelID,
+			"channelBotName": botName,
+		}).Error("can't encode from json")
 	}
 	if !responseBody.Ok {
 		logrus.WithError(err).WithFields(logrus.Fields{
@@ -67,7 +75,6 @@ func (s *Slack) SendMessage(text, channelID, botName string, asUser bool, iconUR
 			"channelBotName": botName,
 		}).Error(responseBody.Error)
 	}
-	return nil
 }
 
 func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
