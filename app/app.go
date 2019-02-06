@@ -2,56 +2,38 @@ package app
 
 import (
 	"fmt"
-	"net/http"
 	"regexp"
 	"time"
 
-	"backoffice_app/clients"
 	"backoffice_app/config"
+	"backoffice_app/services/hubstaff"
+	"backoffice_app/services/jiraloc"
+	"backoffice_app/services/slack"
 
-	"github.com/andygrunwald/go-jira"
 	"github.com/sirupsen/logrus"
 	"github.com/xanzy/go-gitlab"
 )
 
 // App is main App implementation
 type App struct {
-	Hubstaff *clients.Hubstaff
-	Slack    *clients.Slack
-	Jira     *jira.Client
+	Hubstaff hubstaff.Hubstaff
+	Slack    slack.Slack
+	Jira     jiraloc.Jira
 	Git      *gitlab.Client
 	Config   config.Main
 }
 
 // New is main App constructor
-func New(config *config.Main) (*App, error) {
-	Hubstaff := &clients.Hubstaff{
-		HTTPClient: http.DefaultClient,
-		AppToken:   config.Hubstaff.Auth.AppToken,
-		AuthToken:  config.Hubstaff.Auth.Token,
-		APIURL:     config.Hubstaff.APIURL,
-	}
+func New(conf *config.Main) (*App, error) {
+	git := gitlab.NewClient(nil, conf.GitToken)
 
-	jiraClient, err := jira.NewClient(config.Jira.Auth.Client(), config.Jira.APIUrl)
-	if err != nil {
-		return nil, fmt.Errorf("Jira error: can't create jira client: %s", err)
-	}
-
-	slack := &clients.Slack{
-		APIURL: config.Slack.APIURL,
-		Auth: clients.SlackAuth{
-			InToken:  config.Slack.Auth.InToken,
-			OutToken: config.Slack.Auth.OutToken,
-		},
-		Channel: clients.SlackChannel{
-			BotName: config.Slack.Channel.BotName,
-			ID:      "#" + config.Slack.Channel.BackOfficeAppID,
-		},
-	}
-
-	git := gitlab.NewClient(nil, config.GitToken)
-
-	return &App{Hubstaff, slack, jiraClient, git, *config}, nil
+	return &App{
+		Hubstaff: hubstaff.New(&conf.Hubstaff),
+		Slack:    slack.New(&conf.Slack),
+		Jira:     jiraloc.New(&conf.Jira),
+		Git:      git,
+		Config:   *conf,
+	}, nil
 
 }
 
@@ -72,11 +54,20 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	)
 
 	if len(orgsList) == 0 {
-		a.Slack.SendStandardMessage(
+		err := a.Slack.SendMessage(
 			"No tracked time for now or no organization found",
-			a.Slack.Channel.ID,
-			a.Slack.Channel.BotName,
+			a.Slack.ID,
+			a.Slack.BotName,
+			false,
+			"",
 		)
+		if err != nil {
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"msgBody":        "No tracked time for now or no organization found",
+				"channelID":      a.Slack.ID,
+				"channelBotName": a.Slack.BotName,
+			}).Error(err.Error())
+		}
 		return
 	}
 
@@ -100,11 +91,20 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		}
 	}
 
-	a.Slack.SendStandardMessage(
+	err = a.Slack.SendMessage(
 		message,
-		a.Slack.Channel.ID,
-		a.Slack.Channel.BotName,
+		a.Slack.ID,
+		a.Slack.BotName,
+		false,
+		"",
 	)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"msgBody":        message,
+			"channelID":      a.Slack.ID,
+			"channelBotName": a.Slack.BotName,
+		}).Error(err.Error())
+	}
 
 }
 
@@ -126,7 +126,7 @@ func (a *App) DurationString(durationInSeconds int) (string, error) {
 
 // ReportIsuuesWithClosedSubtasks create report about issues woth closed subtasks
 func (a *App) ReportIsuuesWithClosedSubtasks() {
-	allIssues, err := a.IssuesWithClosedSubtasks()
+	allIssues, err := a.Jira.IssuesWithClosedSubtasks()
 	if err != nil {
 		panic(err)
 	}
@@ -137,16 +137,25 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 		)
 	}
 
-	a.Slack.SendStandardMessage(
+	err = a.Slack.SendMessage(
 		msgBody,
-		a.Slack.Channel.ID,
-		a.Slack.Channel.BotName,
+		a.Slack.ID,
+		a.Slack.BotName,
+		false,
+		"",
 	)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"msgBody":        msgBody,
+			"channelID":      a.Slack.ID,
+			"channelBotName": a.Slack.BotName,
+		}).Error(err.Error())
+	}
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
 func (a *App) ReportEmployeesHaveExceededTasks() {
-	allIssues, _, err := a.IssuesSearch()
+	allIssues, err := a.Jira.AssigneeOpenIssues()
 	if err != nil {
 		panic(err)
 	}
@@ -156,15 +165,24 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 		if issue.Fields != nil {
 			continue
 		}
-		if listRow := a.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
+		if listRow := a.Jira.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
 			msgBody += listRow
 			index++
 		}
 	}
 
-	a.Slack.SendStandardMessage(
+	err = a.Slack.SendMessage(
 		msgBody,
-		a.Slack.Channel.ID,
-		a.Slack.Channel.BotName,
+		a.Slack.ID,
+		a.Slack.BotName,
+		false,
+		"",
 	)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"msgBody":        msgBody,
+			"channelID":      a.Slack.ID,
+			"channelBotName": a.Slack.BotName,
+		}).Error(err.Error())
+	}
 }
