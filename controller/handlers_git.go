@@ -53,10 +53,11 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 		message += "*Warning! Some migration can be skipped which are in commits placed beyond the 20 commit barrier*\n"
 	}
 
-	if err := c.App.Slack.SendStandardMessageWithIcon(
+	if err := c.App.Slack.SendMessage(
 		message,
 		c.Config.Slack.Channel.BackOfficeAppID,
 		req.UserName+" (bot)",
+		false,
 		req.UserAvatar,
 	); err != nil {
 		logrus.WithError(err).
@@ -86,10 +87,11 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 					message += fmt.Sprintf("```%s```", fileContents)
 				}
 
-				if err := c.App.Slack.SendStandardMessageWithIcon(
+				if err := c.App.Slack.SendMessage(
 					message,
 					c.Config.Slack.Channel.BackOfficeAppID,
 					req.UserName+" (bot)",
+					false,
 					req.UserAvatar,
 				); err != nil {
 					logrus.WithError(err).
@@ -117,10 +119,11 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 					message += fmt.Sprintf("```%s```", fileContents)
 				}
 
-				if err := c.App.Slack.SendStandardMessageWithIcon(
+				if err := c.App.Slack.SendMessage(
 					message,
 					c.Config.Slack.Channel.BackOfficeAppID,
 					req.UserName+" (bot)",
+					false,
 					req.UserAvatar,
 				); err != nil {
 					logrus.WithError(err).
