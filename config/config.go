@@ -9,40 +9,50 @@ import (
 
 // Main is template to storing of all configuration settings needed
 type Main struct {
-	LogLevel                        string
-	GinPort                         string
-	GinDebugMode                    bool
-	DailyReportCronTime             string
-	WeeklyReportCronTime            string
-	TaskTimeExceedionReportCronTime string
-	GitToken                        string
-	Jira                            struct {
-		Auth   jira.BasicAuthTransport
-		APIUrl string
-	}
-	Slack struct {
-		Auth struct {
-			InToken  string
-			OutToken string
-		}
-		Channel struct {
-			BotName         string
-			BackOfficeAppID string
-			MigrationsID    string
-		}
-		APIURL string
-	}
-	Hubstaff struct {
-		APIURL string
-		Auth   struct {
-			Token    string
-			AppToken string
+	LogLevel                    string
+	GinPort                     string
+	GinDebugMode                bool
+	DailyWorkersWorkedTimeCron  string
+	WeeklyWorkersWorkedTimeCron string
+	ReportClosedSubtasksCron    string
+	EmployeesExceededTasksCron  string
+	GitToken                    string
+	Jira
+	Hubstaff
+	Slack
+}
 
-			Login    string
-			Password string
-		}
-		OrgsID int64
+// Jira is template to storing jira configuration
+type Jira struct {
+	Auth   jira.BasicAuthTransport
+	APIUrl string
+}
+
+// Hubstaff is template to storing hubstaff configuration
+type Hubstaff struct {
+	APIURL string
+	Auth   struct {
+		Token    string
+		AppToken string
+
+		Login    string
+		Password string
 	}
+	OrgsID int64
+}
+
+// Slack is template to storing slack configuration
+type Slack struct {
+	Auth struct {
+		InToken  string
+		OutToken string
+	}
+	Channel struct {
+		BotName         string
+		BackOfficeAppID string
+		MigrationsID    string
+	}
+	APIURL string
 }
 
 // GetConfig return config parsed from config/config.yml
@@ -62,6 +72,7 @@ func GetConfig(skipFieldsFilledCheck bool) (*Main, error) {
 	return &config, nil
 }
 
+// checkConfig check general auth configuration
 func (config *Main) checkConfig() error {
 
 	if config.Jira.Auth.Username == "" {

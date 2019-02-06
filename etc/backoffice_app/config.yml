@@ -1,9 +1,10 @@
 loglevel: debug
 ginport: 1234
 gindebugmode: true
-dailyreportcrontime: "00 00 07 * * *"
-weeklyreportcrontime: "00 00 07 * * 1"
-tasktimeexceedionreportcrontime: "@every 1h"
+dailyworkersworkedtimecron: "00 00 07 * * *"
+weeklyworkersworkedtimecron: "00 00 07 * * 1"
+reportclosedsubtaskscron: "00 00 07 * * *"
+employeesexceededtaskscron: "@every 1h"
 gittoken:
 jira:
   apiurl: https://theflow.atlassian.net
@@ -13,6 +14,10 @@ jira:
 
 slack:
   apiurl: https://slack.com/api
+  backofficeappid: back-office-app
+  botname: Back Office Bot
+  intoken: ITYgHVRVRhOIZfvDpVgCS6CM
+  outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
   auth:
     intoken: ITYgHVRVRhOIZfvDpVgCS6CM
     outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
