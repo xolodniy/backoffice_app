@@ -8,11 +8,11 @@ import (
 
 // IssuesSearch searches Issues in all sprints which opened now and returning list with issues in this sprints list
 func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
-	allIssues, response, err := a.Jira.Issue.Search(
+	allIssues, response, err := a.Jira.Jira.Issue.Search(
 		`assignee != "empty" AND Sprint IN openSprints() AND (status NOT IN ("Closed")) AND issuetype IN subTaskIssueTypes()`,
 		&jira.SearchOptions{
 			StartAt:       0,
-			MaxResults:    1000, //TODO: Test this func, because searching can return only 100 and it must be refactored
+			MaxResults:    1000,
 			ValidateQuery: "strict",
 			Fields: []string{
 				"customfield_10026",
@@ -116,11 +116,11 @@ func (a *App) IssueTimeExceededNoTimeRange(issue jira.Issue, rowIndex int) strin
 func (a *App) IssuesWithClosedSubtasks() ([]jira.Issue, error) {
 	var issuesWithSubtasks []jira.Issue
 	for i := 0; ; i += 100 {
-		issues, resp, err := a.Jira.Issue.Search(
+		issues, resp, err := a.Jira.Jira.Issue.Search(
 			`(status NOT IN ("Closed")) `,
 			&jira.SearchOptions{
-				StartAt:       i,
-				MaxResults:    i + 100,
+				StartAt:    i,
+				MaxResults: i + 100,
 				//Determines how to validate the JQL query and treat the validation results.
 				ValidateQuery: "strict", //strict Returns a 400 response code if any errors are found, along with a list of all errors (and warnings).
 				Fields: []string{
