@@ -133,7 +133,7 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
     dailyworkersworkedtimecron: "00 00 07 * * *"    — start everyday at 7:00 to send daily worked time of worker
     weeklyworkersworkedtimecron: "00 00 07 * * 1"   — start every week at 7:00 to send weekly worked time of worker
     reportclosedsubtaskscron: "00 00 07 * * *"      — start everyday at 7:00 to send report about all closed subtask of issue
-    employeesexceededtaskscron: "@every 1h"         — start every hour to send report about employers that have exceeded tasks
+    employeesexceededtaskscron: "00 00 07 * * *"         — start everyday at 7:00 to send report about employers that have exceeded tasks
 
 ### API Description
 

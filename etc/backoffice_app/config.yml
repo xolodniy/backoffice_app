@@ -4,7 +4,7 @@ gindebugmode: true
 dailyworkersworkedtimecron: "00 00 07 * * *"
 weeklyworkersworkedtimecron: "00 00 07 * * 1"
 reportclosedsubtaskscron: "00 00 07 * * *"
-employeesexceededtaskscron: "@every 1h"
+employeesexceededtaskscron: "00 00 07 * * *"
 gittoken:
 jira:
   apiurl: https://theflow.atlassian.net
