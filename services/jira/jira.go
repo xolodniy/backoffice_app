@@ -1,16 +1,20 @@
 package jira
 
 import (
-	"backoffice_app/config"
 	"fmt"
+
+	"backoffice_app/config"
+
 	"github.com/andygrunwald/go-jira"
 	"github.com/sirupsen/logrus"
 )
 
+// Jira main struct of jira client
 type Jira struct {
-	Jira *jira.Client
+	*jira.Client
 }
 
+// Issue struct don't let go-jira dependency on App level
 type Issue struct {
 	jira.Issue
 }
@@ -22,15 +26,15 @@ func New(config *config.Jira) Jira {
 		panic(err)
 	}
 	return Jira{
-		Jira: jiraClient,
+		jiraClient,
 	}
 }
 
-// IssuesSearch searches Issues in all sprints which opened now and returning list with issues in this sprints list
+// issues searches issues in all sprints which opened now and returning list with issues in this sprints list
 func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
-	var openIssues []Issue
+	var issues []Issue
 	for i := 0; ; i += 100 {
-		issues, resp, err := j.Jira.Issue.Search(
+		allIssues, resp, err := j.Issue.Search(
 			jqlRequest,
 			&jira.SearchOptions{
 				StartAt:    i,
@@ -51,7 +55,7 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 		)
 
 		if err != nil {
-			logrus.WithError(err).WithField("response", resp).Error("can't take from jira all not closed issues")
+			logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira all not closed issues")
 			return nil, err
 		}
 
@@ -59,14 +63,14 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 			break
 		}
 
-		for _, issue := range issues {
-			openIssues = append(openIssues, Issue{issue})
+		for _, issue := range allIssues {
+			issues = append(issues, Issue{issue})
 		}
 	}
-	return openIssues, nil
+	return issues, nil
 }
 
-// IssuesSearch searches Issues in all sprints which opened now and returning list with issues in this sprints list
+// AssigneeOpenIssues searches Issues in all sprints which opened now and returning list with issues in this sprints list
 func (j *Jira) AssigneeOpenIssues() ([]Issue, error) {
 	issues, err := j.issues(`assignee != "empty" AND Sprint IN openSprints() AND (status NOT IN ("Closed")) AND issuetype IN subTaskIssueTypes()`)
 
@@ -79,7 +83,7 @@ func (j *Jira) AssigneeOpenIssues() ([]Issue, error) {
 // IssueTimeExceededNoTimeRange prepares string without employee time excess
 func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 	if issue.Fields == nil {
-		logrus.WithField("issue", issue).Error("issue fields is empty")
+		logrus.WithField("issue", fmt.Sprintf("%+v", issue)).Error("issue fields is empty")
 		return ""
 	}
 
@@ -91,12 +95,12 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 	var developer = "No developer"
 	developerMap, err := issue.Fields.Unknowns.MarshalMap("customfield_10026")
 	if err != nil {
-		logrus.WithError(err).WithField("developerMap", developerMap).
+		logrus.WithError(err).WithField("developerMap", fmt.Sprintf("%+v", developerMap)).
 			Error("can't make customfield_10026 map marshaling")
 	} else if developerMap != nil {
 		displayName, ok := developerMap["displayName"].(string)
 		if !ok {
-			logrus.WithField("displayName", developerMap["displayName"]).
+			logrus.WithField("displayName", fmt.Sprintf("%+v", developerMap["displayName"])).
 				Error("can't assert to string map displayName field")
 		} else {
 			developer = displayName
