@@ -18,10 +18,7 @@ type Controller struct {
 
 // New returns controller object
 func New(config config.Main) *Controller {
-	appObj, err := app.New(&config)
-	if err != nil {
-		panic(err)
-	}
+	appObj := app.New(&config)
 	if !config.GinDebugMode {
 		gin.SetMode(gin.ReleaseMode)
 	}

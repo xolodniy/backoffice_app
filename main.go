@@ -29,7 +29,7 @@ func main() {
 
 		level, err := logrus.ParseLevel(cfg.LogLevel)
 		if err != nil {
-			panic("invalid logLevel \"" + cfg.LogLevel + " \" in cfg. available")
+			panic("invalid logLevel \"" + cfg.LogLevel + " \" in cfg. available: ") //TODO + logrus.AllLevels()
 		}
 		logrus.SetLevel(level)
 
@@ -45,10 +45,7 @@ func main() {
 		cliApp.Usage = "It's the best application for real time workers day and week progress."
 
 		cliApp.Action = func(c *cli.Context) {
-			application, err := app.New(cfg)
-			if err != nil {
-				panic(err)
-			}
+			application := app.New(cfg)
 
 			go controller.New(*cfg).Start()
 
@@ -57,7 +54,7 @@ func main() {
 			wg := sync.WaitGroup{}
 			tm := taskmanager.New(&wg)
 
-			err = tm.AddTask(cfg.DailyWorkersWorkedTimeCron, func() {
+			err := tm.AddTask(cfg.DailyWorkersWorkedTimeCron, func() {
 				application.GetWorkersWorkedTimeAndSendToSlack(
 					"Daily work time report (auto)",
 					now.BeginningOfDay().AddDate(0, 0, -1),
@@ -101,10 +98,7 @@ func main() {
 				Name:  "remove-all-slack-attachments",
 				Usage: "Removes ABSOLUTELY ALL Slack attachments",
 				Action: func(c *cli.Context) {
-					application, err := app.New(cfg)
-					if err != nil {
-						panic(err)
-					}
+					application := app.New(cfg)
 
 					for {
 						files, err := application.Slack.ListFiles("50")
@@ -128,44 +122,23 @@ func main() {
 				Name:  "get-jira-exceedions-now",
 				Usage: "Gets jira exceedions right now",
 				Action: func(c *cli.Context) {
-					application, err := app.New(cfg)
-					if err != nil {
-						panic(err)
-					}
-
-					allIssues, err := application.Jira.AssigneeOpenIssues()
-					if err != nil {
-						panic(err)
-					}
-					var msgBody = "Employees have exceeded tasks:\n"
-					var index = 1
-					for _, issue := range allIssues {
-						if issue.Fields != nil {
-							continue
-						}
-						if listRow := application.Jira.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
-							msgBody += listRow
-							index++
-						}
-					}
-
-					application.Slack.SendMessage(
-						msgBody,
-						application.Slack.ID,
-						application.Slack.BotName,
-						false,
-						"",
-					)
+					application := app.New(cfg)
+					application.ReportEmployeesHaveExceededTasks()
+				},
+			},
+			{
+				Name:  "get-jira-issues-with-closed-subtasks-now",
+				Usage: "Gets jira issues with closed subtasks right now",
+				Action: func(c *cli.Context) {
+					application := app.New(cfg)
+					application.ReportIsuuesWithClosedSubtasks()
 				},
 			},
 			{
 				Name:  "make-weekly-report-now",
 				Usage: "Sends weekly report to slack channel",
 				Action: func(c *cli.Context) {
-					application, err := app.New(cfg)
-					if err != nil {
-						panic(err)
-					}
+					application := app.New(cfg)
 
 					application.GetWorkersWorkedTimeAndSendToSlack(
 						"Weekly work time report (manual)",
@@ -179,10 +152,7 @@ func main() {
 				Name:  "make-daily-report-now",
 				Usage: "Sends daily report to slack channel",
 				Action: func(c *cli.Context) {
-					application, err := app.New(cfg)
-					if err != nil {
-						panic(err)
-					}
+					application := app.New(cfg)
 
 					application.GetWorkersWorkedTimeAndSendToSlack(
 						"Daily work time report (manual)",
@@ -195,11 +165,8 @@ func main() {
 				Name:  "obtain-hubstaff-token",
 				Usage: "Obtains Hubstaff authorization token.",
 				Action: func(c *cli.Context) {
+					application := app.New(cfg)
 
-					application, err := app.New(cfg)
-					if err != nil {
-						panic(err)
-					}
 					authToken, err := application.Hubstaff.ObtainAuthToken(cfg.Hubstaff.Auth)
 					if err != nil {
 						panic(err)
