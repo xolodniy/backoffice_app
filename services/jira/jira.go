@@ -1,4 +1,4 @@
-package jiraloc
+package jira
 
 import (
 	"backoffice_app/config"
