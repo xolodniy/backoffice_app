@@ -7,7 +7,7 @@ import (
 
 	"backoffice_app/config"
 	"backoffice_app/services/hubstaff"
-	"backoffice_app/services/jiraloc"
+	"backoffice_app/services/jira"
 	"backoffice_app/services/slack"
 
 	"github.com/sirupsen/logrus"
@@ -18,23 +18,20 @@ import (
 type App struct {
 	Hubstaff hubstaff.Hubstaff
 	Slack    slack.Slack
-	Jira     jiraloc.Jira
+	Jira     jira.Jira
 	Git      *gitlab.Client
 	Config   config.Main
 }
 
 // New is main App constructor
-func New(conf *config.Main) (*App, error) {
-	git := gitlab.NewClient(nil, conf.GitToken)
-
+func New(conf *config.Main) *App {
 	return &App{
 		Hubstaff: hubstaff.New(&conf.Hubstaff),
 		Slack:    slack.New(&conf.Slack),
-		Jira:     jiraloc.New(&conf.Jira),
-		Git:      git,
+		Jira:     jira.New(&conf.Jira),
+		Git:      gitlab.NewClient(nil, conf.GitToken),
 		Config:   *conf,
-	}, nil
-
+	}
 }
 
 // GetWorkersWorkedTimeAndSendToSlack gather workers work time made through period between dates and send it to Slack channel
@@ -54,13 +51,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	)
 
 	if len(orgsList) == 0 {
-		a.Slack.SendMessage(
-			"No tracked time for now or no organization found",
-			a.Slack.ID,
-			a.Slack.BotName,
-			false,
-			"",
-		)
+		a.Slack.SendMessage("No tracked time for now or no organization found")
 		return
 	}
 
@@ -82,13 +73,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		}
 	}
 
-	a.Slack.SendMessage(
-		message,
-		a.Slack.ID,
-		a.Slack.BotName,
-		false,
-		"",
-	)
+	a.Slack.SendMessage(message)
 }
 
 // DurationString converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
@@ -109,49 +94,43 @@ func (a *App) DurationString(durationInSeconds int) (string, error) {
 
 // ReportIsuuesWithClosedSubtasks create report about issues woth closed subtasks
 func (a *App) ReportIsuuesWithClosedSubtasks() {
-	allIssues, err := a.Jira.IssuesWithClosedSubtasks()
+	issues, err := a.Jira.IssuesWithClosedSubtasks()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about closed subtasks from jira")
+		return
 	}
-	var msgBody = "Issues have all closed subtasks:\n"
-	for _, issue := range allIssues {
-		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n",
-			issue.Key,
-		)
+	var msgBody = "There are no issues with all closed subtasks"
+	if len(issues) != 0 {
+		msgBody = "Issues have all closed subtasks:\n"
+		for _, issue := range issues {
+			msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
+		}
 	}
 
-	a.Slack.SendMessage(
-		msgBody,
-		a.Slack.ID,
-		a.Slack.BotName,
-		false,
-		"",
-	)
+	a.Slack.SendMessage(msgBody)
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
 func (a *App) ReportEmployeesHaveExceededTasks() {
-	allIssues, err := a.Jira.AssigneeOpenIssues()
+	issues, err := a.Jira.AssigneeOpenIssues()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about exceeded tasks of employees from jira")
+		return
 	}
-	var index = 1
-	var msgBody = "Employees have exceeded tasks:\n"
-	for _, issue := range allIssues {
-		if issue.Fields != nil {
-			continue
-		}
-		if listRow := a.Jira.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
-			msgBody += listRow
-			index++
+	var msgBody = "There are no employees with exceeded subtasks"
+	if len(issues) != 0 {
+		var index = 1
+		var msgBody = "Employees have exceeded tasks:\n"
+		for _, issue := range issues {
+			if issue.Fields != nil {
+				continue
+			}
+			if listRow := a.Jira.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
+				msgBody += listRow
+				index++
+			}
 		}
 	}
 
-	a.Slack.SendMessage(
-		msgBody,
-		a.Slack.ID,
-		a.Slack.BotName,
-		false,
-		"",
-	)
+	a.Slack.SendMessage(msgBody)
 }
