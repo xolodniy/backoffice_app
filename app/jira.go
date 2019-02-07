@@ -2,13 +2,14 @@ package app
 
 import (
 	"fmt"
+
 	"github.com/andygrunwald/go-jira"
 	"github.com/sirupsen/logrus"
 )
 
 // IssuesSearch searches Issues in all sprints which opened now and returning list with issues in this sprints list
 func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
-	allIssues, response, err := a.Jira.Jira.Issue.Search(
+	allIssues, response, err := a.Jira.Issue.Search(
 		`assignee != "empty" AND Sprint IN openSprints() AND (status NOT IN ("Closed")) AND issuetype IN subTaskIssueTypes()`,
 		&jira.SearchOptions{
 			StartAt:       0,
@@ -99,51 +100,4 @@ func (a *App) IssueTimeExceededNoTimeRange(issue jira.Issue, rowIndex int) strin
 	)
 
 	return listRow
-}
-
-// IssuesWithClosedSubtasks retrieves issues with closed subtasks
-func (a *App) IssuesWithClosedSubtasks() ([]jira.Issue, error) {
-	var issuesWithSubtasks []jira.Issue
-	for i := 0; ; i += 100 {
-		issues, resp, err := a.Jira.Jira.Issue.Search(
-			`(status NOT IN ("Closed")) `,
-			&jira.SearchOptions{
-				StartAt:    i,
-				MaxResults: i + 100,
-				//Determines how to validate the JQL query and treat the validation results.
-				ValidateQuery: "strict", //strict Returns a 400 response code if any errors are found, along with a list of all errors (and warnings).
-				Fields: []string{
-					"subtasks",
-				},
-			},
-		)
-
-		if err != nil {
-			logrus.WithError(err).WithField("response", resp).Error("can't take from jira all not closed issues")
-			return nil, err
-		}
-
-		if len(issues) == 0 {
-			break
-		}
-
-		for _, issue := range issues {
-			if len(issue.Fields.Subtasks) != 0 {
-				issuesWithSubtasks = append(issuesWithSubtasks, issue)
-			}
-		}
-	}
-
-	var issuesWithClosedSubtasks []jira.Issue
-	for _, issue := range issuesWithSubtasks {
-		func() {
-			for _, subtask := range issue.Fields.Subtasks {
-				if subtask.Fields.Status.Name != "Closed" {
-					return
-				}
-			}
-			issuesWithClosedSubtasks = append(issuesWithClosedSubtasks, issue)
-		}()
-	}
-	return issuesWithClosedSubtasks, nil
 }
