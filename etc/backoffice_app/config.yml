@@ -15,17 +15,10 @@ jira:
 slack:
   apiurl: https://slack.com/api
   backofficeappid: back-office-app
+  migrationsid: migrations
   botname: Back Office Bot
   intoken: ITYgHVRVRhOIZfvDpVgCS6CM
   outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
-  auth:
-    intoken: ITYgHVRVRhOIZfvDpVgCS6CM
-    outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
-
-  channel:
-    migrationsid: migrations
-    backofficeappid: back-office-app
-    botname: Back Office Bot
 
 hubstaff:
   apiurl: https://api.hubstaff.com

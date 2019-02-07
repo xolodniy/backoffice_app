@@ -43,16 +43,12 @@ type Hubstaff struct {
 
 // Slack is template to storing slack configuration
 type Slack struct {
-	Auth struct {
-		InToken  string
-		OutToken string
-	}
-	Channel struct {
-		BotName         string
-		BackOfficeAppID string
-		MigrationsID    string
-	}
-	APIURL string
+	InToken         string
+	OutToken        string
+	BotName         string
+	BackOfficeAppID string
+	MigrationsID    string
+	APIURL          string
 }
 
 // GetConfig return config parsed from config/config.yml
@@ -82,10 +78,10 @@ func (config *Main) checkConfig() error {
 		return fmt.Errorf("Jira Password configuration field is not set. Please set it in configuration file «config/config.yml»")
 	}
 
-	if config.Slack.Auth.InToken == "" {
+	if config.Slack.InToken == "" {
 		return fmt.Errorf("Slack InToken configuration field is not set. Please set it in configuration file «config/config.yml»")
 	}
-	if config.Slack.Auth.OutToken == "" {
+	if config.Slack.OutToken == "" {
 		return fmt.Errorf("Slack OutToken configuration field is not set. Please set it in configuration file «config/config.yml»")
 	}
 

@@ -26,10 +26,10 @@ type Slack struct {
 // New creates new slack
 func New(config *config.Slack) Slack {
 	return Slack{
-		InToken:         config.Auth.InToken,
-		OutToken:        config.Auth.OutToken,
-		BotName:         config.Channel.BotName,
-		BackofficeAppID: "#" + config.Channel.BackOfficeAppID,
+		InToken:         config.InToken,
+		OutToken:        config.OutToken,
+		BotName:         config.BotName,
+		BackofficeAppID: "#" + config.BackOfficeAppID,
 		APIURL:          config.APIURL,
 	}
 }
