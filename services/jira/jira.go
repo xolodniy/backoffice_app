@@ -59,7 +59,7 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 			return nil, err
 		}
 
-		if len(issues) == 0 {
+		if len(allIssues) == 0 {
 			break
 		}
 
@@ -92,6 +92,7 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 		return listRow
 	}
 
+	//TODO разобраться со вложенностями
 	var developer = "No developer"
 	developerMap, err := issue.Fields.Unknowns.MarshalMap("customfield_10026")
 	if err != nil {

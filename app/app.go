@@ -120,9 +120,9 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 	var msgBody = "There are no employees with exceeded subtasks"
 	if len(issues) != 0 {
 		var index = 1
-		var msgBody = "Employees have exceeded tasks:\n"
+		msgBody = "Employees have exceeded tasks:\n"
 		for _, issue := range issues {
-			if issue.Fields != nil {
+			if issue.Fields == nil {
 				continue
 			}
 			if listRow := a.Jira.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
