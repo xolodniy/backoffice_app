@@ -33,7 +33,7 @@ type SlackChannel struct {
 }
 
 // SendStandardMessage is main message sending method
-func (slack *Slack) SendStandardMessage(message, channelID, botName string) error {
+func (slack *Slack) SendStandardMessage(message, channelID, botName string) {
 	logrus.Debugf("Slack standard message sent:\n %v", message)
 
 	err := slack.postChannelMessage(
@@ -44,9 +44,12 @@ func (slack *Slack) SendStandardMessage(message, channelID, botName string) erro
 		"",
 	)
 	if err != nil {
-		return err
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"msgBody":        message,
+			"channelID":      channelID,
+			"channelBotName": botName,
+		}).Error("can't send Jira work time exceeding message to Slack.")
 	}
-	return nil
 }
 
 // SendStandardMessageWithIcon is main message sending method

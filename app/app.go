@@ -2,64 +2,43 @@ package app
 
 import (
 	"fmt"
-	"net/http"
 	"regexp"
 	"time"
 
-	"backoffice_app/clients"
 	"backoffice_app/config"
+	"backoffice_app/services/hubstaff"
+	"backoffice_app/services/jira"
+	"backoffice_app/services/slack"
 
-	"github.com/andygrunwald/go-jira"
 	"github.com/sirupsen/logrus"
 	"github.com/xanzy/go-gitlab"
 )
 
 // App is main App implementation
 type App struct {
-	Hubstaff *clients.Hubstaff
-	Slack    *clients.Slack
-	Jira     *jira.Client
+	Hubstaff hubstaff.Hubstaff
+	Slack    slack.Slack
+	Jira     jira.Jira
 	Git      *gitlab.Client
 	Config   config.Main
 }
 
 // New is main App constructor
-func New(config *config.Main) (*App, error) {
-	Hubstaff := &clients.Hubstaff{
-		HTTPClient: http.DefaultClient,
-		AppToken:   config.Hubstaff.Auth.AppToken,
-		AuthToken:  config.Hubstaff.Auth.Token,
-		APIURL:     config.Hubstaff.APIURL,
+func New(conf *config.Main) *App {
+	return &App{
+		Hubstaff: hubstaff.New(&conf.Hubstaff),
+		Slack:    slack.New(&conf.Slack),
+		Jira:     jira.New(&conf.Jira),
+		Git:      gitlab.NewClient(nil, conf.GitToken),
+		Config:   *conf,
 	}
-
-	jiraClient, err := jira.NewClient(config.Jira.Auth.Client(), config.Jira.APIUrl)
-	if err != nil {
-		return nil, fmt.Errorf("Jira error: can't create jira client: %s", err)
-	}
-
-	slack := &clients.Slack{
-		APIURL: config.Slack.APIURL,
-		Auth: clients.SlackAuth{
-			InToken:  config.Slack.Auth.InToken,
-			OutToken: config.Slack.Auth.OutToken,
-		},
-		Channel: clients.SlackChannel{
-			BotName: config.Slack.Channel.BotName,
-			ID:      "#" + config.Slack.Channel.BackOfficeAppID,
-		},
-	}
-
-	git := gitlab.NewClient(nil, config.GitToken)
-
-	return &App{Hubstaff, slack, jiraClient, git, *config}, nil
-
 }
 
 // GetWorkersWorkedTimeAndSendToSlack gather workers work time made through period between dates and send it to Slack channel
 func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, orgID int64) {
 	orgsList, err := a.GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd, orgID)
 	if err != nil {
-		panic(fmt.Sprintf("Hubstaff error: %v", err))
+		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
 	}
 
 	var message = fmt.Sprintf(
@@ -72,14 +51,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	)
 
 	if len(orgsList) == 0 {
-		err := a.Slack.SendStandardMessage(
-			"No tracked time for now or no organization found",
-			a.Slack.Channel.ID,
-			a.Slack.Channel.BotName,
-		)
-		if err != nil {
-			panic(fmt.Sprintf("Slack error: %s", err))
-		}
+		a.Slack.SendMessage("No tracked time for now or no organization found")
 		return
 	}
 
@@ -89,9 +61,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		for _, worker := range orgsList[0].Workers {
 			t, err := a.DurationString(worker.TimeWorked)
 			if err != nil {
-				logrus.
-					WithError(err).
-					WithField("time", worker.TimeWorked).
+				logrus.WithError(err).WithField("time", worker.TimeWorked).
 					Error("error occurred on time conversion error")
 				continue
 			}
@@ -103,13 +73,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		}
 	}
 
-	if err := a.Slack.SendStandardMessage(
-		message,
-		a.Slack.Channel.ID,
-		a.Slack.Channel.BotName); err != nil {
-		panic(fmt.Sprintf("Slack error: %s", err))
-	}
-
+	a.Slack.SendMessage(message)
 }
 
 // DurationString converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
@@ -126,4 +90,47 @@ func (a *App) DurationString(durationInSeconds int) (string, error) {
 	}
 
 	return occurrences[1], nil
+}
+
+// ReportIsuuesWithClosedSubtasks create report about issues woth closed subtasks
+func (a *App) ReportIsuuesWithClosedSubtasks() {
+	issues, err := a.Jira.IssuesWithClosedSubtasks()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about closed subtasks from jira")
+		return
+	}
+	var msgBody = "There are no issues with all closed subtasks"
+	if len(issues) != 0 {
+		msgBody = "Issues have all closed subtasks:\n"
+		for _, issue := range issues {
+			msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
+		}
+	}
+
+	a.Slack.SendMessage(msgBody)
+}
+
+// ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
+func (a *App) ReportEmployeesHaveExceededTasks() {
+	issues, err := a.Jira.AssigneeOpenIssues()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about exceeded tasks of employees from jira")
+		return
+	}
+	var msgBody = "There are no employees with exceeded subtasks"
+	if len(issues) != 0 {
+		var index = 1
+		msgBody = "Employees have exceeded tasks:\n"
+		for _, issue := range issues {
+			if issue.Fields == nil {
+				continue
+			}
+			if listRow := a.Jira.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
+				msgBody += listRow
+				index++
+			}
+		}
+	}
+
+	a.Slack.SendMessage(msgBody)
 }

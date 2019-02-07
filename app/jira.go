@@ -38,9 +38,7 @@ func (a *App) IssuesSearch() ([]jira.Issue, *jira.Response, error) {
 // Not used now, but will be used further.
 func (a *App) IssueTimeExcisionWithTimeCompare(issue jira.Issue, rowIndex int) (string, error) {
 	if issue.Fields == nil {
-		logrus.
-			WithField("issue", issue).
-			Error("issue fields is empty")
+		logrus.WithField("issue", issue).Error("issue fields is empty")
 		return "", fmt.Errorf("issue fields is empty")
 	}
 	var listRow string
@@ -50,9 +48,7 @@ func (a *App) IssueTimeExcisionWithTimeCompare(issue jira.Issue, rowIndex int) (
 
 	ts, err := a.DurationString(issue.Fields.TimeSpent)
 	if err != nil {
-		logrus.
-			WithError(err).
-			WithField("time", issue.Fields.TimeSpent).
+		logrus.WithError(err).WithField("time", issue.Fields.TimeSpent).
 			Error("error occurred on time conversion error")
 		return listRow, fmt.Errorf("time conversion: %v", err)
 
@@ -60,9 +56,7 @@ func (a *App) IssueTimeExcisionWithTimeCompare(issue jira.Issue, rowIndex int) (
 
 	te, err := a.DurationString(issue.Fields.TimeOriginalEstimate)
 	if err != nil {
-		logrus.
-			WithError(err).
-			WithField("time", issue.Fields.TimeOriginalEstimate).
+		logrus.WithError(err).WithField("time", issue.Fields.TimeOriginalEstimate).
 			Error("error occurred on time conversion error")
 		return listRow, fmt.Errorf("time conversion: %v", err)
 	}
@@ -77,9 +71,7 @@ func (a *App) IssueTimeExcisionWithTimeCompare(issue jira.Issue, rowIndex int) (
 // IssueTimeExceededNoTimeRange prepares string without employee time excess
 func (a *App) IssueTimeExceededNoTimeRange(issue jira.Issue, rowIndex int) string {
 	if issue.Fields == nil {
-		logrus.
-			WithField("issue", issue).
-			Error("issue fields is empty")
+		logrus.WithField("issue", issue).Error("issue fields is empty")
 		return ""
 	}
 
@@ -91,15 +83,12 @@ func (a *App) IssueTimeExceededNoTimeRange(issue jira.Issue, rowIndex int) strin
 	var developer = "No developer"
 	developerMap, err := issue.Fields.Unknowns.MarshalMap("customfield_10026")
 	if err != nil {
-		logrus.
-			WithError(err).
-			WithField("developerMap", developerMap).
+		logrus.WithError(err).WithField("developerMap", developerMap).
 			Error("can't make customfield_10026 map marshaling")
 	} else if developerMap != nil {
 		displayName, ok := developerMap["displayName"].(string)
 		if !ok {
-			logrus.
-				WithField("displayName", developerMap["displayName"]).
+			logrus.WithField("displayName", developerMap["displayName"]).
 				Error("can't assert to string map displayName field")
 		} else {
 			developer = displayName
