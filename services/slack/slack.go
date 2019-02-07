@@ -1,8 +1,6 @@
 package slack
 
 import (
-	"backoffice_app/config"
-	"backoffice_app/types"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -10,48 +8,49 @@ import (
 	"net/http"
 	"net/url"
 
+	"backoffice_app/config"
+	"backoffice_app/types"
+
 	"github.com/sirupsen/logrus"
 )
 
-//TODO only send messange
-
 // Slack is main Slack client app implementation
 type Slack struct {
-	InToken  string `default:"someSlackInToken"`
-	OutToken string `default:"someSlackOutToken"`
-	BotName  string
-	ID       string
-	APIURL   string
+	InToken         string `default:"someSlackInToken"`
+	OutToken        string `default:"someSlackOutToken"`
+	BotName         string
+	BackofficeAppID string
+	APIURL          string
 }
 
 // New creates new slack
 func New(config *config.Slack) Slack {
 	return Slack{
-		InToken:  config.Auth.InToken,
-		OutToken: config.Auth.OutToken,
-		BotName:  config.Channel.BotName,
-		ID:       "#" + config.Channel.BackOfficeAppID,
-		APIURL:   config.APIURL,
+		InToken:         config.Auth.InToken,
+		OutToken:        config.Auth.OutToken,
+		BotName:         config.Channel.BotName,
+		BackofficeAppID: "#" + config.Channel.BackOfficeAppID,
+		APIURL:          config.APIURL,
 	}
 }
 
 // SendMessage is main message sending method
-func (s *Slack) SendMessage(text, channelID, botName string, asUser bool, iconURL string) {
+func (s *Slack) SendMessage(text string) {
 	var message = &types.PostChannelMessage{
 		Token:    s.OutToken,
-		Channel:  channelID,
+		Channel:  s.BackofficeAppID,
 		AsUser:   false,
 		Text:     text,
-		Username: botName,
-		IconURL:  iconURL,
+		Username: s.BotName,
+		IconURL:  "",
 	}
 
 	jsonMessage, err := json.Marshal(message)
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"msgBody":        text,
-			"channelID":      channelID,
-			"channelBotName": botName,
+			"channelID":      s.BackofficeAppID,
+			"channelBotName": s.BotName,
 		}).Error("can't decode to json")
 	}
 	var responseBody struct {
@@ -64,15 +63,15 @@ func (s *Slack) SendMessage(text, channelID, botName string, asUser bool, iconUR
 	if err := json.Unmarshal(respBody, &responseBody); err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"msgBody":        text,
-			"channelID":      channelID,
-			"channelBotName": botName,
+			"channelID":      s.BackofficeAppID,
+			"channelBotName": s.BotName,
 		}).Error("can't encode from json")
 	}
 	if !responseBody.Ok {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"msgBody":        text,
-			"channelID":      channelID,
-			"channelBotName": botName,
+			"channelID":      s.BackofficeAppID,
+			"channelBotName": s.BotName,
 		}).Error(responseBody.Error)
 	}
 }
