@@ -16,6 +16,7 @@ type Main struct {
 	WeeklyWorkersWorkedTimeCron string
 	ReportClosedSubtasksCron    string
 	EmployeesExceededTasksCron  string
+	ReportSlackSpaceEndingCron  string
 	GitToken                    string
 	Jira
 	Hubstaff
