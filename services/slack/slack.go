@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"backoffice_app/config"
 	"backoffice_app/types"
@@ -22,6 +23,26 @@ type Slack struct {
 	BackofficeAppID string
 	APIURL          string
 }
+
+type FilesResponse struct {
+	Ok      bool    `json:"ok"`
+	Error   string  `json:"error"`
+	Warning string  `json:"warning"`
+	Files   []Files `json:"files"`
+	Paging  struct {
+		Count int `json:"count"`
+		Total int `json:"total"`
+		Page  int `json:"page"`
+		Pages int `json:"pages"`
+	} `json:"paging"`
+}
+
+type Files struct {
+	ID   string  `json:"id"`
+	Size float64 `json:"size"`
+}
+
+var slackSize = 5.0
 
 // New creates new slack
 func New(config *config.Slack) Slack {
@@ -94,12 +115,12 @@ func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 	return body, nil
 }
 
-func (s *Slack) ListFiles(count string) ([]types.ListFilesResponseFile, error) {
+func (s *Slack) Files() ([]Files, error) {
 	// Prepare request.
 	data := url.Values{}
 	// For this to work, it should be a user token, not a bot token or something.
 	data.Set("token", s.InToken)
-	data.Set("count", count)
+	data.Set("count", "100")
 
 	u, _ := url.ParseRequestURI(s.APIURL)
 	u.Path = "/api/files.list"
@@ -110,35 +131,49 @@ func (s *Slack) ListFiles(count string) ([]types.ListFilesResponseFile, error) {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.OutToken))
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.InToken))
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	var files []Files
+	for i := 0; ; i++ {
+		filesResp := FilesResponse{}
+		data.Set("page", strconv.Itoa(i))
+		resp, err := client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(body, &filesResp); err != nil {
+			return nil, err
+		}
+		if !filesResp.Ok {
+			return nil, fmt.Errorf(filesResp.Error)
+		}
+		for _, file := range filesResp.Files {
+			files = append(files, file)
+		}
+		if filesResp.Paging.Pages == i {
+			break
+		}
+	}
+	return files, nil
+}
+
+// EmtpySpace is retrieves empty space on slack
+func (s *Slack) FreeSpace() (float64, error) {
+	files, err := s.Files()
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
+	var sum float64
+	for _, file := range files {
+		sum += file.Size
 	}
-
-	//logrus.Info("Slack request body:", string(body))
-	//logrus.Info("Slack response Status:", resp.Status)
-
-	// Process response.
-	if err != nil {
-		return nil, err
-	}
-	filesResp := types.ListFilesResponse{}
-	if err := json.Unmarshal(body, &filesResp); err != nil {
-		return nil, err
-	}
-	if !filesResp.Ok {
-		return nil, fmt.Errorf(filesResp.Error)
-	}
-
-	return filesResp.Files, nil
+	free := slackSize - (sum / 1024 / 1024 / 1024)
+	return free, nil
 }
 
 func (s *Slack) DeleteFile(id string) error {
