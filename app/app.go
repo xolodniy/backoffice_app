@@ -92,7 +92,7 @@ func (a *App) DurationString(durationInSeconds int) (string, error) {
 	return occurrences[1], nil
 }
 
-// ReportIsuuesWithClosedSubtasks create report about issues woth closed subtasks
+// ReportIsuuesWithClosedSubtasks create report about issues with closed subtasks
 func (a *App) ReportIsuuesWithClosedSubtasks() {
 	issues, err := a.Jira.IssuesWithClosedSubtasks()
 	if err != nil {
@@ -129,6 +129,24 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 				msgBody += listRow
 				index++
 			}
+		}
+	}
+
+	a.Slack.SendMessage(msgBody)
+}
+
+// ReportIsuuesAfterSecondReview create report about issues after second review round
+func (a *App) ReportIsuuesAfterSecondReview() {
+	issues, err := a.Jira.IssuesAfterSecondReview()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about issues after second review from jira")
+		return
+	}
+	var msgBody = "There are no issues after second review round"
+	if len(issues) != 0 {
+		msgBody = "Issues after second review round:\n"
+		for _, issue := range issues {
+			msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
 		}
 	}
 
