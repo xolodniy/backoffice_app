@@ -54,7 +54,7 @@ func main() {
 			wg := sync.WaitGroup{}
 			tm := taskmanager.New(&wg)
 
-			err := tm.AddTask(cfg.DailyWorkersWorkedTimeCron, func() {
+			err := tm.AddTask(cfg.Cron.DailyWorkersWorkedTime, func() {
 				application.GetWorkersWorkedTimeAndSendToSlack(
 					"Daily work time report (auto)",
 					now.BeginningOfDay().AddDate(0, 0, -1),
@@ -65,7 +65,7 @@ func main() {
 				panic(err)
 			}
 
-			err = tm.AddTask(cfg.WeeklyWorkersWorkedTimeCron, func() {
+			err = tm.AddTask(cfg.Cron.WeeklyWorkersWorkedTime, func() {
 				application.GetWorkersWorkedTimeAndSendToSlack(
 					"Weekly work time report (auto)",
 					now.BeginningOfWeek().AddDate(0, 0, -7),
@@ -76,17 +76,17 @@ func main() {
 				panic(err)
 			}
 
-			err = tm.AddTask(cfg.EmployeesExceededTasksCron, application.ReportEmployeesHaveExceededTasks)
+			err = tm.AddTask(cfg.Cron.EmployeesExceededTasks, application.ReportEmployeesHaveExceededTasks)
 			if err != nil {
 				panic(err)
 			}
 
-			err = tm.AddTask(cfg.ReportClosedSubtasksCron, application.ReportIsuuesWithClosedSubtasks)
+			err = tm.AddTask(cfg.Cron.ReportClosedSubtasks, application.ReportIsuuesWithClosedSubtasks)
 			if err != nil {
 				panic(err)
 			}
 
-			err = tm.AddTask(cfg.ReportAfterSecondReviewCron, application.ReportIsuuesAfterSecondReview)
+			err = tm.AddTask(cfg.Cron.ReportAfterSecondReview, application.ReportIsuuesAfterSecondReview)
 			if err != nil {
 				panic(err)
 			}
