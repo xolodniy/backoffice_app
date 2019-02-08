@@ -30,6 +30,14 @@ func New(config *config.Jira) Jira {
 	}
 }
 
+// Status variables for jql requests
+var (
+	ClosedStatus        = "Closed"
+	TlReviewStatus      = "TL Review"
+	PeerReviewStatus    = "In peer review"
+	EmptyAssigneeStatus = "empty"
+)
+
 // issues searches issues in all sprints which opened now and returning list with issues in this sprints list
 func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 	var issues []Issue
@@ -72,7 +80,8 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 
 // AssigneeOpenIssues searches Issues in all sprints which opened now and returning list with issues in this sprints list
 func (j *Jira) AssigneeOpenIssues() ([]Issue, error) {
-	issues, err := j.issues(`assignee != "empty" AND Sprint IN openSprints() AND (status NOT IN ("Closed")) AND issuetype IN subTaskIssueTypes()`)
+	request := fmt.Sprintf(`assignee != "%s" AND Sprint IN openSprints() AND (status NOT IN ("%s")) AND issuetype IN subTaskIssueTypes()`, EmptyAssigneeStatus, ClosedStatus)
+	issues, err := j.issues(request)
 
 	if err != nil {
 		return nil, fmt.Errorf("can't create jira client: %s", err)
@@ -117,7 +126,8 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 
 // IssuesWithClosedSubtasks retrieves issues with closed subtasks
 func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
-	openIssues, err := j.issues(`(status NOT IN ("Closed")) `)
+	request := fmt.Sprintf(`(status NOT IN ("%s"))`, ClosedStatus)
+	openIssues, err := j.issues(request)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +142,7 @@ func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
 	for _, issue := range issuesWithSubtasks {
 		func() {
 			for _, subtask := range issue.Fields.Subtasks {
-				if subtask.Fields.Status.Name != "Closed" {
+				if subtask.Fields.Status.Name != ClosedStatus {
 					return
 				}
 			}
@@ -144,31 +154,35 @@ func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
 
 // IssuesAfterSecondReview retrieves issues that have 2 or more reviews
 func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
-	issues, err := j.issues(`status NOT IN ("Closed") AND (status was "TL Review" OR status was "In peer review")`)
+	request := fmt.Sprintf(`status NOT IN ("%s") AND (status was "%s" OR status was "%s")`, ClosedStatus, TlReviewStatus, PeerReviewStatus)
+	issues, err := j.issues(request)
 	if err != nil {
 		return nil, err
 	}
 	var issuesAfterReviews []Issue
 	for _, issue := range issues {
-		thisIssue, _, err := j.Issue.Get(issue.ID, &jira.GetQueryOptions{
+		thisIssue, resp, err := j.Issue.Get(issue.ID, &jira.GetQueryOptions{
 			Expand:        issue.Expand,
 			UpdateHistory: true,
 		})
 		if err != nil {
+			logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira this jira issue")
 			return nil, err
 		}
-		if len(thisIssue.Changelog.Histories) != 0 {
-			count := 0
-			for _, histories := range thisIssue.Changelog.Histories {
-				for _, item := range histories.Items {
-					if item.ToString == "In peer review" || item.ToString == "TL Review" {
-						count++
-					}
+		if len(thisIssue.Changelog.Histories) == 0 {
+			continue
+		}
+
+		count := 0
+		for _, histories := range thisIssue.Changelog.Histories {
+			for _, item := range histories.Items {
+				if item.ToString == PeerReviewStatus || item.ToString == TlReviewStatus {
+					count++
 				}
 			}
-			if count > 1 {
-				issuesAfterReviews = append(issuesAfterReviews, issue)
-			}
+		}
+		if count > 1 {
+			issuesAfterReviews = append(issuesAfterReviews, issue)
 		}
 	}
 	return issuesAfterReviews, nil
