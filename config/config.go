@@ -15,6 +15,7 @@ type Main struct {
 	DailyWorkersWorkedTimeCron  string
 	WeeklyWorkersWorkedTimeCron string
 	ReportClosedSubtasksCron    string
+	ReportAfterSecondReviewCron string
 	EmployeesExceededTasksCron  string
 	GitToken                    string
 	Jira
