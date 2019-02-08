@@ -99,14 +99,14 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 		logrus.WithError(err).Error("can't take information about closed subtasks from jira")
 		return
 	}
-	var msgBody = "There are no issues with all closed subtasks"
-	if len(issues) != 0 {
-		msgBody = "Issues have all closed subtasks:\n"
-		for _, issue := range issues {
-			msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
-		}
+	if len(issues) == 0 {
+		a.Slack.SendMessage("There are no issues with all closed subtasks")
+		return
 	}
-
+	msgBody := "Issues have all closed subtasks:\n"
+	for _, issue := range issues {
+		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
+	}
 	a.Slack.SendMessage(msgBody)
 }
 
@@ -117,21 +117,21 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 		logrus.WithError(err).Error("can't take information about exceeded tasks of employees from jira")
 		return
 	}
-	var msgBody = "There are no employees with exceeded subtasks"
-	if len(issues) != 0 {
-		var index = 1
-		msgBody = "Employees have exceeded tasks:\n"
-		for _, issue := range issues {
-			if issue.Fields == nil {
-				continue
-			}
-			if listRow := a.Jira.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
-				msgBody += listRow
-				index++
-			}
+	if len(issues) == 0 {
+		a.Slack.SendMessage("There are no employees with exceeded subtasks")
+		return
+	}
+	var index = 1
+	msgBody := "Employees have exceeded tasks:\n"
+	for _, issue := range issues {
+		if issue.Fields == nil {
+			continue
+		}
+		if listRow := a.Jira.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
+			msgBody += listRow
+			index++
 		}
 	}
-
 	a.Slack.SendMessage(msgBody)
 }
 
@@ -142,13 +142,13 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 		logrus.WithError(err).Error("can't take information about issues after second review from jira")
 		return
 	}
-	var msgBody = "There are no issues after second review round"
-	if len(issues) != 0 {
-		msgBody = "Issues after second review round:\n"
-		for _, issue := range issues {
-			msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
-		}
+	if len(issues) == 0 {
+		a.Slack.SendMessage("There are no issues after second review round")
+		return
 	}
-
+	msgBody := "Issues after second review round:\n"
+	for _, issue := range issues {
+		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
+	}
 	a.Slack.SendMessage(msgBody)
 }
