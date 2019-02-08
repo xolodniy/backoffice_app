@@ -86,6 +86,11 @@ func main() {
 				panic(err)
 			}
 
+			err = tm.AddTask(cfg.ReportAfterSecondReviewCron, application.ReportIsuuesAfterSecondReview)
+			if err != nil {
+				panic(err)
+			}
+
 			tm.Start()
 
 			log.Println("Task scheduler started.")
@@ -129,6 +134,14 @@ func main() {
 			{
 				Name:  "get-jira-issues-with-closed-subtasks-now",
 				Usage: "Gets jira issues with closed subtasks right now",
+				Action: func(c *cli.Context) {
+					application := app.New(cfg)
+					application.ReportIsuuesWithClosedSubtasks()
+				},
+			},
+			{
+				Name:  "get-jira-issues-after-second-review-round",
+				Usage: "Gets jira issues after second review round right now",
 				Action: func(c *cli.Context) {
 					application := app.New(cfg)
 					application.ReportIsuuesWithClosedSubtasks()
