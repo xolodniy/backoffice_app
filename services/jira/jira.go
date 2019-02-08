@@ -141,3 +141,35 @@ func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
 	}
 	return issuesWithClosedSubtasks, nil
 }
+
+// IssuesAfterSecondReview retrieves issues that have 2 or more reviews
+func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
+	issues, err := j.issues(`status NOT IN ("Closed") AND (status was "TL Review" OR status was "In peer review")`)
+	if err != nil {
+		return nil, err
+	}
+	var issuesAfterReviews []Issue
+	for _, issue := range issues {
+		thisIssue, _, err := j.Issue.Get(issue.ID, &jira.GetQueryOptions{
+			Expand:        issue.Expand,
+			UpdateHistory: true,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(thisIssue.Changelog.Histories) != 0 {
+			count := 0
+			for _, histories := range thisIssue.Changelog.Histories {
+				for _, item := range histories.Items {
+					if item.ToString == "In peer review" || item.ToString == "TL Review" {
+						count++
+					}
+				}
+			}
+			if count > 1 {
+				issuesAfterReviews = append(issuesAfterReviews, issue)
+			}
+		}
+	}
+	return issuesAfterReviews, nil
+}
