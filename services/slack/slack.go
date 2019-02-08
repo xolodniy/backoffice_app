@@ -97,6 +97,7 @@ func (s *Slack) SendMessage(text string) {
 	}
 }
 
+// jsonRequest func for sending json request for slack
 func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 	req, err := http.NewRequest("POST", s.APIURL+"/"+endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -115,6 +116,7 @@ func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 	return body, nil
 }
 
+// Files is returns all files info from slack
 func (s *Slack) Files() ([]Files, error) {
 	// Prepare request.
 	data := url.Values{}
@@ -176,6 +178,7 @@ func (s *Slack) FreeSpace() (float64, error) {
 	return free, nil
 }
 
+// DeleteFile deletes file from slack by id
 func (s *Slack) DeleteFile(id string) error {
 	b, err := json.Marshal(types.DeleteFileMessage{
 		Token: s.InToken,
