@@ -9,15 +9,17 @@ import (
 
 // Main is template to storing of all configuration settings needed
 type Main struct {
-	LogLevel                    string
-	GinPort                     string
-	GinDebugMode                bool
-	DailyWorkersWorkedTimeCron  string
-	WeeklyWorkersWorkedTimeCron string
-	ReportClosedSubtasksCron    string
-	ReportAfterSecondReviewCron string
-	EmployeesExceededTasksCron  string
-	GitToken                    string
+	LogLevel     string
+	GinPort      string
+	GinDebugMode bool
+	Cron         struct {
+		DailyWorkersWorkedTime  string
+		WeeklyWorkersWorkedTime string
+		ReportClosedSubtasks    string
+		ReportAfterSecondReview string
+		EmployeesExceededTasks  string
+	}
+	GitToken string
 	Jira
 	Hubstaff
 	Slack

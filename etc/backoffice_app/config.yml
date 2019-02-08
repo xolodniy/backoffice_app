@@ -1,11 +1,12 @@
 loglevel: debug
 ginport: 1234
 gindebugmode: true
-dailyworkersworkedtimecron: "00 00 07 * * *"
-weeklyworkersworkedtimecron: "00 00 07 * * 1"
-reportclosedsubtaskscron: "00 00 07 * * *"
-reportaftersecondreviewcron: "00 00 07 * * *"
-employeesexceededtaskscron: "00 00 07 * * *"
+cron:
+  dailyworkersworkedtime: "00 00 07 * * *"
+  weeklyworkersworkedtime: "00 00 07 * * 1"
+  reportclosedsubtasks: "00 00 07 * * *"
+  reportaftersecondreview: "00 00 07 * * *"
+  employeesexceededtasks: "00 00 07 * * *"
 gittoken:
 jira:
   apiurl: https://theflow.atlassian.net
