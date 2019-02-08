@@ -134,3 +134,17 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 
 	a.Slack.SendMessage(msgBody)
 }
+
+// ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
+func (a *App) ReportSlackEndingFreeSpace() {
+	free, err := a.Slack.FreeSpace()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about files size from slack")
+		return
+	}
+	if free > 0.5 {
+		return
+	}
+	msgBody := fmt.Sprintf("Free space on slack is ending: %f Gb\n", free)
+	a.Slack.SendMessage(msgBody)
+}
