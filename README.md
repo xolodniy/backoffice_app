@@ -130,11 +130,23 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
 
 ### Config file
 #### Cron manager parameters 
-    dailyworkersworkedtimecron: "00 00 07 * * *"    — start everyday at 7:00 to send daily worked time of worker
-    weeklyworkersworkedtimecron: "00 00 07 * * 1"   — start every week at 7:00 to send weekly worked time of worker
-    reportclosedsubtaskscron: "00 00 07 * * *"      — start everyday at 7:00 to send report about all closed subtask of issue
-    reportaftersecondreviewcron: "00 00 07 * * *"   — start everyday at 7:00 to send report about issues after second round review
-    employeesexceededtaskscron: "00 00 07 * * *"    — start everyday at 7:00 to send report about employers that have exceeded tasks
+    "00 00 07 * * *"    — cron prefence for adding tasks
+   
+    Field name   | Mandatory? | Allowed values  | Allowed special characters
+    ----------   | ---------- | --------------  | --------------------------
+    Seconds      | Yes        | 0-59            | * / , -
+    Minutes      | Yes        | 0-59            | * / , -
+    Hours        | Yes        | 0-23            | * / , -
+    Day of month | Yes        | 1-31            | * / , - ?
+    Month        | Yes        | 1-12 or JAN-DEC | * / , -
+    Day of week  | Yes        | 0-6 or SUN-SAT  | * / , - ?
+
+#### Config.yml variables for cron 
+    dailyworkersworkedtimecron: "00 00 07 * * *"    — preference to send daily worked time of worker
+    weeklyworkersworkedtimecron: "00 00 07 * * 1"   — preference to send weekly worked time of worker
+    reportclosedsubtaskscron: "00 00 07 * * *"      — preference to send report about all closed subtask of issue
+    reportaftersecondreviewcron: "00 00 07 * * *"   — preference to send report about issues after second round review
+    employeesexceededtaskscron: "00 00 07 * * *"    — preference to send report about employers that have exceeded tasks
 
 ### API Description
 
