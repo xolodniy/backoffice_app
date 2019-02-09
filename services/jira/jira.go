@@ -30,6 +30,14 @@ func New(config *config.Jira) Jira {
 	}
 }
 
+// Status variables for jql requests
+var (
+	StatusClosed        = "Closed"
+	StatusTlReview      = "TL Review"
+	StatusPeerReview    = "In peer review"
+	StatusEmptyAssignee = "empty"
+)
+
 // issues searches issues in all sprints which opened now and returning list with issues in this sprints list
 func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 	var issues []Issue
@@ -72,8 +80,8 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 
 // AssigneeOpenIssues searches Issues in all sprints which opened now and returning list with issues in this sprints list
 func (j *Jira) AssigneeOpenIssues() ([]Issue, error) {
-	issues, err := j.issues(`assignee != "empty" AND Sprint IN openSprints() AND (status NOT IN ("Closed")) AND issuetype IN subTaskIssueTypes()`)
-
+	request := fmt.Sprintf(`assignee != "%s" AND Sprint IN openSprints() AND (status NOT IN ("%s")) AND issuetype IN subTaskIssueTypes()`, StatusEmptyAssignee, StatusClosed)
+	issues, err := j.issues(request)
 	if err != nil {
 		return nil, fmt.Errorf("can't create jira client: %s", err)
 	}
@@ -117,7 +125,8 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 
 // IssuesWithClosedSubtasks retrieves issues with closed subtasks
 func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
-	openIssues, err := j.issues(`(status NOT IN ("Closed")) `)
+	request := fmt.Sprintf(`(status NOT IN ("%s"))`, StatusClosed)
+	openIssues, err := j.issues(request)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +141,7 @@ func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
 	for _, issue := range issuesWithSubtasks {
 		func() {
 			for _, subtask := range issue.Fields.Subtasks {
-				if subtask.Fields.Status.Name != "Closed" {
+				if subtask.Fields.Status.Name != StatusClosed {
 					return
 				}
 			}
@@ -140,4 +149,44 @@ func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
 		}()
 	}
 	return issuesWithClosedSubtasks, nil
+}
+
+// IssuesAfterSecondReview retrieves issues that have 2 or more reviews
+func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
+	request := fmt.Sprintf(`status NOT IN ("%s") AND (status was "%s" OR status was "%s")`, StatusClosed, StatusTlReview, StatusPeerReview)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, err
+	}
+	var issuesAfterReview []Issue
+	for _, i := range issues {
+		issue, resp, err := j.Issue.Get(i.ID, &jira.GetQueryOptions{
+			Expand:        i.Expand,
+			UpdateHistory: true,
+		})
+		if err != nil {
+			logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira this jira issue")
+			return nil, err
+		}
+		if len(issue.Changelog.Histories) == 0 {
+			continue
+		}
+
+		countPeer := 0
+		countTl := 0
+		for _, histories := range issue.Changelog.Histories {
+			for _, item := range histories.Items {
+				if item.ToString == StatusPeerReview {
+					countPeer++
+				}
+				if item.ToString == StatusTlReview {
+					countTl++
+				}
+			}
+		}
+		if countPeer > 1 || countTl > 1 {
+			issuesAfterReview = append(issuesAfterReview, i)
+		}
+	}
+	return issuesAfterReview, nil
 }
