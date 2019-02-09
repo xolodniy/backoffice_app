@@ -23,6 +23,8 @@ type App struct {
 	Config   config.Main
 }
 
+var slackMinSize = 0.5
+
 // New is main App constructor
 func New(conf *config.Main) *App {
 	return &App{
@@ -160,7 +162,7 @@ func (a *App) ReportSlackEndingFreeSpace() {
 		logrus.WithError(err).Error("can't take information about files size from slack")
 		return
 	}
-	if free > 0.5 {
+	if free > slackMinSize {
 		return
 	}
 	msgBody := fmt.Sprintf("Free space on slack is ending: %f Gb\n", free)
