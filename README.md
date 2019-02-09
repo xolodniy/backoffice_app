@@ -129,6 +129,11 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
 2. Start project
 
 ### Config file
+#### Slack
+    var slackSize = 5.0     -variable of availible space on slack. Now it is 5 Gb.
+    
+#### App
+    var slackMinSize = 0.5 - variable of minimum space on slack when report will send. Now it is 0.5 Gb.
 #### Cron manager parameters 
     "00 00 07 * * *"    — cron prefence for adding tasks
    
