@@ -91,6 +91,11 @@ func main() {
 				panic(err)
 			}
 
+			err = tm.AddTask(cfg.Cron.ReportSlackSpaceEnding, application.ReportSlackEndingFreeSpace)
+			if err != nil {
+				panic(err)
+			}
+
 			tm.Start()
 
 			log.Println("Task scheduler started.")
@@ -104,22 +109,19 @@ func main() {
 				Usage: "Removes ABSOLUTELY ALL Slack attachments",
 				Action: func(c *cli.Context) {
 					application := app.New(cfg)
-
-					for {
-						files, err := application.Slack.ListFiles("50")
-						if len(files) == 0 {
-							// We finished.
-							return
-						}
-						if err != nil {
+					files, err := application.Slack.Files()
+					if len(files) == 0 {
+						// We finished.
+						return
+					}
+					if err != nil {
+						panic(err)
+					}
+					for _, f := range files {
+						if err := application.Slack.DeleteFile(f.ID); err != nil {
 							panic(err)
 						}
-						for _, f := range files {
-							if err := application.Slack.DeleteFile(f.ID); err != nil {
-								panic(err)
-							}
-							logrus.Info("deleted file " + f.ID)
-						}
+						logrus.Info("deleted file " + f.ID)
 					}
 				},
 			},
@@ -145,6 +147,14 @@ func main() {
 				Action: func(c *cli.Context) {
 					application := app.New(cfg)
 					application.ReportIsuuesWithClosedSubtasks()
+				},
+			},
+			{
+				Name:  "get-slack-report-if-free-space-enging",
+				Usage: "Gets report, if slack free space is empty",
+				Action: func(c *cli.Context) {
+					application := app.New(cfg)
+					application.ReportSlackEndingFreeSpace()
 				},
 			},
 			{

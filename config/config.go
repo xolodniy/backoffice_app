@@ -18,6 +18,7 @@ type Main struct {
 		ReportClosedSubtasks    string
 		ReportAfterSecondReview string
 		EmployeesExceededTasks  string
+		ReportSlackSpaceEnding  string
 	}
 	GitToken string
 	Jira

@@ -142,11 +142,12 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
     Day of week  | Yes        | 0-6 or SUN-SAT  | * / , - ?
 
 #### Config.yml variables for cron 
-    dailyworkersworkedtimecron: "00 00 07 * * *"    — preference to send daily worked time of worker
-    weeklyworkersworkedtimecron: "00 00 07 * * 1"   — preference to send weekly worked time of worker
-    reportclosedsubtaskscron: "00 00 07 * * *"      — preference to send report about all closed subtask of issue
-    reportaftersecondreviewcron: "00 00 07 * * *"   — preference to send report about issues after second round review
-    employeesexceededtaskscron: "00 00 07 * * *"    — preference to send report about employers that have exceeded tasks
+    dailyworkersworkedtime: "00 00 07 * * *"    — preference to send daily worked time of worker
+    weeklyworkersworkedtime: "00 00 07 * * 1"   — preference to send weekly worked time of worker
+    reportclosedsubtasks: "00 00 07 * * *"      — preference to send report about all closed subtask of issue
+    reportaftersecondreview: "00 00 07 * * *"   — preference to send report about issues after second round review
+    employeesexceededtasks: "00 00 07 * * *"    — preference to send report about employers that have exceeded tasks
+    reportslackspaceending: "00 00 07 * * *"    — start everyday at 7:00 to send report if free space on slack < 0.5GB
 
 ### API Description
 
