@@ -116,27 +116,26 @@ func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 	return body, nil
 }
 
-// Files is returns all files info from slack
+// Files returns all files info from slack
 func (s *Slack) Files() ([]Files, error) {
 	// Prepare request.
 	data := url.Values{}
 	// For this to work, it should be a user token, not a bot token or something.
 	data.Set("token", s.InToken)
-	data.Set("count", "100")
-
-	u, _ := url.ParseRequestURI(s.APIURL)
-	u.Path = "/api/files.list"
-	urlStr := u.String()
-
-	req, err := http.NewRequest("GET", urlStr, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.InToken))
-	client := &http.Client{}
 	var files []Files
 	for i := 0; ; i++ {
+		data.Set("page", strconv.Itoa(i))
+
+		u, _ := url.ParseRequestURI(s.APIURL)
+		u.Path = "/api/files.list"
+		urlStr := u.String() + "?" + data.Encode()
+
+		req, err := http.NewRequest("GET", urlStr, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		client := &http.Client{}
 		filesResp := FilesResponse{}
 		data.Set("page", strconv.Itoa(i))
 		resp, err := client.Do(req)
@@ -164,7 +163,7 @@ func (s *Slack) Files() ([]Files, error) {
 	return files, nil
 }
 
-// EmtpySpace is retrieves empty space on slack
+// EmtpySpace retrieves empty space on slack
 func (s *Slack) FreeSpace() (float64, error) {
 	files, err := s.Files()
 	if err != nil {
