@@ -107,7 +107,8 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 	}
 	msgBody := "Issues have all closed subtasks:\n"
 	for _, issue := range issues {
-		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
+		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 	}
 	a.Slack.SendMessage(msgBody)
 }
@@ -150,7 +151,8 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 	}
 	msgBody := "Issues after second review round:\n"
 	for _, issue := range issues {
-		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
+		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 	}
 	a.Slack.SendMessage(msgBody)
 }
