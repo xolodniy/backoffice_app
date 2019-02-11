@@ -11,4 +11,5 @@ gitlab_token: JmzCVZJ7xxssy55sv7eS # Maintainer's token
 jira_login: stepan.morozov@theflow.global # TODO: special account with full read access
 jira_password: 123123123
 
-hubstaff_token: BhC8BzeH31pemX-iR2KffMnYm5JmkoJ2_lt6oN4Ma_c # TODO: improve obtaining, currently available until 15.01.2019
+hubstaff_token: 9omAc5EjhHp7wKXfqBCunHri6jkOsn_FFCcPC8XOqZo # TODO: check token valid after 11.03.2019
+hubstaff_app_token: yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ

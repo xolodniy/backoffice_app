@@ -26,7 +26,7 @@ hubstaff:
   apiurl: https://api.hubstaff.com
   auth:
     token: {{ hubstaff_token }}
-    apptoken: yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ
+    apptoken: {{ hubstaff_app_token }}
     login:
     password:
   orgsid: 60470
