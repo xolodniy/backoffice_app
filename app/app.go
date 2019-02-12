@@ -80,9 +80,9 @@ func (a *App) DurationStringInHoursMinutes(durationInSeconds int) (string, error
 	if durationInSeconds < 0 {
 		return "", fmt.Errorf("time can not be less than zero")
 	}
-	const SecInHour, SecInMinute int = 3600, 60
-	hours := int(durationInSeconds / SecInHour)
-	minutes := int(durationInSeconds % SecInHour / SecInMinute)
+	SecInHour, SecInMinute := 3600, 60
+	hours := durationInSeconds / SecInHour
+	minutes := durationInSeconds % SecInHour / SecInMinute
 	return fmt.Sprintf("%.2d:%.2d", hours, minutes), nil
 }
 
