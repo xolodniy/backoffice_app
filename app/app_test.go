@@ -44,7 +44,6 @@ func TestDurationStringInHoursMinutes_4(t *testing.T) {
 
 func TestDurationStringInHoursMinutes_5(t *testing.T) {
 	var a App
-
 	str, err := a.DurationStringInHoursMinutes(842400)
 
 	require.Equal(t, nil, err)
