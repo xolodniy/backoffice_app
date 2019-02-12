@@ -75,6 +75,75 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	a.Slack.SendMessage(message)
 }
 
+// gather detailed workers work time made through period between dates and send it to Slack channel
+func (a *App) GetDetailedWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, orgID int64) {
+	orgsList, err := a.GetWorkersTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd, orgID)
+	if err != nil {
+		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
+	}
+
+	var message = fmt.Sprintf(
+		"%s:\n\n"+
+			"From: %v %v\n"+
+			"To: %v %v",
+		prefix,
+		dateOfWorkdaysStart.Format("02.01.06"), "00:00:00",
+		dateOfWorkdaysEnd.Format("02.01.06"), "23:59:59",
+	)
+
+	if len(orgsList) == 0 {
+		a.Slack.SendMessage("No tracked time for now or no organization found")
+		return
+	}
+
+	if len(orgsList[0].Dates) == 0 {
+		message = "No tracked time for now or no workers found"
+	} else {
+		for _, separatedDate := range orgsList[0].Dates {
+			if separatedDate.TimeWorked == 0 {
+				continue
+			}
+			//separatedDate print
+			message += fmt.Sprintf(
+				"\n\n\n*%s*", separatedDate.Date)
+		LWORKER:
+			for _, worker := range separatedDate.Workers {
+				workerTime, err := a.DurationStringInHoursMinutes(worker.TimeWorked)
+				if err != nil {
+					logrus.WithError(err).WithField("time", worker.TimeWorked).
+						Error("error occurred on worker's time conversion error")
+					continue LWORKER
+				} else if worker.TimeWorked == 0 {
+					continue LWORKER
+				}
+				//employee name print
+				message += fmt.Sprintf(
+					"\n\n\n*%s (%s total)*\n", worker.Name, workerTime)
+			LPROJECT:
+				for _, project := range worker.Projects {
+					projectTime, err := a.DurationStringInHoursMinutes(project.TimeWorked)
+					if err != nil {
+						logrus.WithError(err).
+							WithField("separatedDate", separatedDate.Date).
+							WithField("worker", worker.Name).
+							WithField("time", project.TimeWorked).
+							Error("error occurred on projects's time conversion error")
+						continue LPROJECT
+					} else if project.TimeWorked == 0 {
+						continue LPROJECT
+					}
+					message += fmt.Sprintf(
+						"\n%s - %s", projectTime, project.Name)
+					for _, note := range project.Notes {
+						message += fmt.Sprintf("\n - %s", note.Description)
+					}
+				}
+			}
+		}
+	}
+	a.Slack.SendMessage(message)
+}
+
 // DurationString converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
 func (a *App) DurationStringInHoursMinutes(durationInSeconds int) (string, error) {
 	if durationInSeconds < 0 {

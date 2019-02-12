@@ -80,8 +80,29 @@ type Message struct {
 
 // Worker used to store an worker data
 type Worker struct {
+	Name       string           `json:"name"`
+	TimeWorked int              `json:"duration"`
+	Projects   []ProjectWorklog `json:"projects"`
+}
+
+//A type that reflects date array field from Hubstaff's api model
+type SeparatedDate struct {
+	Date       string   `json:"date"`
+	TimeWorked int      `json:"duration"`
+	Workers    []Worker `json:"users"`
+}
+
+//Work log by Project from Hubstaff's api model
+type ProjectWorklog struct {
 	Name       string `json:"name"`
 	TimeWorked int    `json:"duration"`
+	Notes      []Note `json:"notes"`
+}
+
+// Type for reflect the task notes for Hubstaff's api model
+type Note struct {
+	//TaskID      string `json:"task_id"`
+	Description string `json:"description"`
 }
 
 // Workers used to store workers list
@@ -93,6 +114,14 @@ type Organization struct {
 	Name       string   `json:"name"`
 	TimeWorked int64    `json:"duration"`
 	Workers    []Worker `json:"users"`
+}
+
+// Organization used to store an organization data
+type OrganizationByDate struct {
+	ID         int64           `json:"id"`
+	Name       string          `json:"name"`
+	TimeWorked int64           `json:"duration"`
+	Dates      []SeparatedDate `json:"dates"`
 }
 
 // Organizations used to store organizations list

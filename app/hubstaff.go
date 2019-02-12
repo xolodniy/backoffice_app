@@ -40,3 +40,34 @@ func (a *App) GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEn
 	}
 	return orgs.List, nil
 }
+
+// GetWorkersTimeByOrganization returning workers times by organization id
+func (a *App) GetWorkersTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, OrgID int64) ([]types.OrganizationByDate, error) {
+
+	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
+	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
+
+	apiURL := fmt.Sprintf(
+		"/v1/custom/by_date/team/?start_date=%s&end_date=%s&organizations=%d&show_notes=%t",
+		dateStart, dateEnd, OrgID, true)
+
+	orgsRaw, err := a.Hubstaff.Request(
+		apiURL,
+		nil,
+	)
+
+	fmt.Println("Hubstuff request URL will be:", apiURL)
+
+	if err != nil {
+		return nil, fmt.Errorf("error on getting workers worked time: %v", err)
+	}
+
+	orgs := struct {
+		List []types.OrganizationByDate `json:"organizations"`
+	}{}
+
+	if err = json.Unmarshal(orgsRaw, &orgs); err != nil {
+		return nil, fmt.Errorf("can't decode response: %s", err)
+	}
+	return orgs.List, nil
+}

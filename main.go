@@ -162,6 +162,20 @@ func main() {
 				},
 			},
 			{
+				Name:  "make-daily-detail-report-now",
+				Usage: "Sends daily detailed report to slack channel",
+				Action: func(c *cli.Context) {
+					application := app.New(cfg)
+
+					application.GetDetailedWorkersWorkedTimeAndSendToSlack(
+						"Detailed daily time report (manual)",
+						now.BeginningOfDay(),
+						now.EndOfDay(),
+						cfg.Hubstaff.OrgsID)
+
+				},
+			},
+			{
 				Name:  "make-daily-report-now",
 				Usage: "Sends daily report to slack channel",
 				Action: func(c *cli.Context) {
