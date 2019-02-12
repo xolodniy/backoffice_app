@@ -46,7 +46,7 @@ func (a *App) IssueTimeExcisionWithTimeCompare(issue jira.Issue, rowIndex int) (
 		return listRow, nil
 	}
 
-	ts, err := a.DurationString(issue.Fields.TimeSpent)
+	ts, err := a.DurationStringInHoursMinutes(issue.Fields.TimeSpent)
 	if err != nil {
 		logrus.WithError(err).WithField("time", issue.Fields.TimeSpent).
 			Error("error occurred on time conversion error")
@@ -54,7 +54,7 @@ func (a *App) IssueTimeExcisionWithTimeCompare(issue jira.Issue, rowIndex int) (
 
 	}
 
-	te, err := a.DurationString(issue.Fields.TimeOriginalEstimate)
+	te, err := a.DurationStringInHoursMinutes(issue.Fields.TimeOriginalEstimate)
 	if err != nil {
 		logrus.WithError(err).WithField("time", issue.Fields.TimeOriginalEstimate).
 			Error("error occurred on time conversion error")
