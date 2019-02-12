@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"regexp"
 	"time"
 
 	"backoffice_app/config"
@@ -59,7 +58,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		message = "No tracked time for now or no workers found"
 	} else {
 		for _, worker := range orgsList[0].Workers {
-			t, err := a.DurationString(worker.TimeWorked)
+			t, err := a.DurationStringInHoursMinutes(worker.TimeWorked)
 			if err != nil {
 				logrus.WithError(err).WithField("time", worker.TimeWorked).
 					Error("error occurred on time conversion error")
@@ -77,19 +76,14 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 }
 
 // DurationString converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
-func (a *App) DurationString(durationInSeconds int) (string, error) {
-	var someTime time.Time
-	r, err := regexp.Compile(` ([0-9]{2,2}:[0-9]{2,2}):[0-9]{2,2}`)
-	if err != nil {
-		return "", fmt.Errorf("regexp error: %v", err)
+func (a *App) DurationStringInHoursMinutes(durationInSeconds int) (string, error) {
+	if durationInSeconds < 0 {
+		return "", fmt.Errorf("time can not be less than zero")
 	}
-
-	occurrences := r.FindStringSubmatch(someTime.Add(time.Second * time.Duration(durationInSeconds)).String())
-	if len(occurrences) != 2 && &occurrences[1] == nil {
-		return "", fmt.Errorf("no time after unix time parsing")
-	}
-
-	return occurrences[1], nil
+	const SecInHour, SecInMinute int = 3600, 60
+	hours := int(durationInSeconds / SecInHour)
+	minutes := int(durationInSeconds % SecInHour / SecInMinute)
+	return fmt.Sprintf("%.2d:%.2d", hours, minutes), nil
 }
 
 // ReportIsuuesWithClosedSubtasks create report about issues with closed subtasks
