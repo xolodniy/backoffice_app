@@ -19,10 +19,6 @@
 *Sends daily report to Slack channel, immediately:*
 
     $ ./backoffice-app make-daily-report-now
-    
-*Sends detailed daily report to Slack channel, immediately:*
-
-    $ ./backoffice-app make-daily-detail-report-now
 
 *Obtains Hubstaff authorization token:*
 

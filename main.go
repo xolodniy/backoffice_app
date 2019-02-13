@@ -54,34 +54,15 @@ func main() {
 			wg := sync.WaitGroup{}
 			tm := taskmanager.New(&wg)
 
-			err := tm.AddTask(cfg.Cron.DailyWorkersWorkedTime, func() {
-				application.GetWorkersWorkedTimeAndSendToSlack(
-					"Daily work time report (auto)",
-					now.BeginningOfDay().AddDate(0, 0, -1),
-					now.EndOfDay().AddDate(0, 0, -1),
-					cfg.Hubstaff.OrgsID)
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			err = tm.AddTask(cfg.Cron.DailyWorkersWorkedTimeDetailed, func() {
-				application.GetDetailedWorkersWorkedTimeAndSendToSlack(
-					"Daily detailed report (auto)",
-					now.BeginningOfDay().AddDate(0, 0, -1),
-					now.EndOfDay().AddDate(0, 0, -1),
-					cfg.Hubstaff.OrgsID)
+			err = tm.AddTask(cfg.Cron.DailyWorkersWorkedTime, func() {
+				application.MakeWorkersWorkedReportYesterday("auto")
 			})
 			if err != nil {
 				panic(err)
 			}
 
 			err = tm.AddTask(cfg.Cron.WeeklyWorkersWorkedTime, func() {
-				application.GetWorkersWorkedTimeAndSendToSlack(
-					"Weekly work time report (auto)",
-					now.BeginningOfWeek().AddDate(0, 0, -7),
-					now.EndOfWeek().AddDate(0, 0, -7),
-					cfg.Hubstaff.OrgsID)
+				application.MakeWorkersWorkedReportLastWeek("auto")
 			})
 			if err != nil {
 				panic(err)
@@ -163,27 +144,7 @@ func main() {
 				Usage: "Sends weekly report to slack channel",
 				Action: func(c *cli.Context) {
 					application := app.New(cfg)
-
-					application.GetWorkersWorkedTimeAndSendToSlack(
-						"Weekly work time report (manual)",
-						now.BeginningOfWeek(),
-						now.EndOfWeek(),
-						cfg.Hubstaff.OrgsID)
-
-				},
-			},
-			{
-				Name:  "make-daily-detail-report-now",
-				Usage: "Sends daily detailed report to slack channel",
-				Action: func(c *cli.Context) {
-					application := app.New(cfg)
-
-					application.GetDetailedWorkersWorkedTimeAndSendToSlack(
-						"Detailed daily time report (manual)",
-						now.BeginningOfDay(),
-						now.EndOfDay(),
-						cfg.Hubstaff.OrgsID)
-
+					application.MakeWorkersWorkedReportLastWeek("manual")
 				},
 			},
 			{
@@ -191,12 +152,7 @@ func main() {
 				Usage: "Sends daily report to slack channel",
 				Action: func(c *cli.Context) {
 					application := app.New(cfg)
-
-					application.GetWorkersWorkedTimeAndSendToSlack(
-						"Daily work time report (manual)",
-						now.BeginningOfDay(),
-						now.EndOfDay(), cfg.Hubstaff.OrgsID)
-
+					application.MakeWorkersWorkedReportYesterday("manual")
 				},
 			},
 			{
