@@ -97,6 +97,10 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 
 	var listRow string
 
+	if issue.Fields.TimeTracking.RemainingEstimateSeconds != 0 {
+		return listRow
+	}
+
 	//TODO разобраться со вложенностями
 	var developer = "No developer"
 	developerMap, err := issue.Fields.Unknowns.MarshalMap("customfield_10026")
@@ -116,7 +120,7 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 	originalEtaSeconds := issue.Fields.TimeTracking.OriginalEstimateSeconds
 	remainingEtaSeconds := issue.Fields.TimeTracking.RemainingEstimateSeconds
 	timeSpentSeconds := issue.Fields.TimeTracking.TimeSpentSeconds
-	if remainingEtaSeconds > 0 && timeSpentSeconds > originalEtaSeconds {
+	if timeSpentSeconds > originalEtaSeconds {
 		remainingEta, err := util.FormatDateTimeToJiraRepresentation(remainingEtaSeconds)
 		if err != nil {
 			logrus.WithField("Fields.TimeTracking.RemainingEstimateSeconds", remainingEtaSeconds).
