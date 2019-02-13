@@ -20,6 +20,7 @@ type Slack struct {
 	OutToken        string `default:"someSlackOutToken"`
 	BotName         string
 	BackofficeAppID string
+	MigrationsID    string
 	APIURL          string
 }
 
@@ -30,15 +31,16 @@ func New(config *config.Slack) Slack {
 		OutToken:        config.OutToken,
 		BotName:         config.BotName,
 		BackofficeAppID: "#" + config.BackOfficeAppID,
+		MigrationsID:    "#" + config.MigrationsID,
 		APIURL:          config.APIURL,
 	}
 }
 
 // SendMessage is main message sending method
-func (s *Slack) SendMessage(text string) {
+func (s *Slack) SendMessage(text, channel string) {
 	var message = &types.PostChannelMessage{
 		Token:    s.OutToken,
-		Channel:  s.BackofficeAppID,
+		Channel:  channel,
 		AsUser:   false,
 		Text:     text,
 		Username: s.BotName,
