@@ -101,7 +101,6 @@ type ProjectWorklog struct {
 
 // Type for reflect the task notes for Hubstaff's api model
 type Note struct {
-	//TaskID      string `json:"task_id"`
 	Description string `json:"description"`
 }
 
