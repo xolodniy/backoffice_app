@@ -1,6 +1,7 @@
 package app
 
 import (
+	"backoffice_app/services/util"
 	"fmt"
 	"time"
 
@@ -58,7 +59,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		message = "No tracked time for now or no workers found"
 	} else {
 		for _, worker := range orgsList[0].Workers {
-			t, err := a.DurationStringInHoursMinutes(worker.TimeWorked)
+			t, err := util.DurationStringInHoursMinutes(worker.TimeWorked)
 			if err != nil {
 				logrus.WithError(err).WithField("time", worker.TimeWorked).
 					Error("error occurred on time conversion error")
@@ -73,17 +74,6 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	}
 
 	a.Slack.SendMessage(message)
-}
-
-// DurationString converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
-func (a *App) DurationStringInHoursMinutes(durationInSeconds int) (string, error) {
-	if durationInSeconds < 0 {
-		return "", fmt.Errorf("time can not be less than zero")
-	}
-	SecInHour, SecInMinute := 3600, 60
-	hours := durationInSeconds / SecInHour
-	minutes := durationInSeconds % SecInHour / SecInMinute
-	return fmt.Sprintf("%.2d:%.2d", hours, minutes), nil
 }
 
 // ReportIsuuesWithClosedSubtasks create report about issues with closed subtasks

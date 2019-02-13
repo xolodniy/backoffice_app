@@ -1,9 +1,9 @@
 package jira
 
 import (
-	"fmt"
-
 	"backoffice_app/config"
+	"backoffice_app/services/util"
+	"fmt"
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/sirupsen/logrus"
@@ -96,9 +96,6 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 	}
 
 	var listRow string
-	if issue.Fields.TimeTracking.RemainingEstimateSeconds != 0 {
-		return listRow
-	}
 
 	//TODO разобраться со вложенностями
 	var developer = "No developer"
@@ -115,10 +112,27 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 			developer = displayName
 		}
 	}
+	var worklogString string
+	originalEtaSeconds := issue.Fields.TimeTracking.OriginalEstimateSeconds
+	remainingEtaSeconds := issue.Fields.TimeTracking.RemainingEstimateSeconds
+	timeSpentSeconds := issue.Fields.TimeTracking.TimeSpentSeconds
+	if remainingEtaSeconds > 0 && timeSpentSeconds > originalEtaSeconds {
+		remainingEta, err := util.FormatDateTimeToJiraRepresentation(remainingEtaSeconds)
+		if err != nil {
+			logrus.WithField("Fields.TimeTracking.RemainingEstimateSeconds", remainingEtaSeconds).
+				Error(err.Error())
+		}
+		originalEta, err := util.FormatDateTimeToJiraRepresentation(originalEtaSeconds)
+		if err != nil {
+			logrus.WithField("Fields.TimeTracking.OriginalEstimateSeconds", originalEtaSeconds).
+				Error(err.Error())
+		}
+		worklogString = fmt.Sprintf(" estimate is %s instead %s", remainingEta, originalEta)
+	}
 
-	listRow = fmt.Sprintf("%[1]d. %[2]s - <https://theflow.atlassian.net/browse/%[3]s|%[3]s - %[4]s>: _%[5]s_\n",
+	listRow = fmt.Sprintf("%[1]d. %[2]s - <https://theflow.atlassian.net/browse/%[3]s|%[3]s - %[4]s>: _%[5]s_%[6]s\n",
 		rowIndex, developer, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name,
-	)
+		worklogString)
 
 	return listRow
 }

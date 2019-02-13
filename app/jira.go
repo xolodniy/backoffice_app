@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 
+	"backoffice_app/services/util"
 	"github.com/andygrunwald/go-jira"
 	"github.com/sirupsen/logrus"
 )
@@ -46,7 +47,7 @@ func (a *App) IssueTimeExcisionWithTimeCompare(issue jira.Issue, rowIndex int) (
 		return listRow, nil
 	}
 
-	ts, err := a.DurationStringInHoursMinutes(issue.Fields.TimeSpent)
+	ts, err := util.DurationStringInHoursMinutes(issue.Fields.TimeSpent)
 	if err != nil {
 		logrus.WithError(err).WithField("time", issue.Fields.TimeSpent).
 			Error("error occurred on time conversion error")
@@ -54,7 +55,7 @@ func (a *App) IssueTimeExcisionWithTimeCompare(issue jira.Issue, rowIndex int) (
 
 	}
 
-	te, err := a.DurationStringInHoursMinutes(issue.Fields.TimeOriginalEstimate)
+	te, err := util.DurationStringInHoursMinutes(issue.Fields.TimeOriginalEstimate)
 	if err != nil {
 		logrus.WithError(err).WithField("time", issue.Fields.TimeOriginalEstimate).
 			Error("error occurred on time conversion error")
