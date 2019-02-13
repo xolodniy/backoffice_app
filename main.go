@@ -49,6 +49,8 @@ func main() {
 
 			go controller.New(*cfg).Start()
 
+			go application.Bitbucket.FillCache()
+
 			log.Println("Requests listener started.")
 
 			wg := sync.WaitGroup{}
@@ -87,6 +89,11 @@ func main() {
 			}
 
 			err = tm.AddTask(cfg.Cron.ReportAfterSecondReview, application.ReportIsuuesAfterSecondReview)
+			if err != nil {
+				panic(err)
+			}
+
+			err = tm.AddTask(cfg.Cron.ReportGitMigrations, application.ReportGitMigrations)
 			if err != nil {
 				panic(err)
 			}
@@ -145,6 +152,14 @@ func main() {
 				Action: func(c *cli.Context) {
 					application := app.New(cfg)
 					application.ReportIsuuesWithClosedSubtasks()
+				},
+			},
+			{
+				Name:  "get-git-new-migrations",
+				Usage: "Gets git new migrations right now",
+				Action: func(c *cli.Context) {
+					application := app.New(cfg)
+					application.ReportGitMigrations()
 				},
 			},
 			{
