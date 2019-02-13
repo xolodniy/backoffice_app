@@ -75,6 +75,10 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
+			err = tm.AddTask(cfg.Cron.EmployeesExceededEstimateTime, application.ReportEmployeesWithExceededEstimateTime)
+			if err != nil {
+				panic(err)
+			}
 
 			err = tm.AddTask(cfg.Cron.EmployeesExceededTasks, application.ReportEmployeesHaveExceededTasks)
 			if err != nil {
@@ -137,6 +141,14 @@ func main() {
 				Action: func(c *cli.Context) {
 					application := app.New(cfg)
 					application.ReportIsuuesWithClosedSubtasks()
+				},
+			},
+			{
+				Name:  "report-exceeded-estimate-now",
+				Usage: "Reports exceeded estimate right now",
+				Action: func(c *cli.Context) {
+					application := app.New(cfg)
+					application.ReportEmployeesWithExceededEstimateTime()
 				},
 			},
 			{

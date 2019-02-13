@@ -58,6 +58,7 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 					"status",
 					"issuetype",
 					"subtasks",
+					"assignee",
 				},
 			},
 		)

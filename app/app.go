@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"github.com/jinzhu/now"
 	"time"
 
 	"backoffice_app/config"
@@ -102,6 +103,60 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
 	}
 	a.Slack.SendMessage(msgBody)
+}
+
+// ReportEmployeesWithExeededEstimateTime create report about employees with ETA overhead
+func (a *App) ReportEmployeesWithExceededEstimateTime() {
+	//getting actual sum of ETA from jira by employees
+	issues, err := a.Jira.AssigneeOpenIssues()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about closed subtasks from jira")
+		return
+	}
+	if len(issues) == 0 {
+		a.Slack.SendMessage("There are no issues with all closed subtasks")
+		return
+	}
+	remainingEtaMap := make(map[string]int)
+	for _, issue := range issues {
+		if issue.Fields.Assignee == nil {
+			continue
+		}
+		remainingEtaMap[issue.Fields.Assignee.DisplayName] += issue.Fields.TimeTracking.RemainingEstimateSeconds
+	}
+	//get logged time from Hubstaff for this week
+	organizations, err := a.GetWorkersTimeByOrganization(now.BeginningOfWeek(), now.EndOfWeek(),
+		a.Config.Hubstaff.OrgsID)
+	if err != nil {
+		logrus.WithError(err).Error("failed to fetch data from hubstaff")
+	}
+	if len(organizations) == 0 {
+		a.Slack.SendMessage("No tracked time for now or no organization found")
+		return
+	}
+
+	messageHeader := "\nExceeded estimate time report:\n"
+	messageHeader += fmt.Sprintf("\n*%v*\n", now.BeginningOfDay().Format("02.01.2006"))
+	message := ""
+	if len(organizations[0].Workers) == 0 {
+		a.Slack.SendMessage("No tracked time for now or no organization found")
+		return
+	} else {
+		var weekWorkingHours float32 = 30.0
+		for _, worker := range organizations[0].Workers {
+			etaTimeSec := remainingEtaMap[worker.Name]
+			if etaTimeSec > 0 {
+				workVolume := float32(etaTimeSec+worker.TimeWorked) / 3600.0
+				if workVolume > weekWorkingHours {
+					message += fmt.Sprintf("\n%s late for %.2f hours", worker.Name, workVolume-weekWorkingHours)
+				}
+			}
+		}
+	}
+	if message == "" {
+		message = "No one developer has exceeded estimate time"
+	}
+	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message))
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks

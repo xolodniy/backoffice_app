@@ -7,6 +7,7 @@ cron:
   reportclosedsubtasks: "00 00 07 * * *"
   reportaftersecondreview: "00 00 07 * * *"
   employeesexceededtasks: "00 00 07 * * *"
+  employeesexceededestimatetime: "00 00 07 * * *"
 gittoken: {{ gitlab_token }}
 jira:
   apiurl: https://theflow.atlassian.net
