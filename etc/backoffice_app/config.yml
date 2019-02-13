@@ -3,6 +3,7 @@ ginport: 1234
 gindebugmode: true
 cron:
   dailyworkersworkedtime: "00 00 07 * * *"
+  dailyworkersworkedtimedetailed: "00 00 07 * * *"
   weeklyworkersworkedtime: "00 00 07 * * 1"
   reportclosedsubtasks: "00 00 07 * * *"
   reportaftersecondreview: "00 00 07 * * *"

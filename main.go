@@ -65,6 +65,17 @@ func main() {
 				panic(err)
 			}
 
+			err = tm.AddTask(cfg.Cron.DailyWorkersWorkedTimeDetailed, func() {
+				application.GetDetailedWorkersWorkedTimeAndSendToSlack(
+					"Daily detailed report (auto)",
+					now.BeginningOfDay().AddDate(0, 0, -1),
+					now.EndOfDay().AddDate(0, 0, -1),
+					cfg.Hubstaff.OrgsID)
+			})
+			if err != nil {
+				panic(err)
+			}
+
 			err = tm.AddTask(cfg.Cron.WeeklyWorkersWorkedTime, func() {
 				application.GetWorkersWorkedTimeAndSendToSlack(
 					"Weekly work time report (auto)",

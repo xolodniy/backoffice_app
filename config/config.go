@@ -13,11 +13,12 @@ type Main struct {
 	GinPort      string
 	GinDebugMode bool
 	Cron         struct {
-		DailyWorkersWorkedTime  string
-		WeeklyWorkersWorkedTime string
-		ReportClosedSubtasks    string
-		ReportAfterSecondReview string
-		EmployeesExceededTasks  string
+		DailyWorkersWorkedTime         string
+		DailyWorkersWorkedTimeDetailed string
+		WeeklyWorkersWorkedTime        string
+		ReportClosedSubtasks           string
+		ReportAfterSecondReview        string
+		EmployeesExceededTasks         string
 	}
 	GitToken string
 	Jira
