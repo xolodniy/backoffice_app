@@ -6,31 +6,31 @@ import (
 	"time"
 
 	"backoffice_app/config"
+	"backoffice_app/services/bitbucket"
 	"backoffice_app/services/hubstaff"
 	"backoffice_app/services/jira"
 	"backoffice_app/services/slack"
 
 	"github.com/sirupsen/logrus"
-	"github.com/xanzy/go-gitlab"
 )
 
 // App is main App implementation
 type App struct {
-	Hubstaff hubstaff.Hubstaff
-	Slack    slack.Slack
-	Jira     jira.Jira
-	Git      *gitlab.Client
-	Config   config.Main
+	Hubstaff  hubstaff.Hubstaff
+	Slack     slack.Slack
+	Jira      jira.Jira
+	Bitbucket bitbucket.Bitbucket
+	Config    config.Main
 }
 
 // New is main App constructor
 func New(conf *config.Main) *App {
 	return &App{
-		Hubstaff: hubstaff.New(&conf.Hubstaff),
-		Slack:    slack.New(&conf.Slack),
-		Jira:     jira.New(&conf.Jira),
-		Git:      gitlab.NewClient(nil, conf.GitToken),
-		Config:   *conf,
+		Hubstaff:  hubstaff.New(&conf.Hubstaff),
+		Slack:     slack.New(&conf.Slack),
+		Jira:      jira.New(&conf.Jira),
+		Bitbucket: bitbucket.New(&conf.Bitbucket),
+		Config:    *conf,
 	}
 }
 
@@ -51,7 +51,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	)
 
 	if len(orgsList) == 0 {
-		a.Slack.SendMessage("No tracked time for now or no organization found")
+		a.Slack.SendMessage("No tracked time for now or no organization found", a.Slack.BackofficeAppID)
 		return
 	}
 
@@ -73,7 +73,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		}
 	}
 
-	a.Slack.SendMessage(message)
+	a.Slack.SendMessage(message, a.Slack.BackofficeAppID)
 }
 
 // DurationString converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
@@ -100,14 +100,14 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues with all closed subtasks")
+		a.Slack.SendMessage("There are no issues with all closed subtasks", a.Slack.BackofficeAppID)
 		return
 	}
 	msgBody := "Issues have all closed subtasks:\n"
 	for _, issue := range issues {
 		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
 	}
-	a.Slack.SendMessage(msgBody)
+	a.Slack.SendMessage(msgBody, a.Slack.BackofficeAppID)
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
@@ -118,7 +118,7 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no employees with exceeded subtasks")
+		a.Slack.SendMessage("There are no employees with exceeded subtasks", a.Slack.BackofficeAppID)
 		return
 	}
 	var index = 1
@@ -132,7 +132,7 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 			index++
 		}
 	}
-	a.Slack.SendMessage(msgBody)
+	a.Slack.SendMessage(msgBody, a.Slack.BackofficeAppID)
 }
 
 // ReportIsuuesAfterSecondReview create report about issues after second review round
@@ -143,12 +143,27 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues after second review round")
+		a.Slack.SendMessage("There are no issues after second review round", a.Slack.BackofficeAppID)
 		return
 	}
 	msgBody := "Issues after second review round:\n"
 	for _, issue := range issues {
 		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
 	}
-	a.Slack.SendMessage(msgBody)
+	a.Slack.SendMessage(msgBody, a.Slack.BackofficeAppID)
+}
+
+// ReportGitMigrations create report about new git migrations
+func (a *App) ReportGitMigrations() {
+	messages, err := a.Bitbucket.MigrationMessages()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information git migrations from bitbucket")
+		return
+	}
+	if len(messages) == 0 {
+		return
+	}
+	for _, message := range messages {
+		a.Slack.SendMessage(message, a.Slack.MigrationsID)
+	}
 }

@@ -52,7 +52,7 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 		message += "*Warning! Some migration can be skipped which are in commits placed beyond the 20 commit barrier*\n"
 	}
 
-	c.App.Slack.SendMessage(message)
+	c.App.Slack.SendMessage(message, c.App.Slack.BackofficeAppID)
 
 	var r, _ = regexp.Compile(`/((etc|db)/migrations/[0-9]{4,}([0-9a-zA-Z_]+)?\.sql)`)
 
@@ -71,7 +71,7 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 					message += fmt.Sprintf("```%s```", fileContents)
 				}
 
-				c.App.Slack.SendMessage(message)
+				c.App.Slack.SendMessage(message, c.App.Slack.BackofficeAppID)
 			}
 		}
 		for _, f := range commit.Modified {
@@ -88,7 +88,7 @@ func (c *Controller) gitHandlerOnEventPush(ctx *gin.Context) {
 					message += fmt.Sprintf("```%s```", fileContents)
 				}
 
-				c.App.Slack.SendMessage(message)
+				c.App.Slack.SendMessage(message, c.App.Slack.BackofficeAppID)
 			}
 		}
 	}
