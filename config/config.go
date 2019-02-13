@@ -18,11 +18,13 @@ type Main struct {
 		ReportClosedSubtasks    string
 		ReportAfterSecondReview string
 		EmployeesExceededTasks  string
+		ReportGitMigrations     string
 	}
 	GitToken string
 	Jira
 	Hubstaff
 	Slack
+	Bitbucket
 }
 
 // Jira is template to storing jira configuration
@@ -52,6 +54,15 @@ type Slack struct {
 	BackOfficeAppID string
 	MigrationsID    string
 	APIURL          string
+}
+
+type Bitbucket struct {
+	APIUrl string
+	Owner  string
+	Auth   struct {
+		Username string
+		Password string
+	}
 }
 
 // GetConfig return config parsed from config/config.yml

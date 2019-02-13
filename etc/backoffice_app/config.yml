@@ -7,9 +7,17 @@ cron:
   reportclosedsubtasks: "00 00 07 * * *"
   reportaftersecondreview: "00 00 07 * * *"
   employeesexceededtasks: "00 00 07 * * *"
+  reportgitmigrations: "@hourly"
 gittoken:
 jira:
   apiurl: https://theflow.atlassian.net
+  auth:
+    username:
+    password:
+
+bitbucket:
+  apiurl: https://api.bitbucket.org/2.0
+  owner: theflowglobal
   auth:
     username:
     password:

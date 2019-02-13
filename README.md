@@ -147,6 +147,7 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
     reportclosedsubtaskscron: "00 00 07 * * *"      — preference to send report about all closed subtask of issue
     reportaftersecondreviewcron: "00 00 07 * * *"   — preference to send report about issues after second round review
     employeesexceededtaskscron: "00 00 07 * * *"    — preference to send report about employers that have exceeded tasks
+    reportgitmigrations: "@hourly"                  — preference to send report about new git migrations
 
 ### API Description
 
