@@ -52,9 +52,10 @@ func (a *App) MakeWorkersWorkedReportYesterday(mode string) {
 
 // GetWorkersWorkedTimeAndSendToSlack gather workers work time made through period between dates and send it to Slack channel
 func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
-	orgsList, err := a.GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd)
+	orgsList, err := a.Hubstaff.GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd)
 	if err != nil {
 		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
+		return
 	}
 
 	var message = fmt.Sprintf(

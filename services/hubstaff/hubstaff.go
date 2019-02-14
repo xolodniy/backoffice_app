@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"backoffice_app/config"
-	"backoffice_app/types"
 )
 
 // Hubstaff is main Hubstaff implementation
@@ -35,7 +34,7 @@ func New(config *config.Hubstaff) Hubstaff {
 
 // ObtainAuthToken retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
-func (h *Hubstaff) ObtainAuthToken(auth types.HubstaffAuth) (string, error) {
+func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
 	form := url.Values{}
 	form.Add("email", auth.Login)
 	form.Add("password", auth.Password)
@@ -103,7 +102,7 @@ func (h *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
 }
 
 // GetWorkersTimeByDate returning workers times by organization id
-func (h *Hubstaff) GetWorkersTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) ([]types.OrganizationByDate, error) {
+func (h *Hubstaff) GetWorkersTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) ([]ApiResponseByDate, error) {
 
 	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
 	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
@@ -124,7 +123,40 @@ func (h *Hubstaff) GetWorkersTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd t
 	}
 
 	orgs := struct {
-		List []types.OrganizationByDate `json:"organizations"`
+		List []ApiResponseByDate `json:"organizations"`
+	}{}
+
+	if err = json.Unmarshal(orgsRaw, &orgs); err != nil {
+		return nil, fmt.Errorf("can't decode response: %s", err)
+	}
+	return orgs.List, nil
+}
+
+// GetWorkersTimeByOrganization returning workers times by organization id
+func (h *Hubstaff) GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) ([]ApiResponseByMember, error) {
+
+	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
+	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
+
+	apiURL := fmt.Sprintf(
+		"/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
+		dateStart,
+		dateEnd,
+		h.OrgID)
+
+	orgsRaw, err := h.Request(
+		apiURL,
+		nil,
+	)
+
+	fmt.Println("Hubstuff request URL will be:", apiURL)
+
+	if err != nil {
+		return nil, fmt.Errorf("error on getting workers worked time: %v", err)
+	}
+
+	orgs := struct {
+		List []ApiResponseByMember `json:"organizations"`
 	}{}
 
 	if err = json.Unmarshal(orgsRaw, &orgs); err != nil {
