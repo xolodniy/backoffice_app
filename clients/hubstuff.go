@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"backoffice_app/types"
+	"backoffice_app/services/hubstaff"
 )
 
 // Hubstaff is main Hubstaff implementation
@@ -22,7 +22,7 @@ type Hubstaff struct {
 
 // ObtainAuthToken retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
-func (c *Hubstaff) ObtainAuthToken(auth types.HubstaffAuth) (string, error) {
+func (c *Hubstaff) ObtainAuthToken(auth hubstaff.HubstaffAuth) (string, error) {
 	form := url.Values{}
 	form.Add("email", auth.Login)
 	form.Add("password", auth.Password)
