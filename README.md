@@ -130,7 +130,9 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
 
 ### Config file
 #### Slack
-    var slackSize = 5.0     -variable of availible space on slack. Now it is 5 Gb.
+
+    totalVolume: 5.0    -variable of availible total space on slack.
+    restVolume: 0.0     -variable of rest space, when we want send report.
     
 #### App
     var slackMinSize = 0.5 - variable of minimum space on slack when report will send. Now it is 0.5 Gb.
