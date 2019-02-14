@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"github.com/jinzhu/now"
 	"time"
 
 	"backoffice_app/config"
@@ -10,6 +9,7 @@ import (
 	"backoffice_app/services/jira"
 	"backoffice_app/services/slack"
 
+	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
 	"github.com/xanzy/go-gitlab"
 )
