@@ -102,19 +102,15 @@ func (h *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
 }
 
 // GetWorkersTimeByDate returning workers times by organization id
-func (h *Hubstaff) GetWorkersTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) ([]ApiResponseByDate, error) {
+func (h *Hubstaff) GetWorkersTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) ([]APIResponseByDate, error) {
 
 	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
 	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
 
-	apiURL := fmt.Sprintf(
-		"/v1/custom/by_date/team/?start_date=%s&end_date=%s&organizations=%d&show_notes=%t",
+	apiURL := fmt.Sprintf("/v1/custom/by_date/team/?start_date=%s&end_date=%s&organizations=%d&show_notes=%t",
 		dateStart, dateEnd, h.OrgID, true)
 
-	orgsRaw, err := h.Request(
-		apiURL,
-		nil,
-	)
+	orgsRaw, err := h.Request(apiURL, nil)
 
 	fmt.Println("Hubstuff request URL will be:", apiURL)
 
@@ -123,7 +119,7 @@ func (h *Hubstaff) GetWorkersTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd t
 	}
 
 	orgs := struct {
-		List []ApiResponseByDate `json:"organizations"`
+		List []APIResponseByDate `json:"organizations"`
 	}{}
 
 	if err = json.Unmarshal(orgsRaw, &orgs); err != nil {
@@ -133,21 +129,15 @@ func (h *Hubstaff) GetWorkersTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd t
 }
 
 // GetWorkersTimeByOrganization returning workers times by organization id
-func (h *Hubstaff) GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) ([]ApiResponseByMember, error) {
+func (h *Hubstaff) GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) ([]APIResponseByMember, error) {
 
 	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
 	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
 
-	apiURL := fmt.Sprintf(
-		"/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
-		dateStart,
-		dateEnd,
-		h.OrgID)
+	apiURL := fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
+		dateStart, dateEnd, h.OrgID)
 
-	orgsRaw, err := h.Request(
-		apiURL,
-		nil,
-	)
+	orgsRaw, err := h.Request(apiURL, nil)
 
 	fmt.Println("Hubstuff request URL will be:", apiURL)
 
@@ -156,7 +146,7 @@ func (h *Hubstaff) GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkd
 	}
 
 	orgs := struct {
-		List []ApiResponseByMember `json:"organizations"`
+		List []APIResponseByMember `json:"organizations"`
 	}{}
 
 	if err = json.Unmarshal(orgsRaw, &orgs); err != nil {
