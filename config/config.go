@@ -48,12 +48,12 @@ type Hubstaff struct {
 
 // Slack is template to storing slack configuration
 type Slack struct {
-	InToken         string
-	OutToken        string
-	BotName         string
-	BackOfficeAppID string
-	MigrationsID    string
-	APIURL          string
+	InToken           string
+	OutToken          string
+	BotName           string
+	ChanBackofficeApp string
+	ChanMigrations    string
+	APIURL            string
 }
 
 type Bitbucket struct {

@@ -24,8 +24,8 @@ bitbucket:
 
 slack:
   apiurl: https://slack.com/api
-  backofficeappid: back-office-app
-  migrationsid: migrations
+  chanbackofficeapp: back-office-app
+  chanmigrations: migrations
   botname: Back Office Bot
   intoken: ITYgHVRVRhOIZfvDpVgCS6CM
   outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79

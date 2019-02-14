@@ -16,23 +16,23 @@ import (
 
 // Slack is main Slack client app implementation
 type Slack struct {
-	InToken         string `default:"someSlackInToken"`
-	OutToken        string `default:"someSlackOutToken"`
-	BotName         string
-	BackofficeAppID string
-	MigrationsID    string
-	APIURL          string
+	InToken           string
+	OutToken          string
+	BotName           string
+	ChanBackofficeApp string
+	ChanMigrations    string
+	APIURL            string
 }
 
 // New creates new slack
 func New(config *config.Slack) Slack {
 	return Slack{
-		InToken:         config.InToken,
-		OutToken:        config.OutToken,
-		BotName:         config.BotName,
-		BackofficeAppID: "#" + config.BackOfficeAppID,
-		MigrationsID:    "#" + config.MigrationsID,
-		APIURL:          config.APIURL,
+		InToken:           config.InToken,
+		OutToken:          config.OutToken,
+		BotName:           config.BotName,
+		ChanBackofficeApp: "#" + config.ChanBackofficeApp,
+		ChanMigrations:    "#" + config.ChanMigrations,
+		APIURL:            config.APIURL,
 	}
 }
 
@@ -51,7 +51,7 @@ func (s *Slack) SendMessage(text, channel string) {
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"msgBody":        text,
-			"channelID":      s.BackofficeAppID,
+			"channelID":      channel,
 			"channelBotName": s.BotName,
 		}).Error("can't decode to json")
 	}
@@ -65,14 +65,14 @@ func (s *Slack) SendMessage(text, channel string) {
 	if err := json.Unmarshal(respBody, &responseBody); err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"msgBody":        text,
-			"channelID":      s.BackofficeAppID,
+			"channelID":      channel,
 			"channelBotName": s.BotName,
 		}).Error("can't encode from json")
 	}
 	if !responseBody.Ok {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"msgBody":        text,
-			"channelID":      s.BackofficeAppID,
+			"channelID":      channel,
 			"channelBotName": s.BotName,
 		}).Error(responseBody.Error)
 	}
