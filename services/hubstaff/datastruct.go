@@ -1,5 +1,14 @@
 package hubstaff
 
+import (
+	"fmt"
+)
+
+const (
+	secInMin  = 60
+	secInHour = 60 * secInMin
+)
+
 // HubstaffAuth is an object used to specifying parameters of issues searching in Hubstaff
 type HubstaffAuth struct {
 	Token    string
@@ -8,24 +17,38 @@ type HubstaffAuth struct {
 	Password string
 }
 
+// WorkingTime type for reflect the working time and easy convert in to string format
+type WorkingTime int
+
+func (wt *WorkingTime) GoString() string {
+	panic("implement me")
+}
+
+// String converts seconds value to 00:00 (hours with leading zero:minutes with leading zero) time format
+func (wt *WorkingTime) String() string {
+	hours := int(*wt) / secInHour
+	minutes := int(*wt) % secInHour / secInMin
+	return fmt.Sprintf("%.2d:%.2d", hours, minutes)
+}
+
 // APIResponse used to reflect an api response from /by_date endpoint
 type APIResponse struct {
-	ID         int64  `json:"id"`
-	Name       string `json:"name"`
-	TimeWorked int64  `json:"duration"`
+	ID         int64       `json:"id"`
+	Name       string      `json:"name"`
+	TimeWorked WorkingTime `json:"duration"`
 	Workers    []struct {
 		Name       string `json:"name"`
 		TimeWorked int    `json:"duration"`
 	} `json:"users"`
 	Dates []struct {
-		Date       string `json:"date"`
-		TimeWorked int    `json:"duration"`
+		Date       string      `json:"date"`
+		TimeWorked WorkingTime `json:"duration"`
 		Workers    []struct {
-			Name       string `json:"name"`
-			TimeWorked int    `json:"duration"`
+			Name       string      `json:"name"`
+			TimeWorked WorkingTime `json:"duration"`
 			Projects   []struct {
-				Name       string `json:"name"`
-				TimeWorked int    `json:"duration"`
+				Name       string      `json:"name"`
+				TimeWorked WorkingTime `json:"duration"`
 				Notes      []struct {
 					Description string `json:"description"`
 				} `json:"notes"`
