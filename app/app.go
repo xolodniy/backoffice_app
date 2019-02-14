@@ -164,11 +164,10 @@ func (a *App) ReportGitMigrations() {
 		logrus.WithError(err).Error("can't take information git migrations from bitbucket")
 		return
 	}
-	if len(messages) == 0 {
-		return
-	}
 	for _, message := range messages {
-		a.Slack.SendMessage(message, a.Slack.ChanMigrations)
+		if message != "" {
+			a.Slack.SendMessage(message, a.Slack.ChanMigrations)
+		}
 	}
 }
 
