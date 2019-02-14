@@ -16,14 +16,14 @@ import (
 
 // App is main App implementation
 type App struct {
-	Hubstaff hubstaff.Hubstaff
-	Slack    slack.Slack
-	Jira     jira.Jira
-	Git      *gitlab.Client
-	Config   config.Main
+	Hubstaff         hubstaff.Hubstaff
+	Slack            slack.Slack
+	Jira             jira.Jira
+	Git              *gitlab.Client
+	Config           config.Main
+	slackTotalVolume float64
+	slackRestVolume  float64
 }
-
-var slackMinSize = 0.5
 
 // New is main App constructor
 func New(conf *config.Main) *App {
@@ -159,14 +159,14 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
 func (a *App) ReportSlackEndingFreeSpace() {
-	free, err := a.Slack.FreeSpace()
+	size, err := a.Slack.FilesSize()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about files size from slack")
 		return
 	}
-	if free > slackMinSize {
+	if a.slackTotalVolume-size > a.slackRestVolume {
 		return
 	}
-	msgBody := fmt.Sprintf("Free space on slack is ending: %f Gb\n", free)
+	msgBody := fmt.Sprintf("Free space on slack end.\n")
 	a.Slack.SendMessage(msgBody)
 }
