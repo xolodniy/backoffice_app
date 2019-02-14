@@ -42,8 +42,6 @@ type Files struct {
 	Size float64 `json:"size"`
 }
 
-var slackSize = 5.0
-
 // New creates new slack
 func New(config *config.Slack) Slack {
 	return Slack{
@@ -122,11 +120,13 @@ func (s *Slack) Files() ([]Files, error) {
 	data := url.Values{}
 	// For this to work, it should be a user token, not a bot token or something.
 	data.Set("token", s.InToken)
+	u, err := url.ParseRequestURI(s.APIURL)
+	if err != nil {
+		return nil, err
+	}
 	var files []Files
 	for i := 0; ; i++ {
 		data.Set("page", strconv.Itoa(i))
-
-		u, _ := url.ParseRequestURI(s.APIURL)
 		u.Path = "/api/files.list"
 		urlStr := u.String() + "?" + data.Encode()
 
@@ -135,9 +135,8 @@ func (s *Slack) Files() ([]Files, error) {
 			return nil, err
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		client := &http.Client{}
+		client := http.DefaultClient
 		filesResp := FilesResponse{}
-		data.Set("page", strconv.Itoa(i))
 		resp, err := client.Do(req)
 		if err != nil {
 			return nil, err
@@ -163,8 +162,8 @@ func (s *Slack) Files() ([]Files, error) {
 	return files, nil
 }
 
-// EmtpySpace retrieves empty space on slack
-func (s *Slack) FreeSpace() (float64, error) {
+// FilesSize retrieves filez size
+func (s *Slack) FilesSize() (float64, error) {
 	files, err := s.Files()
 	if err != nil {
 		return 0, err
@@ -173,8 +172,7 @@ func (s *Slack) FreeSpace() (float64, error) {
 	for _, file := range files {
 		sum += file.Size
 	}
-	free := slackSize - (sum / 1024 / 1024 / 1024)
-	return free, nil
+	return sum / 1024 / 1024 / 1024, nil
 }
 
 // DeleteFile deletes file from slack by id
