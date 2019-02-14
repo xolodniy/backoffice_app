@@ -1,7 +1,6 @@
 package util
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -35,35 +34,35 @@ func TestDurationStringInHoursMinutes_5(t *testing.T) {
 func TestFormatDateTimeToJiraRepresentation_1(t *testing.T) {
 	str := DurationStringGracefull(86400)
 
-	require.Equal(t, "3d", strings.Trim(str, " "))
+	require.Equal(t, "3d", str)
 }
 
 func TestFormatDateTimeToJiraRepresentation_2(t *testing.T) {
 	str := DurationStringGracefull(270240)
 
-	require.Equal(t, "1w 2d 3h 4m", strings.Trim(str, " "))
+	require.Equal(t, "1w 2d 3h 4m", str)
 }
 
 func TestFormatDateTimeToJiraRepresentation_3(t *testing.T) {
 	str := DurationStringGracefull(205140)
 
-	require.Equal(t, "1w 59m", strings.Trim(str, " "))
+	require.Equal(t, "1w 59m", str)
 }
 
 func TestFormatDateTimeToJiraRepresentation_4(t *testing.T) {
 	str := DurationStringGracefull(61200)
 
-	require.Equal(t, "2d 1h", strings.Trim(str, " "))
+	require.Equal(t, "2d 1h", str)
 }
 
 func TestFormatDateTimeToJiraRepresentation_5(t *testing.T) {
 	str := DurationStringGracefull(259200)
 
-	require.Equal(t, "1w 2d", strings.Trim(str, " "))
+	require.Equal(t, "1w 2d", str)
 }
 
 func TestFormatDateTimeToJiraRepresentation_6(t *testing.T) {
 	str := DurationStringGracefull(50)
 
-	require.Equal(t, "0m", strings.Trim(str, " "))
+	require.Equal(t, "0m", str)
 }

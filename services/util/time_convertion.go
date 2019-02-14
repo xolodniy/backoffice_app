@@ -2,6 +2,7 @@ package util
 
 import (
 	"fmt"
+	"strings"
 )
 
 const (
@@ -55,5 +56,5 @@ func DurationStringGracefull(durationInSeconds int) string {
 	if durationInSeconds/secInMin > 0 {
 		result += fmt.Sprintf("%dm", durationInSeconds/secInMin)
 	}
-	return result
+	return strings.Trim(result, " ")
 }
