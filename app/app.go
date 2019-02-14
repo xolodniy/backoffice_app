@@ -8,6 +8,7 @@ import (
 	"backoffice_app/services/hubstaff"
 	"backoffice_app/services/jira"
 	"backoffice_app/services/slack"
+	"backoffice_app/types"
 
 	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
@@ -76,7 +77,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	a.Slack.SendMessage(message)
 }
 
-// DurationString converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
+// DurationStringInHoursMinutes converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
 func (a *App) DurationStringInHoursMinutes(durationInSeconds int) (string, error) {
 	if durationInSeconds < 0 {
 		return "", fmt.Errorf("time can not be less than zero")
@@ -105,58 +106,66 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 	a.Slack.SendMessage(msgBody)
 }
 
-// ReportEmployeesWithExeededEstimateTime create report about employees with ETA overhead
+// ReportEmployeesWithExceededEstimateTime create report about employees with ETA overhead
 func (a *App) ReportEmployeesWithExceededEstimateTime() {
 	//getting actual sum of ETA from jira by employees
-	issues, err := a.Jira.AssigneeOpenIssues()
-	if err != nil {
-		logrus.WithError(err).Error("can't take information about closed subtasks from jira")
+	remainingEtaMap := a.getActualRemainingEtaMap()
+	if remainingEtaMap == nil {
 		return
 	}
-	if len(issues) == 0 {
+	if len(remainingEtaMap) == 0 {
 		a.Slack.SendMessage("There are no issues with all closed subtasks")
 		return
-	}
-	remainingEtaMap := make(map[string]int)
-	for _, issue := range issues {
-		if issue.Fields.Assignee == nil {
-			continue
-		}
-		remainingEtaMap[issue.Fields.Assignee.DisplayName] += issue.Fields.TimeTracking.RemainingEstimateSeconds
 	}
 	//get logged time from Hubstaff for this week
 	organizations, err := a.GetWorkersTimeByOrganization(now.BeginningOfWeek(), now.EndOfWeek(),
 		a.Config.Hubstaff.OrgsID)
 	if err != nil {
 		logrus.WithError(err).Error("failed to fetch data from hubstaff")
+		return
 	}
-	if len(organizations) == 0 {
+	if len(organizations) == 0 || len(organizations[0].Workers) == 0 {
 		a.Slack.SendMessage("No tracked time for now or no organization found")
 		return
 	}
+	messageHeader := fmt.Sprintf("\nExceeded estimate time report:\n\n*%v*\n",
+		now.BeginningOfDay().Format("02.01.2006"))
+	message := compileMessageForExeededEmployeesReport(organizations, remainingEtaMap)
+	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message))
+}
 
-	messageHeader := "\nExceeded estimate time report:\n"
-	messageHeader += fmt.Sprintf("\n*%v*\n", now.BeginningOfDay().Format("02.01.2006"))
+func compileMessageForExeededEmployeesReport(organizations types.Organizations, remainingEtaMap map[string]int) string {
 	message := ""
-	if len(organizations[0].Workers) == 0 {
-		a.Slack.SendMessage("No tracked time for now or no organization found")
-		return
-	} else {
-		var weekWorkingHours float32 = 30.0
-		for _, worker := range organizations[0].Workers {
-			etaTimeSec := remainingEtaMap[worker.Name]
-			if etaTimeSec > 0 {
-				workVolume := float32(etaTimeSec+worker.TimeWorked) / 3600.0
-				if workVolume > weekWorkingHours {
-					message += fmt.Sprintf("\n%s late for %.2f hours", worker.Name, workVolume-weekWorkingHours)
-				}
+	var weekWorkingHours float32 = 30.0
+	for _, worker := range organizations[0].Workers {
+		etaTimeSec := remainingEtaMap[worker.Name]
+		if etaTimeSec > 0 {
+			workVolume := float32(etaTimeSec+worker.TimeWorked) / 3600.0
+			if workVolume > weekWorkingHours {
+				message += fmt.Sprintf("\n%s late for %.2f hours", worker.Name, workVolume-weekWorkingHours)
 			}
 		}
 	}
 	if message == "" {
-		message = "No one developer has exceeded estimate time"
+		return "No one developer has exceeded estimate time"
 	}
-	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message))
+	return message
+}
+
+func (a *App) getActualRemainingEtaMap() map[string]int {
+	remainingEtaMap := make(map[string]int)
+	issues, err := a.Jira.AssigneeOpenIssues()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about closed subtasks from jira")
+		return nil
+	}
+	for _, issue := range issues {
+		if issue.Fields.Assignee == nil {
+			continue
+		}
+		remainingEtaMap[issue.Fields.Assignee.DisplayName] += issue.Fields.TimeTracking.RemainingEstimateSeconds
+	}
+	return remainingEtaMap
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
