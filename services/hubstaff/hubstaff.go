@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"backoffice_app/config"
-	"backoffice_app/types"
 )
 
 // Hubstaff is main Hubstaff implementation
@@ -18,6 +17,7 @@ type Hubstaff struct {
 	AppToken   string
 	AuthToken  string
 	HTTPClient *http.Client
+	OrgID      int64
 }
 
 // New creates new Hubstaff
@@ -27,12 +27,13 @@ func New(config *config.Hubstaff) Hubstaff {
 		AppToken:   config.Auth.AppToken,
 		AuthToken:  config.Auth.Token,
 		APIURL:     config.APIURL,
+		OrgID:      config.OrgsID,
 	}
 }
 
 // ObtainAuthToken retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
-func (h *Hubstaff) ObtainAuthToken(auth types.HubstaffAuth) (string, error) {
+func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
 	form := url.Values{}
 	form.Add("email", auth.Login)
 	form.Add("password", auth.Password)
@@ -97,4 +98,25 @@ func (h *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
 	}
 	s, err := ioutil.ReadAll(response.Body)
 	return s, err
+}
+
+// RequestAndParse returning parsed workers timelogs
+func (h *Hubstaff) RequestAndParse(apiURL string) ([]APIResponse, error) {
+
+	orgsRaw, err := h.Request(apiURL, nil)
+
+	fmt.Println("Hubstuff request URL will be:", apiURL)
+
+	if err != nil {
+		return nil, fmt.Errorf("error on getting workers worked time: %v", err)
+	}
+
+	orgs := struct {
+		List []APIResponse `json:"organizations"`
+	}{}
+
+	if err = json.Unmarshal(orgsRaw, &orgs); err != nil {
+		return nil, fmt.Errorf("can't decode response: %s", err)
+	}
+	return orgs.List, nil
 }
