@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
-	"strconv"
 
 	"backoffice_app/config"
 	"backoffice_app/types"
@@ -24,6 +22,7 @@ type Slack struct {
 	APIURL          string
 }
 
+// FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
 type FilesResponse struct {
 	Ok      bool    `json:"ok"`
 	Error   string  `json:"error"`
@@ -37,6 +36,7 @@ type FilesResponse struct {
 	} `json:"paging"`
 }
 
+// Files piece of FilesResponse struct for files api answer
 type Files struct {
 	ID   string  `json:"id"`
 	Size float64 `json:"size"`
@@ -116,28 +116,17 @@ func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 
 // Files returns all files info from slack
 func (s *Slack) Files() ([]Files, error) {
-	// Prepare request.
-	data := url.Values{}
-	// For this to work, it should be a user token, not a bot token or something.
-	data.Set("token", s.InToken)
-	u, err := url.ParseRequestURI(s.APIURL)
-	if err != nil {
-		return nil, err
-	}
 	var files []Files
 	for i := 0; ; i++ {
-		data.Set("page", strconv.Itoa(i))
-		u.Path = "/api/files.list"
-		urlStr := u.String() + "?" + data.Encode()
+		url := fmt.Sprintf("%s/files.list?token=%s&page=%v", s.APIURL, s.InToken, i)
 
-		req, err := http.NewRequest("GET", urlStr, nil)
+		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
 			return nil, err
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		client := http.DefaultClient
 		filesResp := FilesResponse{}
-		resp, err := client.Do(req)
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -162,7 +151,7 @@ func (s *Slack) Files() ([]Files, error) {
 	return files, nil
 }
 
-// FilesSize retrieves filez size
+// FilesSize retrieves filez size in Gb
 func (s *Slack) FilesSize() (float64, error) {
 	files, err := s.Files()
 	if err != nil {
