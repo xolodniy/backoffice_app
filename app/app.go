@@ -59,12 +59,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		message = "No tracked time for now or no workers found"
 	} else {
 		for _, worker := range orgsList[0].Workers {
-			t, err := util.DurationStringInHoursMinutes(worker.TimeWorked)
-			if err != nil {
-				logrus.WithError(err).WithField("time", worker.TimeWorked).
-					Error("error occurred on time conversion error")
-				continue
-			}
+			t := util.DurationStringInHoursMinutes(worker.TimeWorked)
 			message += fmt.Sprintf(
 				"\n%s %s",
 				t,

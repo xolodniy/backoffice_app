@@ -1,6 +1,8 @@
 package util
 
-import "fmt"
+import (
+	"fmt"
+)
 
 const (
 	secInMin  = 60
@@ -9,22 +11,31 @@ const (
 	secInWeek = 7 * secInDay
 )
 
-// converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
-func DurationStringInHoursMinutes(durationInSeconds int) (string, error) {
-	if durationInSeconds < 0 {
-		return "", fmt.Errorf("time can not be less than zero")
-	}
-	hours := durationInSeconds / secInHour
-	minutes := durationInSeconds % secInHour / secInMin
-	return fmt.Sprintf("%.2d:%.2d", hours, minutes), nil
+// WorkingTime type for reflect the working time and easy convert in to string format
+type WorkingTime int
+
+func (wt *WorkingTime) String() string {
+	return DurationStringInHoursMinutes(int(*wt))
 }
 
-// formats seconds durations to Jira-like time format
-func FormatDateTimeToJiraRepresentation(durationInSeconds int) (string, error) {
-	if durationInSeconds < 0 {
-		return "", fmt.Errorf("time can not be less than zero")
-	}
+// StringGracefull returns gracefully formatted duration
+func (wt *WorkingTime) StringGracefull() string {
+	return DurationStringGracefull(int(*wt))
+}
+
+// DurationStringInHoursMinutes converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
+func DurationStringInHoursMinutes(durationInSeconds int) string {
+	hours := durationInSeconds / secInHour
+	minutes := durationInSeconds % secInHour / secInMin
+	return fmt.Sprintf("%.2d:%.2d", hours, minutes)
+}
+
+// DurationStringGracefull formats seconds durations to Jira-like time format (1w 2d 3h 4m)
+func DurationStringGracefull(durationInSeconds int) string {
 	var result string
+	if durationInSeconds < secInMin {
+		return "0m"
+	}
 
 	if durationInSeconds/secInWeek > 0 {
 		weeks := durationInSeconds / secInWeek
@@ -44,5 +55,5 @@ func FormatDateTimeToJiraRepresentation(durationInSeconds int) (string, error) {
 	if durationInSeconds/secInMin > 0 {
 		result += fmt.Sprintf("%dm", durationInSeconds/secInMin)
 	}
-	return result, nil
+	return result
 }

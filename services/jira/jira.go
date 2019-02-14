@@ -118,21 +118,10 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 		}
 	}
 	var worklogString string
-	originalEtaSeconds := issue.Fields.TimeTracking.OriginalEstimateSeconds
-	remainingEtaSeconds := issue.Fields.TimeTracking.RemainingEstimateSeconds
-	timeSpentSeconds := issue.Fields.TimeTracking.TimeSpentSeconds
-	if timeSpentSeconds > originalEtaSeconds {
-		remainingEta, err := util.FormatDateTimeToJiraRepresentation(remainingEtaSeconds)
-		if err != nil {
-			logrus.WithField("Fields.TimeTracking.RemainingEstimateSeconds", remainingEtaSeconds).
-				Error(err.Error())
-		}
-		originalEta, err := util.FormatDateTimeToJiraRepresentation(originalEtaSeconds)
-		if err != nil {
-			logrus.WithField("Fields.TimeTracking.OriginalEstimateSeconds", originalEtaSeconds).
-				Error(err.Error())
-		}
-		worklogString = fmt.Sprintf(" estimate is %s instead %s", remainingEta, originalEta)
+	originalEta := util.WorkingTime(issue.Fields.TimeTracking.OriginalEstimateSeconds)
+	timeSpent := util.WorkingTime(issue.Fields.TimeTracking.TimeSpentSeconds)
+	if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds {
+		worklogString = fmt.Sprintf(" time spent is %s instead %s", timeSpent.StringGracefull(), originalEta.StringGracefull())
 	}
 
 	listRow = fmt.Sprintf("%[1]d. %[2]s - <https://theflow.atlassian.net/browse/%[3]s|%[3]s - %[4]s>: _%[5]s_%[6]s\n",
