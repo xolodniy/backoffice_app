@@ -114,7 +114,7 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 		return
 	}
 	if len(remainingEtaMap) == 0 {
-		a.Slack.SendMessage("There are no issues with all closed subtasks")
+		a.Slack.SendMessage("There are no issues with remaining ETA.")
 		return
 	}
 	//get logged time from Hubstaff for this week
@@ -160,7 +160,7 @@ func (a *App) getActualRemainingEtaMap() map[string]int {
 		return nil
 	}
 	for _, issue := range issues {
-		if issue.Fields.Assignee == nil {
+		if issue.Fields.Assignee == nil || issue.Fields.Assignee.DisplayName == "Unassigned" {
 			continue
 		}
 		remainingEtaMap[issue.Fields.Assignee.DisplayName] += issue.Fields.TimeTracking.RemainingEstimateSeconds
