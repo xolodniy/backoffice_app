@@ -4,19 +4,35 @@ import "time"
 
 //
 type PullRequests struct {
-	Values []PullRequest `json:"values"`
+	Pagelen int           `json:"pagelen"`
+	Page    int           `json:"page"`
+	Size    int           `json:"size"`
+	Next    string        `json:"next"`
+	Values  []PullRequest `json:"values"`
 }
 
 type Repositories struct {
-	Values []Repository `json:"values"`
+	Pagelen int          `json:"pagelen"`
+	Page    int          `json:"page"`
+	Size    int          `json:"size"`
+	Next    string       `json:"next"`
+	Values  []Repository `json:"values"`
 }
 
 type Commits struct {
-	Values []Commit `json:"values"`
+	Pagelen int      `json:"pagelen"`
+	Page    int      `json:"page"`
+	Size    int      `json:"size"`
+	Next    string   `json:"next"`
+	Values  []Commit `json:"values"`
 }
 
 type DiffStats struct {
-	Values []DiffStat `json:"values"`
+	Pagelen int        `json:"pagelen"`
+	Page    int        `json:"page"`
+	Size    int        `json:"size"`
+	Next    string     `json:"next"`
+	Values  []DiffStat `json:"values"`
 }
 
 type Cache struct {

@@ -49,7 +49,7 @@ func main() {
 
 			go controller.New(*cfg).Start()
 
-			go application.Bitbucket.FillCache()
+			go application.FillCache()
 
 			log.Println("Requests listener started.")
 
