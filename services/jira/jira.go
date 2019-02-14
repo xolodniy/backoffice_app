@@ -1,9 +1,10 @@
 package jira
 
 import (
+	"fmt"
+
 	"backoffice_app/config"
 	"backoffice_app/services/util"
-	"fmt"
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/sirupsen/logrus"

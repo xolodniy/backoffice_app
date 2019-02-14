@@ -1,7 +1,6 @@
 package app
 
 import (
-	"backoffice_app/services/util"
 	"fmt"
 	"time"
 
@@ -9,6 +8,7 @@ import (
 	"backoffice_app/services/hubstaff"
 	"backoffice_app/services/jira"
 	"backoffice_app/services/slack"
+	"backoffice_app/services/util"
 
 	"github.com/sirupsen/logrus"
 	"github.com/xanzy/go-gitlab"
