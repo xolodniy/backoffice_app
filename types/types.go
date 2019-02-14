@@ -15,22 +15,6 @@ type Jira struct {
 	APIURL            string
 }
 
-// Hubstaff is main implementation of Hubstaff app
-type Hubstaff struct {
-	APIURL string
-	Auth   HubstaffAuth
-	OrgsID int64
-}
-
-// HubstaffAuth is an object used to specifying parameters of issues searching in Hubstaff
-type HubstaffAuth struct {
-	Token    string
-	AppToken string
-
-	Login    string
-	Password string
-}
-
 // Attachment used to make append and attachment to a simple message
 type Attachment struct {
 	Text string `json:"text"`
@@ -77,26 +61,6 @@ type Message struct {
 	Text        string       `json:"text"`
 	Attachments []Attachment `json:"attachments"`
 }
-
-// Worker used to store an worker data
-type Worker struct {
-	Name       string `json:"name"`
-	TimeWorked int    `json:"duration"`
-}
-
-// Workers used to store workers list
-type Workers []Worker
-
-// Organization used to store an organization data
-type Organization struct {
-	ID         int64    `json:"id"`
-	Name       string   `json:"name"`
-	TimeWorked int64    `json:"duration"`
-	Workers    []Worker `json:"users"`
-}
-
-// Organizations used to store organizations list
-type Organizations []Organization
 
 // AddAttachment used to add Attachement to Slack message
 func (m *Message) AddAttachment(text string) *Message {
