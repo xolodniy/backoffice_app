@@ -2,7 +2,6 @@ package app
 
 import (
 	"fmt"
-	"github.com/jinzhu/now"
 	"time"
 
 	"backoffice_app/config"
@@ -10,6 +9,7 @@ import (
 	"backoffice_app/services/jira"
 	"backoffice_app/services/slack"
 
+	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
 	"github.com/xanzy/go-gitlab"
 )
@@ -34,6 +34,7 @@ func New(conf *config.Main) *App {
 	}
 }
 
+// MakeWorkersWorkedReportLastWeek preparing a last week report and send it to Slack
 func (a *App) MakeWorkersWorkedReportLastWeek(mode string) {
 	a.GetWorkersWorkedTimeAndSendToSlack(
 		fmt.Sprintf("Weekly work time report (%s)", mode),
@@ -41,6 +42,7 @@ func (a *App) MakeWorkersWorkedReportLastWeek(mode string) {
 		now.EndOfWeek().AddDate(0, 0, -7))
 }
 
+// MakeWorkersWorkedReportYesterday preparing a last day report and send it to Slack
 func (a *App) MakeWorkersWorkedReportYesterday(mode string) {
 	a.GetDetailedWorkersWorkedTimeAndSendToSlack(
 		fmt.Sprintf("Daily detailed report (%s)", mode),
