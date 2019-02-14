@@ -19,6 +19,10 @@
 *Sends daily report to Slack channel, immediately:*
 
     $ ./backoffice-app make-daily-report-now
+    
+*Sends current employees exceeded time report to Slack channel, immediately:*
+
+    $ ./backoffice-app report-exceeded-estimate-now
 
 *Obtains Hubstaff authorization token:*
 
