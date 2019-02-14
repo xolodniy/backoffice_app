@@ -52,7 +52,12 @@ func (a *App) MakeWorkersWorkedReportYesterday(mode string) {
 
 // GetWorkersWorkedTimeAndSendToSlack gather workers work time made through period between dates and send it to Slack channel
 func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
-	orgsList, err := a.Hubstaff.GetWorkersTimeByOrganization(dateOfWorkdaysStart, dateOfWorkdaysEnd)
+	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
+	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
+
+	apiURL := fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
+		dateStart, dateEnd, a.Hubstaff.OrgID)
+	orgsList, err := a.Hubstaff.RequestAndParse(apiURL)
 	if err != nil {
 		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
 		return
@@ -95,7 +100,12 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 
 // GetDetailedWorkersWorkedTimeAndSendToSlack gather detailed workers work time made through period between dates and send it to Slack channel
 func (a *App) GetDetailedWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
-	orgsList, err := a.Hubstaff.GetWorkersTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd)
+	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
+	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
+
+	apiURL := fmt.Sprintf("/v1/custom/by_date/team/?start_date=%s&end_date=%s&organizations=%d&show_notes=%t",
+		dateStart, dateEnd, a.Hubstaff.OrgID, true)
+	orgsList, err := a.Hubstaff.RequestAndParse(apiURL)
 	if err != nil {
 		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
 		return

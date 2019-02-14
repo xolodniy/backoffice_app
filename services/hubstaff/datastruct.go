@@ -8,24 +8,15 @@ type HubstaffAuth struct {
 	Password string
 }
 
-type apiResponse struct {
+// APIResponse used to reflect an api response from /by_date endpoint
+type APIResponse struct {
 	ID         int64  `json:"id"`
 	Name       string `json:"name"`
 	TimeWorked int64  `json:"duration"`
-}
-
-// APIResponseByMember  used to reflect an api response from /by_member endpoint
-type APIResponseByMember struct {
-	apiResponse
-	Workers []struct {
+	Workers    []struct {
 		Name       string `json:"name"`
 		TimeWorked int    `json:"duration"`
 	} `json:"users"`
-}
-
-// APIResponseByDate used to reflect an api response from /by_date endpoint
-type APIResponseByDate struct {
-	apiResponse
 	Dates []struct {
 		Date       string `json:"date"`
 		TimeWorked int    `json:"duration"`
