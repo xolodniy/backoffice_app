@@ -3,13 +3,14 @@ package hubstaff
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"backoffice_app/config"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Hubstaff is main Hubstaff implementation
@@ -122,6 +123,7 @@ func (h *Hubstaff) RequestAndParse(apiURL string) ([]APIResponse, error) {
 	return orgs.List, nil
 }
 
+// GetAllHubstaffUsers returns a slice of Hubstaff users
 func (h *Hubstaff) GetAllHubstaffUsers() ([]UserDTO, error) {
 	apiURL := "/v1/users"
 	orgsRaw, err := h.Request(apiURL, nil)
