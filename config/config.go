@@ -13,12 +13,14 @@ type Main struct {
 	GinPort      string
 	GinDebugMode bool
 	Cron         struct {
-		DailyWorkersWorkedTime  string
-		WeeklyWorkersWorkedTime string
-		ReportClosedSubtasks    string
-		ReportAfterSecondReview string
-		EmployeesExceededTasks  string
-		ReportGitMigrations     string
+		DailyWorkersWorkedTime        string
+		WeeklyWorkersWorkedTime       string
+		ReportClosedSubtasks          string
+		ReportAfterSecondReview       string
+		EmployeesExceededTasks        string
+		EmployeesExceededEstimateTime string
+		ReportSlackSpaceEnding        string
+		ReportGitMigrations           string
 	}
 	GitToken string
 	Jira
@@ -54,6 +56,8 @@ type Slack struct {
 	ChanBackofficeApp string
 	ChanMigrations    string
 	APIURL            string
+	TotalVolume       float64
+	RestVolume        float64
 }
 
 type Bitbucket struct {

@@ -56,24 +56,20 @@ func main() {
 			wg := sync.WaitGroup{}
 			tm := taskmanager.New(&wg)
 
-			err := tm.AddTask(cfg.Cron.DailyWorkersWorkedTime, func() {
-				application.GetWorkersWorkedTimeAndSendToSlack(
-					"Daily work time report (auto)",
-					now.BeginningOfDay().AddDate(0, 0, -1),
-					now.EndOfDay().AddDate(0, 0, -1),
-					cfg.Hubstaff.OrgsID)
+			err = tm.AddTask(cfg.Cron.DailyWorkersWorkedTime, func() {
+				application.MakeWorkersWorkedReportYesterday("auto")
 			})
 			if err != nil {
 				panic(err)
 			}
 
 			err = tm.AddTask(cfg.Cron.WeeklyWorkersWorkedTime, func() {
-				application.GetWorkersWorkedTimeAndSendToSlack(
-					"Weekly work time report (auto)",
-					now.BeginningOfWeek().AddDate(0, 0, -7),
-					now.EndOfWeek().AddDate(0, 0, -7),
-					cfg.Hubstaff.OrgsID)
+				application.MakeWorkersWorkedReportLastWeek("auto")
 			})
+			if err != nil {
+				panic(err)
+			}
+			err = tm.AddTask(cfg.Cron.EmployeesExceededEstimateTime, application.ReportEmployeesWithExceededEstimateTime)
 			if err != nil {
 				panic(err)
 			}
@@ -89,6 +85,11 @@ func main() {
 			}
 
 			err = tm.AddTask(cfg.Cron.ReportAfterSecondReview, application.ReportIsuuesAfterSecondReview)
+			if err != nil {
+				panic(err)
+			}
+
+			err = tm.AddTask(cfg.Cron.ReportSlackSpaceEnding, application.ReportSlackEndingFreeSpace)
 			if err != nil {
 				panic(err)
 			}
@@ -111,22 +112,19 @@ func main() {
 				Usage: "Removes ABSOLUTELY ALL Slack attachments",
 				Action: func(c *cli.Context) {
 					application := app.New(cfg)
-
-					for {
-						files, err := application.Slack.ListFiles("50")
-						if len(files) == 0 {
-							// We finished.
-							return
-						}
-						if err != nil {
+					files, err := application.Slack.Files()
+					if len(files) == 0 {
+						// We finished.
+						return
+					}
+					if err != nil {
+						panic(err)
+					}
+					for _, f := range files {
+						if err := application.Slack.DeleteFile(f.ID); err != nil {
 							panic(err)
 						}
-						for _, f := range files {
-							if err := application.Slack.DeleteFile(f.ID); err != nil {
-								panic(err)
-							}
-							logrus.Info("deleted file " + f.ID)
-						}
+						logrus.Info("deleted file " + f.ID)
 					}
 				},
 			},
@@ -147,6 +145,14 @@ func main() {
 				},
 			},
 			{
+				Name:  "report-exceeded-estimate-now",
+				Usage: "Reports exceeded estimate right now",
+				Action: func(c *cli.Context) {
+					application := app.New(cfg)
+					application.ReportEmployeesWithExceededEstimateTime()
+				},
+			},
+			{
 				Name:  "get-jira-issues-after-second-review-round",
 				Usage: "Gets jira issues after second review round right now",
 				Action: func(c *cli.Context) {
@@ -163,17 +169,19 @@ func main() {
 				},
 			},
 			{
+				Name:  "get-slack-report-if-free-space-enging",
+				Usage: "Gets report, if slack free space is empty",
+				Action: func(c *cli.Context) {
+					application := app.New(cfg)
+					application.ReportSlackEndingFreeSpace()
+				},
+			},
+			{
 				Name:  "make-weekly-report-now",
 				Usage: "Sends weekly report to slack channel",
 				Action: func(c *cli.Context) {
 					application := app.New(cfg)
-
-					application.GetWorkersWorkedTimeAndSendToSlack(
-						"Weekly work time report (manual)",
-						now.BeginningOfWeek(),
-						now.EndOfWeek(),
-						cfg.Hubstaff.OrgsID)
-
+					application.MakeWorkersWorkedReportLastWeek("manual")
 				},
 			},
 			{
@@ -181,12 +189,7 @@ func main() {
 				Usage: "Sends daily report to slack channel",
 				Action: func(c *cli.Context) {
 					application := app.New(cfg)
-
-					application.GetWorkersWorkedTimeAndSendToSlack(
-						"Daily work time report (manual)",
-						now.BeginningOfDay(),
-						now.EndOfDay(), cfg.Hubstaff.OrgsID)
-
+					application.MakeWorkersWorkedReportYesterday("manual")
 				},
 			},
 			{

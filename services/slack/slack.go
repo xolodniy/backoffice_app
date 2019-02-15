@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 
 	"backoffice_app/config"
 	"backoffice_app/types"
@@ -22,6 +21,28 @@ type Slack struct {
 	ChanBackofficeApp string
 	ChanMigrations    string
 	APIURL            string
+	TotalVolume       float64
+	RestVolume        float64
+}
+
+// FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
+type FilesResponse struct {
+	Ok      bool    `json:"ok"`
+	Error   string  `json:"error"`
+	Warning string  `json:"warning"`
+	Files   []Files `json:"files"`
+	Paging  struct {
+		Count int `json:"count"`
+		Total int `json:"total"`
+		Page  int `json:"page"`
+		Pages int `json:"pages"`
+	} `json:"paging"`
+}
+
+// Files piece of FilesResponse struct for files api answer
+type Files struct {
+	ID   string  `json:"id"`
+	Size float64 `json:"size"`
 }
 
 // New creates new slack
@@ -33,6 +54,8 @@ func New(config *config.Slack) Slack {
 		ChanBackofficeApp: "#" + config.ChanBackofficeApp,
 		ChanMigrations:    "#" + config.ChanMigrations,
 		APIURL:            config.APIURL,
+		TotalVolume:       config.TotalVolume,
+		RestVolume:        config.RestVolume,
 	}
 }
 
@@ -78,6 +101,7 @@ func (s *Slack) SendMessage(text, channel string) {
 	}
 }
 
+// jsonRequest func for sending json request for slack
 func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 	req, err := http.NewRequest("POST", s.APIURL+"/"+endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -96,53 +120,57 @@ func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 	return body, nil
 }
 
-func (s *Slack) ListFiles(count string) ([]types.ListFilesResponseFile, error) {
-	// Prepare request.
-	data := url.Values{}
-	// For this to work, it should be a user token, not a bot token or something.
-	data.Set("token", s.InToken)
-	data.Set("count", count)
+// Files returns all files info from slack
+func (s *Slack) Files() ([]Files, error) {
+	var files []Files
+	for i := 0; ; i++ {
+		url := fmt.Sprintf("%s/files.list?token=%s&page=%v", s.APIURL, s.InToken, i)
 
-	u, _ := url.ParseRequestURI(s.APIURL)
-	u.Path = "/api/files.list"
-	urlStr := u.String()
-
-	req, err := http.NewRequest("GET", urlStr, nil)
-	if err != nil {
-		return nil, err
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		filesResp := FilesResponse{}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(body, &filesResp); err != nil {
+			return nil, err
+		}
+		if !filesResp.Ok {
+			return nil, fmt.Errorf(filesResp.Error)
+		}
+		for _, file := range filesResp.Files {
+			files = append(files, file)
+		}
+		if filesResp.Paging.Pages == i {
+			break
+		}
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.OutToken))
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	//logrus.Info("Slack request body:", string(body))
-	//logrus.Info("Slack response Status:", resp.Status)
-
-	// Process response.
-	if err != nil {
-		return nil, err
-	}
-	filesResp := types.ListFilesResponse{}
-	if err := json.Unmarshal(body, &filesResp); err != nil {
-		return nil, err
-	}
-	if !filesResp.Ok {
-		return nil, fmt.Errorf(filesResp.Error)
-	}
-
-	return filesResp.Files, nil
+	return files, nil
 }
 
+// FilesSize retrieves filez size in Gb
+func (s *Slack) FilesSize() (float64, error) {
+	files, err := s.Files()
+	if err != nil {
+		return 0, err
+	}
+	var sum float64
+	for _, file := range files {
+		sum += file.Size
+	}
+	return sum / 1024 / 1024 / 1024, nil
+}
+
+// DeleteFile deletes file from slack by id
 func (s *Slack) DeleteFile(id string) error {
 	b, err := json.Marshal(types.DeleteFileMessage{
 		Token: s.InToken,
