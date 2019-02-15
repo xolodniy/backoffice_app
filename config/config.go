@@ -54,6 +54,8 @@ type Slack struct {
 	BackOfficeAppID string
 	MigrationsID    string
 	APIURL          string
+	TotalVolume     float64
+	RestVolume      float64
 }
 
 // GetConfig return config parsed from config/config.yml
