@@ -33,7 +33,7 @@ slack:
 hubstaff:
   apiurl: https://api.hubstaff.com
   auth:
-    token:
+    token: 9omAc5EjhHp7wKXfqBCunHri6jkOsn_FFCcPC8XOqZo
     apptoken: yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ
     login:
     password:
