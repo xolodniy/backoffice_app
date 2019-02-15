@@ -2,8 +2,6 @@ package app
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"backoffice_app/config"
@@ -17,23 +15,23 @@ import (
 
 // App is main App implementation
 type App struct {
-	Hubstaff   hubstaff.Hubstaff
-	Slack      slack.Slack
-	Jira       jira.Jira
-	Bitbucket  bitbucket.Bitbucket
-	Config     config.Main
-	SlackCache map[string][]map[int64]string
+	Hubstaff     hubstaff.Hubstaff
+	Slack        slack.Slack
+	Jira         jira.Jira
+	Bitbucket    bitbucket.Bitbucket
+	Config       config.Main
+	CommitsCache map[string]bitbucket.HashCache
 }
 
 // New is main App constructor
 func New(conf *config.Main) *App {
 	return &App{
-		Hubstaff:   hubstaff.New(&conf.Hubstaff),
-		Slack:      slack.New(&conf.Slack),
-		Jira:       jira.New(&conf.Jira),
-		Bitbucket:  bitbucket.New(&conf.Bitbucket),
-		Config:     *conf,
-		SlackCache: make(map[string][]map[int64]string),
+		Hubstaff:     hubstaff.New(&conf.Hubstaff),
+		Slack:        slack.New(&conf.Slack),
+		Jira:         jira.New(&conf.Jira),
+		Bitbucket:    bitbucket.New(&conf.Bitbucket),
+		Config:       *conf,
+		CommitsCache: make(map[string]bitbucket.HashCache),
 	}
 }
 
@@ -167,96 +165,32 @@ func (a *App) ReportGitMigrations() {
 
 // FillCache fill cache commits for searching new migrations
 func (a *App) FillCache() {
-	repositories, err := a.Bitbucket.RepositoriesList()
+	commitsCache, err := a.Bitbucket.MigrationCommitsOfOpenedPRs()
 	if err != nil {
-		logrus.Panic(err)
+		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
+		return
 	}
-
-	var allPullRequests bitbucket.PullRequests
-	for _, repository := range repositories.Values {
-		pullRequests, err := a.Bitbucket.PullRequestsList(repository.Name)
-		if err != nil {
-			logrus.Panic(err)
-		}
-		for _, pullRequest := range pullRequests.Values {
-			if pullRequest.State == "OPEN" {
-				allPullRequests.Values = append(allPullRequests.Values, pullRequest)
-			}
-		}
-	}
-	for _, pullRequest := range allPullRequests.Values {
-		commits, err := a.Bitbucket.PullRequestCommits(pullRequest.Source.Repository.Name, strconv.FormatInt(pullRequest.ID, 10))
-		if err != nil {
-			logrus.Panic(err)
-		}
-		for _, commit := range commits.Values {
-			a.SlackCache[pullRequest.Source.Repository.Name] = append(
-				a.SlackCache[pullRequest.Source.Repository.Name],
-				map[int64]string{pullRequest.ID: commit.Hash},
-			)
-		}
-	}
+	a.CommitsCache = commitsCache
 }
-
-//TODO убрать дублирование кода
 
 // MigrationMessages returns slice of all miigration files
 func (a *App) MigrationMessages() ([]string, error) {
-	repositories, err := a.Bitbucket.RepositoriesList()
+	newCommitsCache, err := a.Bitbucket.MigrationCommitsOfOpenedPRs()
 	if err != nil {
-		return nil, err
+		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
+		return []string{}, err
 	}
-
-	var allPullRequests bitbucket.PullRequests
-	for _, repository := range repositories.Values {
-		pullRequests, err := a.Bitbucket.PullRequestsList(repository.Name)
-		if err != nil {
-			return nil, err
-		}
-		for _, pullRequest := range pullRequests.Values {
-			if pullRequest.State == "OPEN" {
-				allPullRequests.Values = append(allPullRequests.Values, pullRequest)
-			}
-		}
-	}
-
 	var files []string
-	newCache := make(map[string][]map[int64]string)
-	for _, pullRequest := range allPullRequests.Values {
-		commits, err := a.Bitbucket.PullRequestCommits(pullRequest.Source.Repository.Name, strconv.FormatInt(pullRequest.ID, 10))
-		if err != nil {
-			logrus.Panic(err)
-		}
-		for _, commit := range commits.Values {
-			diffStats, err := a.Bitbucket.CommitsDiffStats(commit.Repository.Name, commit.Hash)
+	for hash, cache := range newCommitsCache {
+		if _, ok := a.CommitsCache[hash]; !ok {
+			file, err := a.Bitbucket.SrcFile(cache.Repository, hash, cache.Path)
 			if err != nil {
-				return nil, err
+				logrus.WithError(err).Error("can't take information about file from bitbucket")
+				return []string{}, err
 			}
-
-			newCache[pullRequest.Source.Repository.Name] = append(
-				newCache[pullRequest.Source.Repository.Name],
-				map[int64]string{pullRequest.ID: commit.Hash},
-			)
-			func() {
-				for _, commits := range a.SlackCache[commit.Repository.Name] {
-					if commit.Hash == commits[pullRequest.ID] {
-						return
-					}
-				}
-				logrus.Debug("New!")
-				for _, diffStat := range diffStats.Values {
-					if strings.Contains(diffStat.New.Path, ".sql") {
-						logrus.Debug(diffStat.New.Path)
-						file, err := a.Bitbucket.SrcFile(commit.Repository.Name, commit.Hash, diffStat.New.Path)
-						if err != nil {
-							logrus.Panic(err)
-						}
-						files = append(files, pullRequest.Source.Branch.Name+"\n"+file)
-					}
-				}
-			}()
+			files = append(files, cache.Message+"\n"+file)
 		}
 	}
-	a.SlackCache = newCache
+	a.CommitsCache = newCommitsCache
 	return files, nil
 }
