@@ -57,7 +57,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 
 	apiURL := fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
 		dateStart, dateEnd, a.Hubstaff.OrgID)
-	orgsList, err := a.Hubstaff.RequestAndParse(apiURL)
+	hubstaffResponse, err := a.Hubstaff.RequestAndParseTimelogs(apiURL)
 	if err != nil {
 		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
 		return
@@ -70,17 +70,10 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		dateOfWorkdaysStart.Format("02.01.06"), "00:00:00",
 		dateOfWorkdaysEnd.Format("02.01.06"), "23:59:59",
 	)
-	if len(orgsList) == 0 {
-		a.Slack.SendMessage("No tracked time for now or no organization found")
-		return
+	for _, worker := range hubstaffResponse.Workers {
+		message += fmt.Sprintf("\n%s %s", worker.TimeWorked, worker.Name)
 	}
-	if len(orgsList[0].Workers) == 0 {
-		message = "No tracked time for now or no workers found"
-	} else {
-		for _, worker := range orgsList[0].Workers {
-			message += fmt.Sprintf("\n%s %s", worker.TimeWorked, worker.Name)
-		}
-	}
+
 	a.Slack.SendMessage(message)
 }
 
@@ -91,7 +84,7 @@ func (a *App) GetDetailedWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWo
 
 	apiURL := fmt.Sprintf("/v1/custom/by_date/team/?start_date=%s&end_date=%s&organizations=%d&show_notes=%t",
 		dateStart, dateEnd, a.Hubstaff.OrgID, true)
-	orgsList, err := a.Hubstaff.RequestAndParse(apiURL)
+	hubstaffResponse, err := a.Hubstaff.RequestAndParseTimelogs(apiURL)
 	if err != nil {
 		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
 		return
@@ -99,16 +92,7 @@ func (a *App) GetDetailedWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWo
 
 	var message = prefix + "\n"
 
-	if len(orgsList) == 0 {
-		a.Slack.SendMessage("No tracked time for now or no organization found")
-		return
-	}
-
-	if len(orgsList[0].Dates) == 0 {
-		a.Slack.SendMessage("No tracked time for now or no workers found")
-		return
-	}
-	for _, separatedDate := range orgsList[0].Dates {
+	for _, separatedDate := range hubstaffResponse.Dates {
 		if separatedDate.TimeWorked == 0 {
 			continue
 		}
@@ -148,6 +132,70 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 	}
 	a.Slack.SendMessage(msgBody)
+}
+
+// ReportEmployeesWithExceededEstimateTime create report about employees with ETA overhead
+func (a *App) ReportEmployeesWithExceededEstimateTime() {
+	//getting actual sum of ETA from jira by employees
+	jiraRemainingEtaMap := make(map[string]int)
+	issues, err := a.Jira.AssigneeOpenIssues()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about closed subtasks from jira")
+		return
+	}
+	for _, issue := range issues {
+		if issue.Fields.Assignee == nil || issue.Fields.Assignee.DisplayName == "Unassigned" {
+			continue
+		}
+		jiraRemainingEtaMap[issue.Fields.Assignee.EmailAddress] += issue.Fields.TimeTracking.RemainingEstimateSeconds
+	}
+	if len(jiraRemainingEtaMap) == 0 {
+		a.Slack.SendMessage("There are no issues with remaining ETA.")
+		return
+	}
+	//get logged time from Hubstaff for this week
+	var dateStart = now.BeginningOfWeek().Format("2006-01-02")
+	var dateEnd = now.EndOfWeek().Format("2006-01-02")
+
+	apiURL := fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
+		dateStart, dateEnd, a.Hubstaff.OrgID)
+	hubstaffResponse, err := a.Hubstaff.RequestAndParseTimelogs(apiURL)
+	if err != nil {
+		logrus.WithError(err).Error("can't get logged time from Hubstaff")
+		return
+	}
+	//get hubstaff's user list
+	hubstaffUsers, err := a.Hubstaff.GetAllHubstaffUsers()
+	if err != nil {
+		logrus.WithError(err).Error("failed to fetch data from hubstaff")
+		return
+	}
+	// prepare the content
+	messageHeader := fmt.Sprintf("\nExceeded estimate time report:\n\n*%v*\n",
+		now.BeginningOfDay().Format("02.01.2006"))
+	message := ""
+	var maxWeekWorkingHours float32 = 30.0
+	for _, userWithTime := range hubstaffResponse.Workers {
+		var workerEmail = ""
+		for _, userWithEmail := range hubstaffUsers {
+			if userWithEmail.Name == userWithTime.Name {
+				workerEmail = userWithEmail.Email
+				break
+			}
+		}
+		jiraEta := jiraRemainingEtaMap[workerEmail]
+		if jiraEta > 0 {
+			workVolume := float32(jiraEta+int(userWithTime.TimeWorked)) / 3600.0
+			if workVolume > maxWeekWorkingHours {
+				message += fmt.Sprintf("\n%s late for %.2f hours", userWithTime.Name, workVolume-maxWeekWorkingHours)
+			}
+		}
+	}
+	if message == "" {
+		message = "No one developer has exceeded estimate time"
+	}
+
+	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message))
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
