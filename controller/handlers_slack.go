@@ -25,10 +25,12 @@ func (c *Controller) slackLastActivityHandler(ctx *gin.Context) {
 	logrus.Warn("Body", string(buf))
 
 	ctx.JSON(http.StatusOK, struct {
-		text        string
-		attachments []types.Attachment
+		text        string             `json:"text"`
+		attachments []types.Attachment `json:"attachments"`
 	}{
 		text: "just response text", attachments: []types.Attachment{{Text: "text1"}, {"text2"}},
 	})
+
+	//
 
 }
