@@ -130,7 +130,7 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 
 // IssuesWithClosedSubtasks retrieves issues with closed subtasks
 func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
-	request := fmt.Sprintf(`(status NOT IN ("%s"))`, StatusClosed)
+	request := fmt.Sprintf(`status NOT IN ("%s")  AND Sprint in openSprints()`, StatusClosed)
 	openIssues, err := j.issues(request)
 	if err != nil {
 		return nil, err
