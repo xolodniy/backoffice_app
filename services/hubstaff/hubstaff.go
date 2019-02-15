@@ -145,6 +145,7 @@ func (h *Hubstaff) GetAllHubstaffUsers() ([]UserDTO, error) {
 	return usersSlice.List, nil
 }
 
+// GetLastActivityReport returns a text report about last activities
 func (h *Hubstaff) GetLastActivityReport() (string, error) {
 	apiUrl := fmt.Sprintf("/v1/organizations/%d/last_activity", h.OrgID)
 	rawResponse, err := h.Request(apiUrl, nil)

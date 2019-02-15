@@ -14,10 +14,6 @@ type LastActivityRequest struct {
 	ResponseUrl string `form:"response_url" binding:"required"`
 }
 
-func (c *Controller) MyLogs(ctx *gin.Context) {
-	ctx.JSON(http.StatusOK, c.App.MyTrueLogs)
-}
-
 func (c *Controller) slackLastActivityHandler(ctx *gin.Context) {
 
 	var form = LastActivityRequest{}
