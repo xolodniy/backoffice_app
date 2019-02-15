@@ -2,55 +2,61 @@ package bitbucket
 
 import "time"
 
-//
-type PullRequests struct {
+// HashCache struct of hash commits map
+type HashCache struct {
+	Repository string
+	Path       string
+	Message    string
+}
+
+// PullRequests struct of answer from bitbucket about pullrequests
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/pullrequests#get
+type pullRequests struct {
 	Pagelen int           `json:"pagelen"`
 	Page    int           `json:"page"`
 	Size    int           `json:"size"`
 	Next    string        `json:"next"`
-	Values  []PullRequest `json:"values"`
+	Values  []pullRequest `json:"values"`
 }
 
-type Repositories struct {
+// Repositories struct of answer from bitbucket about Repositories
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories
+type repositories struct {
 	Pagelen int          `json:"pagelen"`
 	Page    int          `json:"page"`
 	Size    int          `json:"size"`
 	Next    string       `json:"next"`
-	Values  []Repository `json:"values"`
+	Values  []repository `json:"values"`
 }
 
-type Commits struct {
+// Commits struct of answer from bitbucket about Commits
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/commit/%7Bnode%7D
+type commits struct {
 	Pagelen int      `json:"pagelen"`
 	Page    int      `json:"page"`
 	Size    int      `json:"size"`
 	Next    string   `json:"next"`
-	Values  []Commit `json:"values"`
+	Values  []commit `json:"values"`
 }
 
-type DiffStats struct {
+// DiffStats struct of answer from bitbucket about DiffStats
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/diffstat/%7Bspec%7D
+type diffStats struct {
 	Pagelen int        `json:"pagelen"`
 	Page    int        `json:"page"`
 	Size    int        `json:"size"`
 	Next    string     `json:"next"`
-	Values  []DiffStat `json:"values"`
+	Values  []diffStat `json:"values"`
 }
 
-type Cache struct {
-	Name         string `json:"name"`
-	PullRequests []CachePullRequest
-}
-
-type CachePullRequest struct {
-	ID      int64 `json:"id"`
-	Commits []Commit
-}
-
-type PullRequest struct {
+// PullRequest struct of pull request from bitbucket
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/pullrequests#get
+type pullRequest struct {
 	ID          int64  `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	State       string `json:"state"`
-	Author      Owner  `json:"author"`
+	Author      owner  `json:"author"`
 	Source      struct {
 		Branch struct {
 			Name string `json:"name"`
@@ -58,7 +64,7 @@ type PullRequest struct {
 		Commit struct {
 			Hash string `json:"hash"`
 		} `json:"commit"`
-		Repository Repository `json:"repository"`
+		Repository repository `json:"repository"`
 	} `json:"source"`
 	Destination struct {
 		Branch struct {
@@ -67,15 +73,15 @@ type PullRequest struct {
 		Commit struct {
 			Hash string `json:"hash"`
 		} `json:"commit"`
-		Repository Repository `json:"repository"`
+		Repository repository `json:"repository"`
 	} `json:"destination"`
 	MergeCommit struct {
 		Hash string `json:"hash"`
 	} `json:"merge_commit"`
-	Participants      []Owner   `json:"participants"`
-	Reviewers         []Owner   `json:"reviewers"`
+	Participants      []owner   `json:"participants"`
+	Reviewers         []owner   `json:"reviewers"`
 	CloseSourceBranch bool      `json:"close_source_branch"`
-	ClosedBy          Owner     `json:"closed_by"`
+	ClosedBy          owner     `json:"closed_by"`
 	Reason            string    `json:"reason"`
 	CreatedOn         time.Time `json:"created_on"`
 	UpdatedOn         time.Time `json:"updated_on"`
@@ -89,7 +95,9 @@ type PullRequest struct {
 	} `json:"links"`
 }
 
-type Repository struct {
+// Repository struct of pull repository from bitbucket
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories
+type repository struct {
 	Type  string `json:"type"`
 	Links struct {
 		Self struct {
@@ -103,16 +111,18 @@ type Repository struct {
 		} `json:"avatar"`
 	} `json:"links"`
 	UUID      string  `json:"uuid"`
-	Project   Project `json:"project"`
+	Project   project `json:"project"`
 	FullName  string  `json:"full_name"` //empty
 	Name      string  `json:"name"`
 	Website   string  `json:"website"`
-	Owner     Owner   `json:"owner"`
+	Owner     owner   `json:"owner"`
 	Scm       string  `json:"scm"`
 	IsPrivate bool    `json:"is_private"`
 }
 
-type Project struct {
+// Project struct of pull project from bitbucket
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/teams/%7Busername%7D/projects/#get
+type project struct {
 	Type    string `json:"type"`
 	Project string `json:"project"`
 	UUID    string `json:"uuid"`
@@ -127,7 +137,9 @@ type Project struct {
 	Key string `json:"key"`
 }
 
-type Owner struct {
+// Owner struct of owner from bitbucket
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories
+type owner struct {
 	Type        string `json:"type"`
 	Username    string `json:"username"`
 	DisplayName string `json:"display_name"`
@@ -145,7 +157,9 @@ type Owner struct {
 	} `json:"links"`
 }
 
-type Commit struct {
+// Commit struct of commit from bitbucket
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/commit/%7Bnode%7D
+type commit struct {
 	Type  string `json:"type"`
 	Hash  string `json:"hash"`
 	Links struct {
@@ -168,11 +182,13 @@ type Commit struct {
 	Message string `json:"message"`
 }
 
-type DiffStat struct {
+// DiffStat struct of diffStat from bitbucket
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/diffstat/%7Bspec%7D
+type diffStat struct {
 	Status       string `json:"status"`
 	Type         string `json:"type"`
-	LinesRemoved string `json:"lines_removed"`
-	LinesAdded   string `json:"lines_added"`
+	LinesRemoved int    `json:"lines_removed"`
+	LinesAdded   int    `json:"lines_added"`
 	Old          struct {
 		Path  string `json:"path"`
 		Type  string `json:"type"`
@@ -190,5 +206,5 @@ type DiffStat struct {
 				Href string `json:"href"`
 			} `json:"self"`
 		} `json:"links"`
-	} `json:"old"`
+	} `json:"new"`
 }
