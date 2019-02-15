@@ -11,11 +11,10 @@ import (
 	"backoffice_app/services/jira"
 	"backoffice_app/services/slack"
 
+	"github.com/gin-gonic/gin/json"
 	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
 	"github.com/xanzy/go-gitlab"
-
-	"github.com/gin-gonic/gin/json"
 )
 
 // App is main App implementation
@@ -267,7 +266,6 @@ func (a *App) MakeLastActivityReportWithCallback(callbackUrl string) {
 		logrus.WithError(err).Errorf("Can't get last activity report from Hubstaff.")
 		return
 	}
-
 	jsonReport, err := json.Marshal(struct {
 		Text string `json:"text"`
 	}{Text: report})

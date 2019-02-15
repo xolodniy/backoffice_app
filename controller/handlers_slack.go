@@ -9,33 +9,33 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type LastActivityRequest struct {
+type lastActivityRequest struct {
 	Token       string `form:"token" binding:"required"`
-	ResponseUrl string `form:"response_url" binding:"required"`
+	ResponseURL string `form:"response_url" binding:"required"`
 }
 
 func (c *Controller) slackLastActivityHandler(ctx *gin.Context) {
 
-	var form = LastActivityRequest{}
-
+	form := lastActivityRequest{}
 	err := ctx.Bind(&form)
 	if err != nil {
 		logrus.WithError(err).Error("Can't bind to the form.")
 		ctx.String(http.StatusBadRequest, err.Error())
+		return
 	}
+	//security check
 	// TODO: make signing checking https://api.slack.com/docs/verifying-requests-from-slack
 	if form.Token != "t2LZHz5L0rNuCxSkDt07dVzu" {
 		logrus.Error("Invalid token")
-		ctx.String(http.StatusBadRequest, "Invalid token")
+		ctx.String(http.StatusUnauthorized, "Invalid token")
 		return
 	}
-	//
+	//should to answer to slack and run goroutine with callback
 	ctx.JSON(http.StatusOK, struct {
 		Text        string             `json:"text"`
 		Attachments []types.Attachment `json:"attachments"`
 	}{
-		Text: "Your request will be processed soon...",
+		Text: "Report is preparing. Your request will be processed soon.",
 	})
-	//
-	go c.App.MakeLastActivityReportWithCallback(form.ResponseUrl)
+	go c.App.MakeLastActivityReportWithCallback(form.ResponseURL)
 }
