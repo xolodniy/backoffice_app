@@ -1,7 +1,9 @@
 package app
 
 import (
+	"bytes"
 	"fmt"
+	"net/http"
 	"time"
 
 	"backoffice_app/config"
@@ -12,25 +14,29 @@ import (
 	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
 	"github.com/xanzy/go-gitlab"
+
+	"github.com/gin-gonic/gin/json"
 )
 
 // App is main App implementation
 type App struct {
-	Hubstaff hubstaff.Hubstaff
-	Slack    slack.Slack
-	Jira     jira.Jira
-	Git      *gitlab.Client
-	Config   config.Main
+	Hubstaff   hubstaff.Hubstaff
+	Slack      slack.Slack
+	Jira       jira.Jira
+	Git        *gitlab.Client
+	Config     config.Main
+	MyTrueLogs []string //todo remove
 }
 
 // New is main App constructor
 func New(conf *config.Main) *App {
 	return &App{
-		Hubstaff: hubstaff.New(&conf.Hubstaff),
-		Slack:    slack.New(&conf.Slack),
-		Jira:     jira.New(&conf.Jira),
-		Git:      gitlab.NewClient(nil, conf.GitToken),
-		Config:   *conf,
+		Hubstaff:   hubstaff.New(&conf.Hubstaff),
+		Slack:      slack.New(&conf.Slack),
+		Jira:       jira.New(&conf.Jira),
+		Git:        gitlab.NewClient(nil, conf.GitToken),
+		Config:     *conf,
+		MyTrueLogs: make([]string, 2),
 	}
 }
 
@@ -254,4 +260,36 @@ func (a *App) ReportSlackEndingFreeSpace() {
 	}
 	msgBody := fmt.Sprintf("Free space on slack end.\n")
 	a.Slack.SendMessage(msgBody)
+}
+
+// MakeLastActivityReportWithCallback posts last activity to slack to defined callbackUrl
+func (a *App) MakeLastActivityReportWithCallback(callbackUrl string) {
+	report, err := a.Hubstaff.GetLastActivityReport()
+	if err != nil {
+		a.MyTrueLogs = append(a.MyTrueLogs, "error getting report from hubstaff! url: + "+callbackUrl, err.Error()) //todo remove
+		logrus.WithError(err).Errorf("Can't get last activity report from Hubstaff.")
+		return
+	}
+	a.MyTrueLogs = append(a.MyTrueLogs, "call url: + "+callbackUrl+"\n"+report) //todo remove
+
+	jsonReport, err := json.Marshal(struct {
+		Text string `json:"text"`
+	}{Text: report})
+	if err != nil {
+		a.MyTrueLogs = append(a.MyTrueLogs, "Can't convert last activity report to json. Report is:\n%s"+report, err.Error()) //todo remove
+		logrus.WithError(err).Errorf("Can't convert last activity report to json. Report is:\n%s", report)
+		return
+	}
+	a.MyTrueLogs = append(a.MyTrueLogs, "call url: + "+callbackUrl+"\n"+report) //todo remove
+	resp, err := http.Post(callbackUrl, "application/json", bytes.NewReader(jsonReport))
+	if err != nil {
+		a.MyTrueLogs = append(a.MyTrueLogs, "Can't send last activity report by url :"+callbackUrl, err.Error()) //todo remove
+		logrus.WithError(err).Errorf("Can't send last activity report by url : %s", callbackUrl)
+		return
+	}
+	if resp.StatusCode != http.StatusOK {
+		a.MyTrueLogs = append(a.MyTrueLogs, "bad code "+resp.Status) //todo remove
+		logrus.Errorf("Error while sending last activity report by url : %s, status code : %d",
+			callbackUrl, resp.StatusCode)
+	}
 }

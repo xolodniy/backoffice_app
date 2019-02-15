@@ -9,27 +9,37 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type LastActivityRequest struct {
+	Token       string `form:"token" binding:"required"`
+	ResponseUrl string `form:"response_url" binding:"required"`
+}
+
+func (c *Controller) MyLogs(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, c.App.MyTrueLogs)
+}
+
 func (c *Controller) slackLastActivityHandler(ctx *gin.Context) {
 
-	for i, p := range ctx.Params {
-		logrus.Warn("header", i, p.Key, p.Value)
-	}
+	var form = LastActivityRequest{}
 
-	logrus.Warn("Conttype", ctx.GetHeader("Content-type"))
-
-	buf := make([]byte, 2048)
-	_, err := ctx.Request.Body.Read(buf)
+	err := ctx.Bind(&form)
 	if err != nil {
-		logrus.WithError(err).Error("cannot read the body")
+		logrus.WithError(err).Error("Can't bind to the form.")
+		ctx.String(http.StatusBadRequest, err.Error())
 	}
-	logrus.Warn("Body", string(buf))
-
+	// TODO: make signing checking https://api.slack.com/docs/verifying-requests-from-slack
+	if form.Token != "t2LZHz5L0rNuCxSkDt07dVzu" {
+		logrus.Error("Invalid token")
+		ctx.String(http.StatusBadRequest, "Invalid token")
+		return
+	}
+	//
 	ctx.JSON(http.StatusOK, struct {
 		Text        string             `json:"text"`
 		Attachments []types.Attachment `json:"attachments"`
 	}{
-		Text: "just response text", Attachments: []types.Attachment{{Text: "text1"}, {"text2"}},
+		Text: "Your request will be processed soon...",
 	})
 	//
-
+	go c.App.MakeLastActivityReportWithCallback(form.ResponseUrl)
 }

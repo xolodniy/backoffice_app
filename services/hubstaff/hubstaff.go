@@ -144,3 +144,90 @@ func (h *Hubstaff) GetAllHubstaffUsers() ([]UserDTO, error) {
 	}
 	return usersSlice.List, nil
 }
+
+func (h *Hubstaff) GetLastActivityReport() (string, error) {
+	apiUrl := fmt.Sprintf("/v1/organizations/%d/last_activity", h.OrgID)
+	rawResponse, err := h.Request(apiUrl, nil)
+	if err != nil {
+		return "", fmt.Errorf("error on getting last activities data: %v", err)
+	}
+	activities := struct {
+		List []APIResponseLastActivity `json:"last_activities"`
+	}{}
+
+	if err = json.Unmarshal(rawResponse, &activities); err != nil {
+		return "", fmt.Errorf("can't decode response: %s", err)
+	}
+	if len(activities.List) == 0 {
+		return "No logged activities have found", nil
+	}
+
+	message := ""
+	for _, activity := range activities.List {
+		projectName, err := h.getProjectNameById(activity.LastProjectId)
+		if err != err {
+			return "", err
+		}
+		taskJiraKey, err := h.getJiraTaskKeyById(activity.LastTaskId)
+		if err != err {
+			return "", err
+		}
+		if projectName != "" || taskJiraKey != "" {
+			if taskJiraKey != "" {
+				taskJiraKey = fmt.Sprintf(" / %s", taskJiraKey)
+			}
+			message += fmt.Sprintf("\n\n*%s*\n%s %s", activity.User.Name, projectName, taskJiraKey)
+		}
+	}
+	return message, nil
+}
+
+func (h *Hubstaff) getProjectNameById(projectId int) (string, error) {
+	if projectId == 0 {
+		return "", nil
+	}
+	apiUrl := fmt.Sprintf("/v1/projects/%d", projectId)
+	rawResponse, err := h.Request(apiUrl, nil)
+	if err != nil {
+		return "", err
+	}
+	response := struct {
+		Project struct {
+			Name string `json:"name"`
+		} `json:"project"`
+	}{}
+
+	if err = json.Unmarshal(rawResponse, &response); err != nil {
+		return "", err
+	}
+	if response.Project.Name == "" {
+		return "", fmt.Errorf("No projects have found by id: %d", projectId)
+	}
+
+	return response.Project.Name, nil
+}
+
+func (h *Hubstaff) getJiraTaskKeyById(taskId int) (string, error) {
+	if taskId == 0 {
+		return "", nil
+	}
+	apiUrl := fmt.Sprintf("/v1/tasks/%d", taskId)
+	rawResponse, err := h.Request(apiUrl, nil)
+	if err != nil {
+		return "", err
+	}
+	response := struct {
+		Task struct {
+			JiraKey string `json:"remote_alternate_id"`
+		} `json:"task"`
+	}{}
+
+	if err = json.Unmarshal(rawResponse, &response); err != nil {
+		return "", err
+	}
+	if response.Task.JiraKey == "" {
+		return "", fmt.Errorf("No tasks have found by id: %d", taskId)
+	}
+
+	return response.Task.JiraKey, nil
+}
