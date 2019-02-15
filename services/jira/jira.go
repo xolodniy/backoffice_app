@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"backoffice_app/config"
-	"backoffice_app/services/hubstaff"
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/sirupsen/logrus"
@@ -118,10 +117,8 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 		}
 	}
 	var worklogString string
-	originalEta := hubstaff.WorkingTime(issue.Fields.TimeTracking.OriginalEstimateSeconds)
-	timeSpent := hubstaff.WorkingTime(issue.Fields.TimeTracking.TimeSpentSeconds)
 	if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds {
-		worklogString = fmt.Sprintf(" time spent is %s instead %s", timeSpent, originalEta)
+		worklogString = fmt.Sprintf(" time spent is %s instead %s", issue.Fields.TimeTracking.TimeSpent, issue.Fields.TimeTracking.OriginalEstimate)
 	}
 
 	listRow = fmt.Sprintf("%[1]d. %[2]s - <https://theflow.atlassian.net/browse/%[3]s|%[3]s - %[4]s>: _%[5]s_%[6]s\n",
