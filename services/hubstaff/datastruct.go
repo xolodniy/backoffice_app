@@ -1,6 +1,13 @@
 package hubstaff
 
-import "backoffice_app/services/util"
+import (
+	"fmt"
+)
+
+const (
+	secInMin  = 60
+	secInHour = 60 * secInMin
+)
 
 // HubstaffAuth is an object used to specifying parameters of issues searching in Hubstaff
 type HubstaffAuth struct {
@@ -15,7 +22,9 @@ type WorkingTime int
 
 // String converts seconds value to 00:00 (hours with leading zero:minutes with leading zero) time format
 func (wt WorkingTime) String() string {
-	return util.SecondsToHoursMinutes(int(wt))
+	hours := int(wt) / secInHour
+	minutes := int(wt) % secInHour / secInMin
+	return fmt.Sprintf("%.2d:%.2d", hours, minutes)
 }
 
 // APIResponse used to reflect an api response from /by_date endpoint
