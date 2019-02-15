@@ -168,11 +168,7 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 		dateStart, dateEnd, a.Hubstaff.OrgID)
 	orgsList, err := a.Hubstaff.RequestAndParse(apiURL)
 	if err != nil {
-		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
-		return
-	}
-	if err != nil {
-		logrus.WithError(err).Error("failed to fetch data from hubstaff")
+		logrus.WithError(err).Error("can't get logged time from Hubstaff")
 		return
 	}
 	if len(orgsList) == 0 || len(orgsList[0].Workers) == 0 {
