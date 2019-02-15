@@ -128,7 +128,8 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 	}
 	msgBody := "Issues have all closed subtasks:\n"
 	for _, issue := range issues {
-		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
+		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 	}
 	a.Slack.SendMessage(msgBody)
 }
@@ -235,7 +236,22 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 	}
 	msgBody := "Issues after second review round:\n"
 	for _, issue := range issues {
-		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s>\n", issue.Key)
+		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 	}
+	a.Slack.SendMessage(msgBody)
+}
+
+// ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
+func (a *App) ReportSlackEndingFreeSpace() {
+	size, err := a.Slack.FilesSize()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about files size from slack")
+		return
+	}
+	if a.Slack.TotalVolume-size > a.Slack.RestVolume {
+		return
+	}
+	msgBody := fmt.Sprintf("Free space on slack end.\n")
 	a.Slack.SendMessage(msgBody)
 }

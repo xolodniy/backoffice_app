@@ -133,6 +133,11 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
 2. Start project
 
 ### Config file
+#### Slack
+
+    totalVolume: 5.0    -variable of availible total space on slack.
+    restVolume: 0.0     -variable of rest space, when we want send report.
+
 #### Cron manager parameters 
     "00 00 07 * * *"    — cron prefence for adding tasks
    
@@ -146,11 +151,12 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
     Day of week  | Yes        | 0-6 or SUN-SAT  | * / , - ?
 
 #### Config.yml variables for cron 
-    dailyworkersworkedtimecron: "00 00 07 * * *"    — preference to send daily worked time of worker
-    weeklyworkersworkedtimecron: "00 00 07 * * 1"   — preference to send weekly worked time of worker
-    reportclosedsubtaskscron: "00 00 07 * * *"      — preference to send report about all closed subtask of issue
-    reportaftersecondreviewcron: "00 00 07 * * *"   — preference to send report about issues after second round review
-    employeesexceededtaskscron: "00 00 07 * * *"    — preference to send report about employers that have exceeded tasks
+    dailyworkersworkedtime: "00 00 07 * * *"    — preference to send daily worked time of worker
+    weeklyworkersworkedtime: "00 00 07 * * 1"   — preference to send weekly worked time of worker
+    reportclosedsubtasks: "00 00 07 * * *"      — preference to send report about all closed subtask of issue
+    reportaftersecondreview: "00 00 07 * * *"   — preference to send report about issues after second round review
+    employeesexceededtasks: "00 00 07 * * *"    — preference to send report about employers that have exceeded tasks
+    reportslackspaceending: "00 00 07 * * *"    — start everyday at 7:00 to send report if free space on slack < 0.5GB
 
 ### API Description
 
