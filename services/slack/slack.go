@@ -20,6 +20,8 @@ type Slack struct {
 	BotName         string
 	BackofficeAppID string
 	APIURL          string
+	TotalVolume     float64
+	RestVolume      float64
 }
 
 // FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
@@ -50,6 +52,8 @@ func New(config *config.Slack) Slack {
 		BotName:         config.BotName,
 		BackofficeAppID: "#" + config.BackOfficeAppID,
 		APIURL:          config.APIURL,
+		TotalVolume:     config.TotalVolume,
+		RestVolume:      config.RestVolume,
 	}
 }
 
