@@ -7,6 +7,7 @@ const (
 	secInHour = 60 * secInMin
 )
 
+// SecondsToHoursMinutes converts duration in seconds to hours:minutes string, like 14:40
 func SecondsToHoursMinutes(duration int) string {
 	hours := duration / secInHour
 	minutes := duration % secInHour / secInMin
