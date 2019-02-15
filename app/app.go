@@ -62,7 +62,6 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
 		return
 	}
-
 	var message = fmt.Sprintf(
 		"%s:\n\n"+
 			"From: %v %v\n"+
@@ -71,24 +70,17 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		dateOfWorkdaysStart.Format("02.01.06"), "00:00:00",
 		dateOfWorkdaysEnd.Format("02.01.06"), "23:59:59",
 	)
-
 	if len(orgsList) == 0 {
 		a.Slack.SendMessage("No tracked time for now or no organization found")
 		return
 	}
-
 	if len(orgsList[0].Workers) == 0 {
 		message = "No tracked time for now or no workers found"
 	} else {
 		for _, worker := range orgsList[0].Workers {
-			message += fmt.Sprintf(
-				"\n%s %s",
-				worker.TimeWorked,
-				worker.Name,
-			)
+			message += fmt.Sprintf("\n%s %s", worker.TimeWorked, worker.Name)
 		}
 	}
-
 	a.Slack.SendMessage(message)
 }
 
@@ -138,8 +130,6 @@ func (a *App) GetDetailedWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWo
 	}
 	a.Slack.SendMessage(message)
 }
-
-// DurationStringInHoursMinutes converts Seconds to 00:00 (hours with leading zero:minutes with leading zero) time format
 
 // ReportIsuuesWithClosedSubtasks create report about issues with closed subtasks
 func (a *App) ReportIsuuesWithClosedSubtasks() {
