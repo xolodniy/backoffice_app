@@ -1,4 +1,4 @@
-package hubstaff
+package util
 
 import (
 	"testing"
@@ -7,31 +7,26 @@ import (
 )
 
 func TestDurationStringInHoursMinutes_1(t *testing.T) {
-	wt := WorkingTime(86400)
-	str := wt.String()
+	str := SecondsToHoursMinutes(86400)
 	require.Equal(t, "24:00", str)
 }
 
 func TestDurationStringInHoursMinutes_2(t *testing.T) {
-	wt := WorkingTime(86461)
-	str := wt.String()
+	str := SecondsToHoursMinutes(86461)
 	require.Equal(t, "24:01", str)
 }
 
 func TestDurationStringInHoursMinutes_3(t *testing.T) {
-	wt := WorkingTime(162120)
-	str := wt.String()
+	str := SecondsToHoursMinutes(162120)
 	require.Equal(t, "45:02", str)
 }
 
 func TestDurationStringInHoursMinutes_4(t *testing.T) {
-	wt := WorkingTime(161943)
-	str := wt.String()
+	str := SecondsToHoursMinutes(161943)
 	require.Equal(t, "44:59", str)
 }
 
 func TestDurationStringInHoursMinutes_5(t *testing.T) {
-	wt := WorkingTime(842400)
-	str := wt.String()
+	str := SecondsToHoursMinutes(842400)
 	require.Equal(t, "234:00", str)
 }
