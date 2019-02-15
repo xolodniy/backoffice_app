@@ -33,3 +33,9 @@ type APIResponse struct {
 		} `json:"users"`
 	} `json:"dates"`
 }
+
+// UsersDTO type for query Hubstaff's users
+type UserDTO struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}

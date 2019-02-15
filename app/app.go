@@ -81,15 +81,9 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 		message = "No tracked time for now or no workers found"
 	} else {
 		for _, worker := range orgsList[0].Workers {
-			t, err := a.DurationStringInHoursMinutes(worker.TimeWorked)
-			if err != nil {
-				logrus.WithError(err).WithField("time", worker.TimeWorked).
-					Error("error occurred on time conversion error")
-				continue
-			}
 			message += fmt.Sprintf(
 				"\n%s %s",
-				t,
+				worker.TimeWorked,
 				worker.Name,
 			)
 		}
@@ -130,31 +124,12 @@ func (a *App) GetDetailedWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWo
 		message += fmt.Sprintf(
 			"\n\n\n*%s*", separatedDate.Date)
 		for _, worker := range separatedDate.Workers {
-			workerTime, err := a.DurationStringInHoursMinutes(worker.TimeWorked)
-			if err != nil {
-				logrus.WithError(err).WithField("time", worker.TimeWorked).
-					Error("error occurred on worker's time conversion error")
-				continue
-			} else if worker.TimeWorked == 0 {
-				continue
-			}
 			//employee name print
 			message += fmt.Sprintf(
-				"\n\n\n*%s (%s total)*\n", worker.Name, workerTime)
+				"\n\n\n*%s (%s total)*\n", worker.Name, worker.TimeWorked)
 			for _, project := range worker.Projects {
-				projectTime, err := a.DurationStringInHoursMinutes(project.TimeWorked)
-				if err != nil {
-					logrus.WithError(err).
-						WithField("separatedDate", separatedDate.Date).
-						WithField("worker", worker.Name).
-						WithField("time", project.TimeWorked).
-						Error("error occurred on projects's time conversion error")
-					continue
-				} else if project.TimeWorked == 0 {
-					continue
-				}
 				message += fmt.Sprintf(
-					"\n%s - %s", projectTime, project.Name)
+					"\n%s - %s", project.TimeWorked, project.Name)
 				for _, note := range project.Notes {
 					message += fmt.Sprintf("\n - %s", note.Description)
 				}
@@ -196,31 +171,52 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 		return
 	}
 	//get logged time from Hubstaff for this week
-	organizations, err := a.GetWorkersTimeByOrganization(now.BeginningOfWeek(), now.EndOfWeek(),
-		a.Config.Hubstaff.OrgsID)
+	var dateStart = now.BeginningOfWeek().Format("2006-01-02")
+	var dateEnd = now.EndOfWeek().Format("2006-01-02")
+
+	apiURL := fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
+		dateStart, dateEnd, a.Hubstaff.OrgID)
+	orgsList, err := a.Hubstaff.RequestAndParse(apiURL)
+	if err != nil {
+		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
+		return
+	}
 	if err != nil {
 		logrus.WithError(err).Error("failed to fetch data from hubstaff")
 		return
 	}
-	if len(organizations) == 0 || len(organizations[0].Workers) == 0 {
+	if len(orgsList) == 0 || len(orgsList[0].Workers) == 0 {
 		a.Slack.SendMessage("No tracked time for now or no organization found")
+		return
+	}
+	//get hubstaff's user list
+	hubstaffUsers, err := a.Hubstaff.GetAllHubstaffUsers()
+	if err != nil {
+		logrus.WithError(err).Error("failed to fetch data from hubstaff")
 		return
 	}
 	messageHeader := fmt.Sprintf("\nExceeded estimate time report:\n\n*%v*\n",
 		now.BeginningOfDay().Format("02.01.2006"))
-	message := compileMessageForExeededEmployeesReport(organizations, remainingEtaMap)
+	message := makeContentForExeededEmployeesReport(orgsList, remainingEtaMap, hubstaffUsers)
 	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message))
 }
 
-func compileMessageForExeededEmployeesReport(organizations types.Organizations, remainingEtaMap map[string]int) string {
+func makeContentForExeededEmployeesReport(organizations []hubstaff.APIResponse, remainingEtaMap map[string]int, hubstaffUsers []hubstaff.UserDTO) string {
 	message := ""
-	var weekWorkingHours float32 = 30.0
-	for _, worker := range organizations[0].Workers {
-		etaTimeSec := remainingEtaMap[worker.Name]
-		if etaTimeSec > 0 {
-			workVolume := float32(etaTimeSec+worker.TimeWorked) / 3600.0
-			if workVolume > weekWorkingHours {
-				message += fmt.Sprintf("\n%s late for %.2f hours", worker.Name, workVolume-weekWorkingHours)
+	var maxWeekWorkingHours float32 = 30.0
+	for _, userWithTime := range organizations[0].Workers {
+		var workerEmail = ""
+		for _, userWithEmail := range hubstaffUsers {
+			if userWithEmail.Name == userWithTime.Name {
+				workerEmail = userWithEmail.Email
+				break
+			}
+		}
+		currentDeveloperRemainigEta := remainingEtaMap[workerEmail]
+		if currentDeveloperRemainigEta > 0 {
+			workVolume := float32(currentDeveloperRemainigEta+int(userWithTime.TimeWorked)) / 3600.0
+			if workVolume > maxWeekWorkingHours {
+				message += fmt.Sprintf("\n%s late for %.2f hours", userWithTime.Name, workVolume-maxWeekWorkingHours)
 			}
 		}
 	}
@@ -241,7 +237,7 @@ func (a *App) getActualRemainingEtaMap() map[string]int {
 		if issue.Fields.Assignee == nil || issue.Fields.Assignee.DisplayName == "Unassigned" {
 			continue
 		}
-		remainingEtaMap[issue.Fields.Assignee.DisplayName] += issue.Fields.TimeTracking.RemainingEstimateSeconds
+		remainingEtaMap[issue.Fields.Assignee.EmailAddress] += issue.Fields.TimeTracking.RemainingEstimateSeconds
 	}
 	return remainingEtaMap
 }

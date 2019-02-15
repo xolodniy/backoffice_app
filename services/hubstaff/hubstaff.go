@@ -3,6 +3,7 @@ package hubstaff
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -119,4 +120,24 @@ func (h *Hubstaff) RequestAndParse(apiURL string) ([]APIResponse, error) {
 		return nil, fmt.Errorf("can't decode response: %s", err)
 	}
 	return orgs.List, nil
+}
+
+func (h *Hubstaff) GetAllHubstaffUsers() ([]UserDTO, error) {
+	apiURL := "/v1/users"
+	orgsRaw, err := h.Request(apiURL, nil)
+
+	logrus.Info("Hubstuff request URL will be:", apiURL)
+
+	if err != nil {
+		return nil, fmt.Errorf("error on getting workers list: %v", err)
+	}
+
+	usersSlice := struct {
+		List []UserDTO `json:"users"`
+	}{}
+
+	if err = json.Unmarshal(orgsRaw, &usersSlice); err != nil {
+		return nil, fmt.Errorf("can't decode response: %s", err)
+	}
+	return usersSlice.List, nil
 }

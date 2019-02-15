@@ -1,6 +1,7 @@
 package app
 
 import (
+	"backoffice_app/services/util"
 	"fmt"
 
 	"github.com/andygrunwald/go-jira"
@@ -46,20 +47,9 @@ func (a *App) IssueTimeExcisionWithTimeCompare(issue jira.Issue, rowIndex int) (
 		return listRow, nil
 	}
 
-	ts, err := a.DurationStringInHoursMinutes(issue.Fields.TimeSpent)
-	if err != nil {
-		logrus.WithError(err).WithField("time", issue.Fields.TimeSpent).
-			Error("error occurred on time conversion error")
-		return listRow, fmt.Errorf("time conversion: %v", err)
+	ts := util.SecondsToHoursMinutes(issue.Fields.TimeSpent)
 
-	}
-
-	te, err := a.DurationStringInHoursMinutes(issue.Fields.TimeOriginalEstimate)
-	if err != nil {
-		logrus.WithError(err).WithField("time", issue.Fields.TimeOriginalEstimate).
-			Error("error occurred on time conversion error")
-		return listRow, fmt.Errorf("time conversion: %v", err)
-	}
+	te := util.SecondsToHoursMinutes(issue.Fields.TimeOriginalEstimate)
 
 	listRow = fmt.Sprintf("%[1]d. <https://theflow.atlassian.net/browse/%[2]s|%[2]s - %[3]s>: %[4]v из %[5]v\n",
 		rowIndex, issue.Key, issue.Fields.Summary, ts, te,
