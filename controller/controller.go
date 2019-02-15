@@ -50,4 +50,5 @@ func (c *Controller) initRoutes() {
 
 	c.Gin.POST("/api/v1/git/onevent/push", c.gitHandlerOnEventPush)
 
+	c.Gin.POST("/api/v1/slack/last_activity", c.slackLastActivityHandler)
 }
