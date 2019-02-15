@@ -100,15 +100,13 @@ func (h *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
 	return s, err
 }
 
-// RequestAndParse returning parsed workers timelogs
-func (h *Hubstaff) RequestAndParse(apiURL string) ([]APIResponse, error) {
+// RequestAndParseTimelogs returning parsed workers timelogs
+func (h *Hubstaff) RequestAndParseTimelogs(apiURL string) (APIResponse, error) {
 
 	orgsRaw, err := h.Request(apiURL, nil)
 
-	fmt.Println("Hubstuff request URL will be:", apiURL)
-
 	if err != nil {
-		return nil, fmt.Errorf("error on getting workers worked time: %v", err)
+		return APIResponse{}, fmt.Errorf("error on getting workers worked time: %v", err)
 	}
 
 	orgs := struct {
@@ -116,7 +114,33 @@ func (h *Hubstaff) RequestAndParse(apiURL string) ([]APIResponse, error) {
 	}{}
 
 	if err = json.Unmarshal(orgsRaw, &orgs); err != nil {
+		return APIResponse{}, fmt.Errorf("can't decode response: %s", err)
+	}
+
+	if len(orgs.List) == 0 {
+		return APIResponse{}, fmt.Errorf("No tracked time for now or no organization found")
+	}
+	if len(orgs.List[0].Workers) == 0 && len(orgs.List[0].Dates) == 0 {
+		return APIResponse{}, fmt.Errorf("No tracked time for now or no workers found")
+	}
+	return orgs.List[0], nil
+}
+
+// GetAllHubstaffUsers returns a slice of Hubstaff users
+func (h *Hubstaff) GetAllHubstaffUsers() ([]UserDTO, error) {
+	apiURL := "/v1/users"
+	orgsRaw, err := h.Request(apiURL, nil)
+
+	if err != nil {
+		return nil, fmt.Errorf("error on getting workers list: %v", err)
+	}
+
+	usersSlice := struct {
+		List []UserDTO `json:"users"`
+	}{}
+
+	if err = json.Unmarshal(orgsRaw, &usersSlice); err != nil {
 		return nil, fmt.Errorf("can't decode response: %s", err)
 	}
-	return orgs.List, nil
+	return usersSlice.List, nil
 }
