@@ -2,13 +2,6 @@ package bitbucket
 
 import "time"
 
-// HashCache struct of hash commits map
-type HashCache struct {
-	Repository string
-	Path       string
-	Message    string
-}
-
 // PullRequest struct of pull request from bitbucket
 // https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/pullrequests#get
 type pullRequest struct {
@@ -119,7 +112,7 @@ type owner struct {
 
 // Commit struct of commit from bitbucket
 // https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/commit/%7Bnode%7D
-type commit struct {
+type Commit struct {
 	Type  string `json:"type"`
 	Hash  string `json:"hash"`
 	Links struct {
