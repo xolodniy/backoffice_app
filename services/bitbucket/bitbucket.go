@@ -6,21 +6,15 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 // Bitbucket main struct of jira client
 type Bitbucket struct {
-	*Client
+	Auth  *auth
+	Owner string
+	Url   string
 }
 
-type Client struct {
-	Auth       *auth
-	Pagelen    uint64
-	Owner      string
-	Url        string
-	HttpClient *http.Client
-}
 type auth struct {
 	appID, secret  string
 	user, password string
@@ -29,12 +23,9 @@ type auth struct {
 // New creates new Bitbucket
 func New(config *config.Bitbucket) Bitbucket {
 	return Bitbucket{
-		&Client{
-			Auth:       &auth{user: config.Auth.Username, password: config.Auth.Password},
-			Owner:      config.Owner,
-			Url:        config.APIUrl,
-			HttpClient: new(http.Client),
-		},
+		Auth:  &auth{user: config.Auth.Username, password: config.Auth.Password},
+		Owner: config.Owner,
+		Url:   config.APIUrl,
 	}
 }
 
@@ -46,7 +37,7 @@ func (b *Bitbucket) do(urlStr string) ([]byte, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.SetBasicAuth(b.Auth.user, b.Auth.password)
-	resp, err := b.HttpClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -60,128 +51,115 @@ func (b *Bitbucket) do(urlStr string) ([]byte, error) {
 }
 
 // RepositoriesList returns list of all repositories
-func (b *Bitbucket) RepositoriesList() (repositories, error) {
-	urlStr := b.Url + "/repositories/" + b.Owner
-	res, err := b.do(urlStr)
-	if err != nil {
-		return repositories{}, err
+func (b *Bitbucket) RepositoriesList() ([]repository, error) {
+	type repositories struct {
+		Next   string       `json:"next"`
+		Values []repository `json:"values"`
 	}
-	var repos repositories
-	err = json.Unmarshal(res, &repos)
-	if err != nil {
-		return repositories{}, err
-	}
+	var repos = repositories{Next: b.Url + "/repositories/" + b.Owner}
 	for {
-		if repos.Next == "" {
-			break
-		}
 		res, err := b.do(repos.Next)
 		if err != nil {
-			return repositories{}, err
+			return []repository{}, err
 		}
 		var nextRepositories repositories
 		err = json.Unmarshal(res, &nextRepositories)
 		if err != nil {
-			return repositories{}, err
+			return []repository{}, err
 		}
-		repos.Next = nextRepositories.Next
 		for _, repository := range nextRepositories.Values {
 			repos.Values = append(repos.Values, repository)
 		}
+		if nextRepositories.Next == "" {
+			break
+		}
+		repos.Next = nextRepositories.Next
 	}
-	return repos, nil
+	return repos.Values, nil
 }
 
 // PullRequestsList returns list of pull requests in repository by repository slug
-func (b *Bitbucket) PullRequestsList(repoSlug string) (pullRequests, error) {
-	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/"
-	res, err := b.do(urlStr)
-	if err != nil {
-		return pullRequests{}, err
+func (b *Bitbucket) PullRequestsList(repoSlug string) ([]pullRequest, error) {
+	type pullRequests struct {
+		Next   string        `json:"next"`
+		Values []pullRequest `json:"values"`
 	}
-
-	var pr pullRequests
-	err = json.Unmarshal(res, &pr)
-	if err != nil {
-		return pullRequests{}, err
-	}
-	for pr.Next != "" {
+	var pr = pullRequests{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests?state=OPEN"}
+	for {
 		res, err := b.do(pr.Next)
 		if err != nil {
-			return pullRequests{}, err
+			return []pullRequest{}, err
 		}
 		var nextPullRequests pullRequests
 		err = json.Unmarshal(res, &nextPullRequests)
 		if err != nil {
-			return pullRequests{}, err
+			return []pullRequest{}, err
 		}
-		pr.Next = nextPullRequests.Next
 		for _, pullRequest := range nextPullRequests.Values {
 			pr.Values = append(pr.Values, pullRequest)
 		}
+		if nextPullRequests.Next == "" {
+			break
+		}
+		pr.Next = nextPullRequests.Next
 	}
-	return pr, nil
+	return pr.Values, nil
 }
 
 // PullRequestCommits returns commits in pull request by pull request id and repository slug
-func (b *Bitbucket) PullRequestCommits(repoSlug, prID string) (commits, error) {
-	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + prID + "/commits"
-	res, err := b.do(urlStr)
-	if err != nil {
-		return commits{}, err
+func (b *Bitbucket) PullRequestCommits(repoSlug, prID string) ([]commit, error) {
+	type commits struct {
+		Next   string   `json:"next"`
+		Values []commit `json:"values"`
 	}
-	var prCommits commits
-	err = json.Unmarshal(res, &prCommits)
-	if err != nil {
-		return commits{}, err
-	}
-	for prCommits.Next != "" {
+	var prCommits = commits{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + prID + "/commits"}
+	for {
 		res, err := b.do(prCommits.Next)
 		if err != nil {
-			return commits{}, err
+			return []commit{}, err
 		}
 		var nextCommits commits
 		err = json.Unmarshal(res, &nextCommits)
 		if err != nil {
-			return commits{}, err
+			return []commit{}, err
 		}
-		prCommits.Next = nextCommits.Next
 		for _, commit := range nextCommits.Values {
 			prCommits.Values = append(prCommits.Values, commit)
 		}
+		if nextCommits.Next == "" {
+			break
+		}
+		prCommits.Next = nextCommits.Next
 	}
-	return prCommits, nil
+	return prCommits.Values, nil
 }
 
 // CommitsDiff returns files diff of commits by repository slug and commit hash
-func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) (diffStats, error) {
-	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/diffstat/" + spec
-	res, err := b.do(urlStr)
-	if err != nil {
-		return diffStats{}, err
+func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) {
+	type diffStats struct {
+		Next   string     `json:"next"`
+		Values []diffStat `json:"values"`
 	}
-
-	var diff diffStats
-	err = json.Unmarshal(res, &diff)
-	if err != nil {
-		return diffStats{}, err
-	}
-	for diff.Next != "" {
+	var diff = diffStats{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/diffstat/" + spec}
+	for {
 		res, err := b.do(diff.Next)
 		if err != nil {
-			return diffStats{}, err
+			return []diffStat{}, err
 		}
 		var nextDiffStats diffStats
 		err = json.Unmarshal(res, &nextDiffStats)
 		if err != nil {
-			return diffStats{}, err
+			return []diffStat{}, err
 		}
-		diff.Next = nextDiffStats.Next
 		for _, pullRequest := range nextDiffStats.Values {
 			diff.Values = append(diff.Values, pullRequest)
 		}
+		if nextDiffStats.Next == "" {
+			break
+		}
+		diff.Next = nextDiffStats.Next
 	}
-	return diff, nil
+	return diff.Values, nil
 }
 
 // SrcFile returns files diff of commits by repository slug and commit hash
@@ -196,42 +174,34 @@ func (b *Bitbucket) SrcFile(repoSlug, spec, path string) (string, error) {
 }
 
 // MigrationCommitsOfOpenedPRs returns commits with migration diff
-func (b *Bitbucket) MigrationCommitsOfOpenedPRs() (map[string]HashCache, error) {
+func (b *Bitbucket) CommitsOfOpenedPRs() ([]commit, error) {
 	repositories, err := b.RepositoriesList()
 	if err != nil {
 		return nil, err
 	}
 
-	var allPullRequests pullRequests
-	for _, repository := range repositories.Values {
+	var allPullRequests []pullRequest
+	for _, repository := range repositories {
 		pullRequests, err := b.PullRequestsList(repository.Name)
 		if err != nil {
 			return nil, err
 		}
-		for _, pullRequest := range pullRequests.Values {
+		for _, pullRequest := range pullRequests {
 			if pullRequest.State == "OPEN" {
-				allPullRequests.Values = append(allPullRequests.Values, pullRequest)
+				allPullRequests = append(allPullRequests, pullRequest)
 			}
 		}
 	}
 
-	newMapSqlCommits := make(map[string]HashCache)
-	for _, pullRequest := range allPullRequests.Values {
+	var allCommits []commit
+	for _, pullRequest := range allPullRequests {
 		commits, err := b.PullRequestCommits(pullRequest.Source.Repository.Name, strconv.FormatInt(pullRequest.ID, 10))
 		if err != nil {
 			return nil, err
 		}
-		for _, commit := range commits.Values {
-			diffStats, err := b.CommitsDiffStats(commit.Repository.Name, commit.Hash)
-			if err != nil {
-				return nil, err
-			}
-			for _, diffStat := range diffStats.Values {
-				if strings.Contains(diffStat.New.Path, ".sql") {
-					newMapSqlCommits[commit.Hash] = HashCache{Repository: commit.Repository.Name, Path: diffStat.New.Path, Message: commit.Message}
-				}
-			}
+		for _, commit := range commits {
+			allCommits = append(allCommits, commit)
 		}
 	}
-	return newMapSqlCommits, nil
+	return allCommits, nil
 }
