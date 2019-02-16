@@ -15,6 +15,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// CommitsCache struct of hash commits map
+type CommitsCache struct {
+	Repository string
+	Path       string
+	Message    string
+}
+
 // App is main App implementation
 type App struct {
 	Hubstaff     hubstaff.Hubstaff
@@ -22,7 +29,7 @@ type App struct {
 	Jira         jira.Jira
 	Bitbucket    bitbucket.Bitbucket
 	Config       config.Main
-	CommitsCache map[string]bitbucket.HashCache
+	CommitsCache map[string]CommitsCache
 }
 
 // New is main App constructor
@@ -33,7 +40,7 @@ func New(conf *config.Main) *App {
 		Jira:         jira.New(&conf.Jira),
 		Bitbucket:    bitbucket.New(&conf.Bitbucket),
 		Config:       *conf,
-		CommitsCache: make(map[string]bitbucket.HashCache),
+		CommitsCache: make(map[string]CommitsCache),
 	}
 }
 
@@ -280,20 +287,12 @@ func (a *App) FillCache() {
 		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
 		return
 	}
-	newMapSqlCommits := make(map[string]bitbucket.HashCache)
-	for _, commit := range commits {
-		diffStats, err := a.Bitbucket.CommitsDiffStats(commit.Repository.Name, commit.Hash)
-		if err != nil {
-			logrus.WithError(err).Error("can't take diff information from bitbucket")
-			return
-		}
-		for _, diffStat := range diffStats {
-			if strings.Contains(diffStat.New.Path, ".sql") {
-				newMapSqlCommits[commit.Hash] = bitbucket.HashCache{Repository: commit.Repository.Name, Path: diffStat.New.Path, Message: commit.Message}
-			}
-		}
+	mapSqlCommits, err := a.SqlCommitsCache(commits)
+	if err != nil {
+		logrus.WithError(err).Error("can't take diff information from bitbucket")
+		return
 	}
-	a.CommitsCache = newMapSqlCommits
+	a.CommitsCache = mapSqlCommits
 }
 
 // MigrationMessages returns slice of all miigration files
@@ -303,18 +302,11 @@ func (a *App) MigrationMessages() ([]string, error) {
 		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
 		return []string{}, err
 	}
-	newCommitsCache := make(map[string]bitbucket.HashCache)
-	for _, commit := range commits {
-		diffStats, err := a.Bitbucket.CommitsDiffStats(commit.Repository.Name, commit.Hash)
-		if err != nil {
-			logrus.WithError(err).Error("can't take diff information from bitbucket")
-			return nil, err
-		}
-		for _, diffStat := range diffStats {
-			if strings.Contains(diffStat.New.Path, ".sql") {
-				newCommitsCache[commit.Hash] = bitbucket.HashCache{Repository: commit.Repository.Name, Path: diffStat.New.Path, Message: commit.Message}
-			}
-		}
+
+	newCommitsCache, err := a.SqlCommitsCache(commits)
+	if err != nil {
+		logrus.WithError(err).Error("can't take diff information from bitbucket")
+		return nil, err
 	}
 	var files []string
 	for hash, cache := range newCommitsCache {
@@ -329,4 +321,21 @@ func (a *App) MigrationMessages() ([]string, error) {
 	}
 	a.CommitsCache = newCommitsCache
 	return files, nil
+}
+
+// SqlCommits returns commits cache with sql migration
+func (a *App) SqlCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCache, error) {
+	newMapSqlCommits := make(map[string]CommitsCache)
+	for _, commit := range commits {
+		diffStats, err := a.Bitbucket.CommitsDiffStats(commit.Repository.Name, commit.Hash)
+		if err != nil {
+			return nil, err
+		}
+		for _, diffStat := range diffStats {
+			if strings.Contains(diffStat.New.Path, ".sql") {
+				newMapSqlCommits[commit.Hash] = CommitsCache{Repository: commit.Repository.Name, Path: diffStat.New.Path, Message: commit.Message}
+			}
+		}
+	}
+	return newMapSqlCommits, nil
 }
