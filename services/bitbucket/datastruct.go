@@ -9,46 +9,6 @@ type HashCache struct {
 	Message    string
 }
 
-// PullRequests struct of answer from bitbucket about pullrequests
-// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/pullrequests#get
-type pullRequests struct {
-	Pagelen int           `json:"pagelen"`
-	Page    int           `json:"page"`
-	Size    int           `json:"size"`
-	Next    string        `json:"next"`
-	Values  []pullRequest `json:"values"`
-}
-
-// Repositories struct of answer from bitbucket about Repositories
-// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories
-type repositories struct {
-	Pagelen int          `json:"pagelen"`
-	Page    int          `json:"page"`
-	Size    int          `json:"size"`
-	Next    string       `json:"next"`
-	Values  []repository `json:"values"`
-}
-
-// Commits struct of answer from bitbucket about Commits
-// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/commit/%7Bnode%7D
-type commits struct {
-	Pagelen int      `json:"pagelen"`
-	Page    int      `json:"page"`
-	Size    int      `json:"size"`
-	Next    string   `json:"next"`
-	Values  []commit `json:"values"`
-}
-
-// DiffStats struct of answer from bitbucket about DiffStats
-// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/diffstat/%7Bspec%7D
-type diffStats struct {
-	Pagelen int        `json:"pagelen"`
-	Page    int        `json:"page"`
-	Size    int        `json:"size"`
-	Next    string     `json:"next"`
-	Values  []diffStat `json:"values"`
-}
-
 // PullRequest struct of pull request from bitbucket
 // https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/pullrequests#get
 type pullRequest struct {
