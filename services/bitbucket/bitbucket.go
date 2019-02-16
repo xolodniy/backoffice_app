@@ -107,21 +107,21 @@ func (b *Bitbucket) PullRequestsList(repoSlug string) ([]pullRequest, error) {
 }
 
 // PullRequestCommits returns commits in pull request by pull request id and repository slug
-func (b *Bitbucket) PullRequestCommits(repoSlug, prID string) ([]commit, error) {
+func (b *Bitbucket) PullRequestCommits(repoSlug, prID string) ([]Commit, error) {
 	type commits struct {
 		Next   string   `json:"next"`
-		Values []commit `json:"values"`
+		Values []Commit `json:"values"`
 	}
 	var prCommits = commits{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + prID + "/commits"}
 	for {
 		res, err := b.do(prCommits.Next)
 		if err != nil {
-			return []commit{}, err
+			return []Commit{}, err
 		}
 		var nextCommits commits
 		err = json.Unmarshal(res, &nextCommits)
 		if err != nil {
-			return []commit{}, err
+			return []Commit{}, err
 		}
 		for _, commit := range nextCommits.Values {
 			prCommits.Values = append(prCommits.Values, commit)
@@ -174,7 +174,7 @@ func (b *Bitbucket) SrcFile(repoSlug, spec, path string) (string, error) {
 }
 
 // MigrationCommitsOfOpenedPRs returns commits with migration diff
-func (b *Bitbucket) CommitsOfOpenedPRs() ([]commit, error) {
+func (b *Bitbucket) CommitsOfOpenedPRs() ([]Commit, error) {
 	repositories, err := b.RepositoriesList()
 	if err != nil {
 		return nil, err
@@ -187,13 +187,11 @@ func (b *Bitbucket) CommitsOfOpenedPRs() ([]commit, error) {
 			return nil, err
 		}
 		for _, pullRequest := range pullRequests {
-			if pullRequest.State == "OPEN" {
-				allPullRequests = append(allPullRequests, pullRequest)
-			}
+			allPullRequests = append(allPullRequests, pullRequest)
 		}
 	}
 
-	var allCommits []commit
+	var allCommits []Commit
 	for _, pullRequest := range allPullRequests {
 		commits, err := b.PullRequestCommits(pullRequest.Source.Repository.Name, strconv.FormatInt(pullRequest.ID, 10))
 		if err != nil {
