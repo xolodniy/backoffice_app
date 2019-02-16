@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"backoffice_app/config"
@@ -274,20 +275,46 @@ func (a *App) ReportGitMigrations() {
 
 // FillCache fill cache commits for searching new migrations
 func (a *App) FillCache() {
-	commitsCache, err := a.Bitbucket.MigrationCommitsOfOpenedPRs()
+	commits, err := a.Bitbucket.CommitsOfOpenedPRs()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
 		return
 	}
-	a.CommitsCache = commitsCache
+	newMapSqlCommits := make(map[string]bitbucket.HashCache)
+	for _, commit := range commits {
+		diffStats, err := a.Bitbucket.CommitsDiffStats(commit.Repository.Name, commit.Hash)
+		if err != nil {
+			logrus.WithError(err).Error("can't take diff information from bitbucket")
+			return
+		}
+		for _, diffStat := range diffStats {
+			if strings.Contains(diffStat.New.Path, ".sql") {
+				newMapSqlCommits[commit.Hash] = bitbucket.HashCache{Repository: commit.Repository.Name, Path: diffStat.New.Path, Message: commit.Message}
+			}
+		}
+	}
+	a.CommitsCache = newMapSqlCommits
 }
 
 // MigrationMessages returns slice of all miigration files
 func (a *App) MigrationMessages() ([]string, error) {
-	newCommitsCache, err := a.Bitbucket.MigrationCommitsOfOpenedPRs()
+	commits, err := a.Bitbucket.CommitsOfOpenedPRs()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
 		return []string{}, err
+	}
+	newCommitsCache := make(map[string]bitbucket.HashCache)
+	for _, commit := range commits {
+		diffStats, err := a.Bitbucket.CommitsDiffStats(commit.Repository.Name, commit.Hash)
+		if err != nil {
+			logrus.WithError(err).Error("can't take diff information from bitbucket")
+			return nil, err
+		}
+		for _, diffStat := range diffStats {
+			if strings.Contains(diffStat.New.Path, ".sql") {
+				newCommitsCache[commit.Hash] = bitbucket.HashCache{Repository: commit.Repository.Name, Path: diffStat.New.Path, Message: commit.Message}
+			}
+		}
 	}
 	var files []string
 	for hash, cache := range newCommitsCache {
