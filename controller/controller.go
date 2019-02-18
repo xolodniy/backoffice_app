@@ -51,9 +51,6 @@ func (c *Controller) initRoutes() {
 		ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
 	})
 	c.Gin.POST("/sprintreport", c.sprintReport)
-
-	c.Gin.POST("/api/v1/git/onevent/push", c.gitHandlerOnEventPush)
-
 }
 
 func (c *Controller) sprintReport(ctx *gin.Context) {
