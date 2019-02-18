@@ -316,7 +316,7 @@ func (a *App) MigrationMessages() ([]string, error) {
 				logrus.WithError(err).Error("can't take information about file from bitbucket")
 				return []string{}, err
 			}
-			files = append(files, cache.Message+"\n"+file)
+			files = append(files, cache.Message+"\n```"+file+"```\n")
 		}
 	}
 	a.CommitsCache = newCommitsCache
