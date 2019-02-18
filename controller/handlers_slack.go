@@ -3,39 +3,32 @@ package controller
 import (
 	"net/http"
 
-	"backoffice_app/types"
-
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/sirupsen/logrus"
 )
 
-type lastActivityRequest struct {
-	Token       string `form:"token" binding:"required"`
-	ResponseURL string `form:"response_url" binding:"required"`
-}
-
 func (c *Controller) slackLastActivityHandler(ctx *gin.Context) {
 
-	form := lastActivityRequest{}
-	err := ctx.Bind(&form)
+	form := struct {
+		Token       string `form:"token" binding:"required"`
+		ResponseURL string `form:"response_url" binding:"required"`
+	}{}
+	err := ctx.ShouldBindWith(&form, binding.FormPost)
 	if err != nil {
-		logrus.WithError(err).Error("Can't bind to the form.")
 		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
 	//security check
 	// TODO: make signing checking https://api.slack.com/docs/verifying-requests-from-slack
-	if form.Token != "t2LZHz5L0rNuCxSkDt07dVzu" {
+	if form.Token != c.Config.Slack.AppTokenIn {
 		logrus.Error("Invalid token")
 		ctx.String(http.StatusUnauthorized, "Invalid token")
 		return
 	}
 	//should to answer to slack and run goroutine with callback
-	ctx.JSON(http.StatusOK, struct {
-		Text        string             `json:"text"`
-		Attachments []types.Attachment `json:"attachments"`
-	}{
-		Text: "Report is preparing. Your request will be processed soon.",
+	ctx.JSON(http.StatusOK, gin.H{
+		"text": "Report is preparing. Your request will be processed soon.",
 	})
 	go c.App.MakeLastActivityReportWithCallback(form.ResponseURL)
 }

@@ -263,7 +263,7 @@ func (a *App) ReportSlackEndingFreeSpace() {
 func (a *App) MakeLastActivityReportWithCallback(callbackUrl string) {
 	report, err := a.Hubstaff.GetLastActivityReport()
 	if err != nil {
-		logrus.WithError(err).Errorf("Can't get last activity report from Hubstaff.")
+		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
 	jsonReport, err := json.Marshal(struct {
