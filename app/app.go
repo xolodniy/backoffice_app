@@ -8,12 +8,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strings"
 	"io"
 	"mime/multipart"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"backoffice_app/config"
@@ -286,7 +286,7 @@ func (a *App) ReportGitMigrations() {
 	}
 	for _, message := range messages {
 		if message != "" {
-			a.Slack.SendMessage(message, a.Slack.ChanMigrations)
+			a.Slack.SendMessage(message, a.Slack.ChanMigrations, false)
 		}
 	}
 }

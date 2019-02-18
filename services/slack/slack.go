@@ -66,7 +66,7 @@ func New(config *config.Slack) Slack {
 func (s *Slack) SendMessage(text, channel string, asUser bool) {
 	var message = &types.PostChannelMessage{
 		Token:    s.OutToken,
-		Channel:  chanel,
+		Channel:  channel,
 		AsUser:   asUser,
 		Text:     text,
 		Username: s.BotName,
