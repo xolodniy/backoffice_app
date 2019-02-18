@@ -10,7 +10,6 @@ cron:
   employeesexceededestimatetime: "00 00 07 * * *"
   reportslackspaceending: "00 00 07 * * *"
   reportgitmigrations: "@hourly"
-gittoken: {{ gitlab_token }}
 jira:
   apiurl: https://theflow.atlassian.net
   auth:

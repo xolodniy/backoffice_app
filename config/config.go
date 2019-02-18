@@ -22,7 +22,6 @@ type Main struct {
 		ReportSlackSpaceEnding        string
 		ReportGitMigrations           string
 	}
-	GitToken string
 	Jira
 	Hubstaff
 	Slack
@@ -60,6 +59,7 @@ type Slack struct {
 	RestVolume        float64
 }
 
+// Bitbucket is template to storing bitbucket configuration
 type Bitbucket struct {
 	APIUrl string
 	Owner  string
