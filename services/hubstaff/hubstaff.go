@@ -166,11 +166,11 @@ func (h *Hubstaff) GetLastActivityReport() (string, error) {
 	message := ""
 	for _, activity := range activities.List {
 		projectName, err := h.getProjectNameById(activity.LastProjectId)
-		if err != err {
+		if err != nil {
 			return "", err
 		}
 		taskJiraKey, err := h.getJiraTaskKeyById(activity.LastTaskId)
-		if err != err {
+		if err != nil {
 			return "", err
 		}
 		if projectName != "" || taskJiraKey != "" {
