@@ -284,7 +284,6 @@ func (a *App) ReportSprintsIsuues(project, chanel string) error {
 		logrus.WithError(err).Error("can't take information about issues stands for next sprint from jira")
 		return err
 	}
-	//TODO узнать почему не выводится информация о спринте в issue
 	issuesFromFutureSprint, err := a.Jira.IssuesFromFutureSprintReport(project)
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about issues from future sprint from jira")
@@ -374,10 +373,7 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename string) (strin
 		return "", err
 	}
 	for _, issue := range issues {
-		var epicName = ""
-		if issue.Fields.Epic != nil {
-			epicName = issue.Fields.Epic.Name
-		}
+		epicName := fmt.Sprint(issue.Fields.Unknowns["customfield_10008"])
 		err := writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName, issue.ID})
 		if err != nil {
 			return "", err
