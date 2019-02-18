@@ -169,10 +169,7 @@ func (h *Hubstaff) GetLastActivityReport() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		taskJiraKey, err := h.getJiraTaskKeyById(activity.LastTaskId)
-		if err != nil {
-			return "", err
-		}
+		taskJiraKey, _ := h.getJiraTaskKeyById(activity.LastTaskId)
 		if projectName != "" || taskJiraKey != "" {
 			if taskJiraKey != "" {
 				taskJiraKey = fmt.Sprintf(" / %s", taskJiraKey)
