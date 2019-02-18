@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"backoffice_app/services/jira"
 	"backoffice_app/services/slack"
 
-	"github.com/gin-gonic/gin/json"
 	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
 	"github.com/xanzy/go-gitlab"
@@ -260,7 +260,7 @@ func (a *App) ReportSlackEndingFreeSpace() {
 }
 
 // MakeLastActivityReportWithCallback posts last activity to slack to defined callbackUrl
-func (a *App) MakeLastActivityReportWithCallback(callbackUrl string) {
+func (a *App) MakeLastActivityReportWithCallback(callbackURL string) {
 	report, err := a.Hubstaff.GetLastActivityReport()
 	if err != nil {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
@@ -273,13 +273,13 @@ func (a *App) MakeLastActivityReportWithCallback(callbackUrl string) {
 		logrus.WithError(err).Errorf("Can't convert last activity report to json. Report is:\n%s", report)
 		return
 	}
-	resp, err := http.Post(callbackUrl, "application/json", bytes.NewReader(jsonReport))
+	resp, err := http.Post(callbackURL, "application/json", bytes.NewReader(jsonReport))
 	if err != nil {
-		logrus.WithError(err).Errorf("Can't send last activity report by url : %s", callbackUrl)
+		logrus.WithError(err).Errorf("Can't send last activity report by url : %s", callbackURL)
 		return
 	}
 	if resp.StatusCode != http.StatusOK {
 		logrus.Errorf("Error while sending last activity report by url : %s, status code : %d",
-			callbackUrl, resp.StatusCode)
+			callbackURL, resp.StatusCode)
 	}
 }
