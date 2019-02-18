@@ -196,3 +196,72 @@ func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
 	}
 	return issuesAfterReview, nil
 }
+
+// IssuesClosedForSprintReport retrieves issues with closed status (bugs and stories)
+func (j *Jira) IssuesClosedForSprintReport(project string) ([]Issue, error) {
+	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, err
+	}
+	var issuesWithClosedStatus []Issue
+	for _, issue := range issues {
+		if issue.Fields.Status.Name == StatusClosed {
+			issuesWithClosedStatus = append(issuesWithClosedStatus, issue)
+			continue
+		}
+	}
+	return issuesWithClosedStatus, nil
+}
+
+// IssuesClosedSubtasksForSprintReport retrieves issues with closed subtasks (bugs and stories)
+func (j *Jira) IssuesClosedSubtasksForSprintReport(project string) ([]Issue, error) {
+	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, err
+	}
+	var issuesWithClosedSubtasks []Issue
+Loop:
+	for _, issue := range issues {
+		for _, subtask := range issue.Fields.Subtasks {
+			if subtask.Fields.Status.Name != StatusClosed {
+				continue Loop
+			}
+		}
+		issuesWithClosedSubtasks = append(issuesWithClosedSubtasks, issue)
+	}
+	return issuesWithClosedSubtasks, nil
+}
+
+// IssuesForNextSprintReport retrieves issues that stands for next sprint (bugs and stories)
+func (j *Jira) IssuesForNextSprintReport(project string) ([]Issue, error) {
+	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, err
+	}
+
+	var issuesForNextSprint []Issue
+Loop:
+	for _, issue := range issues {
+		for _, subtask := range issue.Fields.Subtasks {
+			if subtask.Fields.Status.Name != StatusClosed {
+				issuesForNextSprint = append(issuesForNextSprint, issue)
+				continue Loop
+			}
+		}
+	}
+	return issues, nil
+}
+
+// IssuesFromFutureSprintReport retrieves issues from future sprint (bugs and stories)
+func (j *Jira) IssuesFromFutureSprintReport(project string) ([]Issue, error) {
+	//TODO только в следующем спринте
+	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in futureSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, err
+	}
+	return issues, nil
+}
