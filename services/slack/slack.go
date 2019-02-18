@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
 	"backoffice_app/config"
 	"backoffice_app/types"
@@ -22,6 +23,7 @@ type Slack struct {
 	APIURL          string
 	TotalVolume     float64
 	RestVolume      float64
+	Secret          string
 }
 
 // FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
@@ -54,15 +56,16 @@ func New(config *config.Slack) Slack {
 		APIURL:          config.APIURL,
 		TotalVolume:     config.TotalVolume,
 		RestVolume:      config.RestVolume,
+		Secret:          config.Secret,
 	}
 }
 
 // SendMessage is main message sending method
-func (s *Slack) SendMessage(text string) {
+func (s *Slack) SendMessage(text, chanel string, asUser bool) {
 	var message = &types.PostChannelMessage{
 		Token:    s.OutToken,
-		Channel:  s.BackofficeAppID,
-		AsUser:   false,
+		Channel:  chanel,
+		AsUser:   asUser,
 		Text:     text,
 		Username: s.BotName,
 		IconURL:  "",
@@ -122,9 +125,9 @@ func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 func (s *Slack) Files() ([]Files, error) {
 	var files []Files
 	for i := 0; ; i++ {
-		url := fmt.Sprintf("%s/files.list?token=%s&page=%v", s.APIURL, s.InToken, i)
+		urlStr := fmt.Sprintf("%s/files.list?token=%s&page=%v", s.APIURL, s.InToken, i)
 
-		req, err := http.NewRequest("GET", url, nil)
+		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -192,4 +195,48 @@ func (s *Slack) DeleteFile(id string) error {
 	}
 
 	return err
+}
+
+func (s *Slack) UploadFile(chanel, contentType string, file *bytes.Buffer) error {
+	u, err := url.ParseRequestURI(s.APIURL)
+	if err != nil {
+		return err
+	}
+	u.Path = "/api/files.upload"
+	urlStr := u.String()
+
+	v := url.Values{}
+	v.Add("channels", chanel)
+
+	req, err := http.NewRequest("POST", urlStr, file)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.OutToken))
+	req.URL.RawQuery = v.Encode()
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	var responseBody struct {
+		Ok      bool   `json:"ok"`
+		Error   string `json:"error"`
+		Warning string `json:"warning"`
+	}
+	if err := json.Unmarshal(respBody, &responseBody); err != nil {
+		return err
+	}
+	if !responseBody.Ok {
+		return fmt.Errorf(responseBody.Error)
+	}
+
+	return nil
 }
