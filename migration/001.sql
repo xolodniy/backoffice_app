@@ -1,7 +1,0 @@
-CREATE TABLE equipment (
-  id      BIGSERIAL PRIMARY KEY NOT NULL,
-  number  TEXT NOT NULL,
-  applied BOOLEAN NOT NULL DEFAULT FALSE
-);
-
-ALTER TABLE equipment ADD CONSTRAINT uniq_number UNIQUE (number);
