@@ -2,35 +2,45 @@ package app
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"backoffice_app/config"
+	"backoffice_app/services/bitbucket"
 	"backoffice_app/services/hubstaff"
 	"backoffice_app/services/jira"
 	"backoffice_app/services/slack"
 
 	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
-	"github.com/xanzy/go-gitlab"
 )
+
+// CommitsCache struct of hash commits map
+type CommitsCache struct {
+	Repository string
+	Path       string
+	Message    string
+}
 
 // App is main App implementation
 type App struct {
-	Hubstaff hubstaff.Hubstaff
-	Slack    slack.Slack
-	Jira     jira.Jira
-	Git      *gitlab.Client
-	Config   config.Main
+	Hubstaff     hubstaff.Hubstaff
+	Slack        slack.Slack
+	Jira         jira.Jira
+	Bitbucket    bitbucket.Bitbucket
+	Config       config.Main
+	CommitsCache map[string]CommitsCache
 }
 
 // New is main App constructor
 func New(conf *config.Main) *App {
 	return &App{
-		Hubstaff: hubstaff.New(&conf.Hubstaff),
-		Slack:    slack.New(&conf.Slack),
-		Jira:     jira.New(&conf.Jira),
-		Git:      gitlab.NewClient(nil, conf.GitToken),
-		Config:   *conf,
+		Hubstaff:     hubstaff.New(&conf.Hubstaff),
+		Slack:        slack.New(&conf.Slack),
+		Jira:         jira.New(&conf.Jira),
+		Bitbucket:    bitbucket.New(&conf.Bitbucket),
+		Config:       *conf,
+		CommitsCache: make(map[string]CommitsCache),
 	}
 }
 
@@ -73,8 +83,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	for _, worker := range hubstaffResponse.Workers {
 		message += fmt.Sprintf("\n%s %s", worker.TimeWorked, worker.Name)
 	}
-
-	a.Slack.SendMessage(message)
+	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp)
 }
 
 // GetDetailedWorkersWorkedTimeAndSendToSlack gather detailed workers work time made through period between dates and send it to Slack channel
@@ -112,7 +121,8 @@ func (a *App) GetDetailedWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWo
 			}
 		}
 	}
-	a.Slack.SendMessage(message)
+
+	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp)
 }
 
 // ReportIsuuesWithClosedSubtasks create report about issues with closed subtasks
@@ -123,7 +133,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues with all closed subtasks")
+		a.Slack.SendMessage("There are no issues with all closed subtasks", a.Slack.ChanBackofficeApp)
 		return
 	}
 	msgBody := "Issues have all closed subtasks:\n"
@@ -131,7 +141,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 	}
-	a.Slack.SendMessage(msgBody)
+	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
 }
 
 // ReportEmployeesWithExceededEstimateTime create report about employees with ETA overhead
@@ -150,7 +160,7 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 		jiraRemainingEtaMap[issue.Fields.Assignee.EmailAddress] += issue.Fields.TimeTracking.RemainingEstimateSeconds
 	}
 	if len(jiraRemainingEtaMap) == 0 {
-		a.Slack.SendMessage("There are no issues with remaining ETA.")
+		a.Slack.SendMessage("There are no issues with remaining ETA.", a.Slack.ChanBackofficeApp)
 		return
 	}
 	//get logged time from Hubstaff for this week
@@ -195,7 +205,7 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 		message = "No one developer has exceeded estimate time"
 	}
 
-	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message))
+	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message), a.Slack.ChanBackofficeApp)
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
@@ -206,7 +216,7 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no employees with exceeded subtasks")
+		a.Slack.SendMessage("There are no employees with exceeded subtasks", a.Slack.ChanBackofficeApp)
 		return
 	}
 	var index = 1
@@ -220,7 +230,7 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 			index++
 		}
 	}
-	a.Slack.SendMessage(msgBody)
+	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
 }
 
 // ReportIsuuesAfterSecondReview create report about issues after second review round
@@ -231,7 +241,7 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues after second review round")
+		a.Slack.SendMessage("There are no issues after second review round", a.Slack.ChanBackofficeApp)
 		return
 	}
 	msgBody := "Issues after second review round:\n"
@@ -239,7 +249,7 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 	}
-	a.Slack.SendMessage(msgBody)
+	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
@@ -253,5 +263,79 @@ func (a *App) ReportSlackEndingFreeSpace() {
 		return
 	}
 	msgBody := fmt.Sprintf("Free space on slack end.\n")
-	a.Slack.SendMessage(msgBody)
+	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
+}
+
+// ReportGitMigrations create report about new git migrations
+func (a *App) ReportGitMigrations() {
+	messages, err := a.MigrationMessages()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information git migrations from bitbucket")
+		return
+	}
+	for _, message := range messages {
+		if message != "" {
+			a.Slack.SendMessage(message, a.Slack.ChanMigrations)
+		}
+	}
+}
+
+// FillCache fill cache commits for searching new migrations
+func (a *App) FillCache() {
+	commits, err := a.Bitbucket.CommitsOfOpenedPRs()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
+		return
+	}
+	mapSqlCommits, err := a.SqlCommitsCache(commits)
+	if err != nil {
+		logrus.WithError(err).Error("can't take diff information from bitbucket")
+		return
+	}
+	a.CommitsCache = mapSqlCommits
+}
+
+// MigrationMessages returns slice of all miigration files
+func (a *App) MigrationMessages() ([]string, error) {
+	commits, err := a.Bitbucket.CommitsOfOpenedPRs()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
+		return []string{}, err
+	}
+
+	newCommitsCache, err := a.SqlCommitsCache(commits)
+	if err != nil {
+		logrus.WithError(err).Error("can't take diff information from bitbucket")
+		return nil, err
+	}
+	var files []string
+	for hash, cache := range newCommitsCache {
+		if _, ok := a.CommitsCache[hash]; !ok {
+			file, err := a.Bitbucket.SrcFile(cache.Repository, hash, cache.Path)
+			if err != nil {
+				logrus.WithError(err).Error("can't take information about file from bitbucket")
+				return []string{}, err
+			}
+			files = append(files, cache.Message+"\n```"+file+"```\n")
+		}
+	}
+	a.CommitsCache = newCommitsCache
+	return files, nil
+}
+
+// SqlCommits returns commits cache with sql migration
+func (a *App) SqlCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCache, error) {
+	newMapSqlCommits := make(map[string]CommitsCache)
+	for _, commit := range commits {
+		diffStats, err := a.Bitbucket.CommitsDiffStats(commit.Repository.Name, commit.Hash)
+		if err != nil {
+			return nil, err
+		}
+		for _, diffStat := range diffStats {
+			if strings.Contains(diffStat.New.Path, ".sql") {
+				newMapSqlCommits[commit.Hash] = CommitsCache{Repository: commit.Repository.Name, Path: diffStat.New.Path, Message: commit.Message}
+			}
+		}
+	}
+	return newMapSqlCommits, nil
 }

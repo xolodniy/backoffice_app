@@ -157,6 +157,7 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
     reportaftersecondreview: "00 00 07 * * *"   — preference to send report about issues after second round review
     employeesexceededtasks: "00 00 07 * * *"    — preference to send report about employers that have exceeded tasks
     reportslackspaceending: "00 00 07 * * *"    — start everyday at 7:00 to send report if free space on slack < 0.5GB
+    reportgitmigrations: "@hourly"              — preference to send report about new git migrations
 
 ### API Description
 

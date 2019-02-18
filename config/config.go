@@ -20,11 +20,12 @@ type Main struct {
 		EmployeesExceededTasks        string
 		EmployeesExceededEstimateTime string
 		ReportSlackSpaceEnding        string
+		ReportGitMigrations           string
 	}
-	GitToken string
 	Jira
 	Hubstaff
 	Slack
+	Bitbucket
 }
 
 // Jira is template to storing jira configuration
@@ -48,14 +49,24 @@ type Hubstaff struct {
 
 // Slack is template to storing slack configuration
 type Slack struct {
-	InToken         string
-	OutToken        string
-	BotName         string
-	BackOfficeAppID string
-	MigrationsID    string
-	APIURL          string
-	TotalVolume     float64
-	RestVolume      float64
+	InToken           string
+	OutToken          string
+	BotName           string
+	ChanBackofficeApp string
+	ChanMigrations    string
+	APIURL            string
+	TotalVolume       float64
+	RestVolume        float64
+}
+
+// Bitbucket is template to storing bitbucket configuration
+type Bitbucket struct {
+	APIUrl string
+	Owner  string
+	Auth   struct {
+		Username string
+		Password string
+	}
 }
 
 // GetConfig return config parsed from config/config.yml
