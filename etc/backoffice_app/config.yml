@@ -25,6 +25,7 @@ slack:
   outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
   totalVolume: 5.0
   restVolume: 0.0
+  secret: 046b6a43f79bca89a7f9056921906b25
 
 hubstaff:
   apiurl: https://api.hubstaff.com
