@@ -9,17 +9,24 @@ cron:
   employeesexceededtasks: "00 00 07 * * *"
   employeesexceededestimatetime: "00 00 07 * * *"
   reportslackspaceending: "00 00 07 * * *"
-gittoken:
+  reportgitmigrations: "@hourly"
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
     username:
     password:
 
+bitbucket:
+  apiurl: https://api.bitbucket.org/2.0
+  owner: theflowglobal
+  auth:
+    username:
+    password:
+
 slack:
   apiurl: https://slack.com/api
-  backofficeappid: back-office-app
-  migrationsid: migrations
+  chanbackofficeapp: back-office-app
+  chanmigrations: migrations
   botname: Back Office Bot
   intoken: xoxp-281270780213-532563372454-545645521588-6e70abc49c386bb1ad94465d19866188
   outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
