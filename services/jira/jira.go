@@ -51,6 +51,7 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 				ValidateQuery: "strict", //strict Returns a 400 response code if any errors are found, along with a list of all errors (and warnings).
 				Fields: []string{
 					"customfield_10026",
+					"customfield_10008",
 					"timetracking",
 					"timespent",
 					"timeoriginalestimate",
