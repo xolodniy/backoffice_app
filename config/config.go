@@ -22,7 +22,6 @@ type Main struct {
 		ReportSlackSpaceEnding        string
 		ReportGitMigrations           string
 	}
-	GitToken string
 	Jira
 	Hubstaff
 	Slack
