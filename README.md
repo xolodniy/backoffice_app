@@ -28,6 +28,10 @@
 
     $ ./backoffice-app obtain-hubstaff-token
 
+*Send last activity report to slack right now*
+
+    $ ./backoffice-app send-last-activity-report-now
+
 ## **Directory Structure**
     app/          — Go application domain layer
     controller/   — Go router layer

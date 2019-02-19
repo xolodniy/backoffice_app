@@ -367,3 +367,12 @@ func (a *App) MakeLastActivityReportWithCallback(callbackURL string) {
 			callbackURL, resp.StatusCode)
 	}
 }
+
+func (a *App) SendLastActivityReportNow() {
+	report, err := a.Hubstaff.GetLastActivityReport()
+	if err != nil {
+		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
+		return
+	}
+	a.Slack.SendMessage(report, a.Slack.ChanBackofficeApp)
+}

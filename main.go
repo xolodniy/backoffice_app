@@ -205,6 +205,14 @@ func main() {
 					fmt.Printf("Hubstaff auth token is:\n%s\n", authToken)
 				},
 			},
+			{
+				Name:  "send-last-activity-report-now",
+				Usage: "Send last activity report right now",
+				Action: func(c *cli.Context) {
+					application := app.New(cfg)
+					application.SendLastActivityReportNow()
+				},
+			},
 		}
 
 		if err := cliApp.Run(os.Args); err != nil {
