@@ -48,4 +48,5 @@ func (c *Controller) initRoutes() {
 		ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
 	})
 
+	c.Gin.POST("/api/v1/slack/last_activity", c.slackLastActivityHandler)
 }

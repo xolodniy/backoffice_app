@@ -23,6 +23,7 @@ type Slack struct {
 	APIURL            string
 	TotalVolume       float64
 	RestVolume        float64
+	AppTokenIn        string
 }
 
 // FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
@@ -56,6 +57,7 @@ func New(config *config.Slack) Slack {
 		APIURL:            config.APIURL,
 		TotalVolume:       config.TotalVolume,
 		RestVolume:        config.RestVolume,
+		AppTokenIn:        config.AppTokenIn,
 	}
 }
 
