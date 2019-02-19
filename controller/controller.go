@@ -77,13 +77,11 @@ func (c *Controller) sprintReport(ctx *gin.Context) {
 		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
-	userId := ctx.PostForm("user_id")
-	text := ctx.PostForm("text")
-	if userId != "" && text != "" {
+	if request.UserId != "" && request.Text != "" {
 		go func() {
 			err := c.App.ReportSprintsIsuues(request.Text, request.UserId)
 			if err != nil {
-				c.App.Slack.SendMessage(err.Error(), userId, true)
+				c.App.Slack.SendMessage(err.Error(), request.UserId, true)
 			}
 		}()
 		ctx.JSON(http.StatusOK, "ok, wait for report")
