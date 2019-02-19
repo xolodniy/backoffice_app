@@ -395,83 +395,72 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 	}
 	a.Slack.SendMessage(msgBody, channel, true)
 
-	err = a.CreateIssuesCsvReport(issuesWithClosedSubtasks, "issuesWithClosedSubtasks", channel)
+	fileIssuesClosedSubtasks, err := a.CreateIssuesCsvReport(issuesWithClosedSubtasks, "issuesWithClosedSubtasks")
 	if err != nil && err.Error() != "empty" {
 		logrus.WithError(err).Error("can't create csv file of issues with closed subtasks from jira")
 		return err
 	}
-	err = a.CreateIssuesCsvReport(issuesForNextSprint, "issuesForNextSprint", channel)
+	fileIssuesNextSptint, err := a.CreateIssuesCsvReport(issuesForNextSprint, "issuesForNextSprint")
 	if err != nil && err.Error() != "empty" {
 		logrus.WithError(err).Error("can't create csv file of issues stands for next sprint from jira")
 		return err
 	}
-	err = a.CreateIssuesCsvReport(issuesFromFutureSprint, "issuesFromFutureSprint", channel)
+	fileIssuesFromFutureSprint, err := a.CreateIssuesCsvReport(issuesFromFutureSprint, "issuesFromFutureSprint")
 	if err != nil && err.Error() != "empty" {
 		logrus.WithError(err).Error("can't create csv file of issues from future sprint from jira")
 		return err
 	}
 
-	//if fileIssuesClosedSubtasks != "" {
-	//	err := a.SendFileToSlack(channel, fileIssuesClosedSubtasks)
-	//	if err != nil {
-	//		logrus.WithError(err).Error("can't send csv file to slack")
-	//		return err
-	//	}
-	//}
-	//if fileIssuesNextSptint != "" {
-	//	err := a.SendFileToSlack(channel, fileIssuesNextSptint)
-	//	if err != nil {
-	//		logrus.WithError(err).Error("can't send csv file to slack")
-	//		return err
-	//	}
-	//}
-	//if fileIssuesFromFutureSprint != "" {
-	//	err := a.SendFileToSlack(channel, fileIssuesFromFutureSprint)
-	//	if err != nil {
-	//		logrus.WithError(err).Error("can't send csv file to slack")
-	//		return err
-	//	}
-	//}
+	if fileIssuesClosedSubtasks != "" {
+		err := a.SendFileToSlack(channel, fileIssuesClosedSubtasks)
+		if err != nil {
+			logrus.WithError(err).Error("can't send csv file to slack")
+			return err
+		}
+	}
+	if fileIssuesNextSptint != "" {
+		err := a.SendFileToSlack(channel, fileIssuesNextSptint)
+		if err != nil {
+			logrus.WithError(err).Error("can't send csv file to slack")
+			return err
+		}
+	}
+	if fileIssuesFromFutureSprint != "" {
+		err := a.SendFileToSlack(channel, fileIssuesFromFutureSprint)
+		if err != nil {
+			logrus.WithError(err).Error("can't send csv file to slack")
+			return err
+		}
+	}
 	return nil
 }
 
 // ReportSprintsIsuues create csv file with report about issues
-func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel string) error {
+func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename string) (string, error) {
 	if len(issues) == 0 {
-		return errors.New("empty")
+		return "", errors.New("empty")
 	}
-
-	body := &bytes.Buffer{}
-	writer := csv.NewWriter(body)
-	var fle [][]string
-	fle = append(fle, []string{"Type", "Key", "Summary", "Status", "Epic", "Name"})
-	err := writer.Write([]string{"Type", "Key", "Summary", "Status", "Epic", "Name"})
+	file, err := os.Create(filename + ".csv")
 	if err != nil {
-		return err
+		return "", err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	err = writer.Write([]string{"Type", "Key", "Summary", "Status", "Epic", "Name"})
+	if err != nil {
+		return "", err
 	}
 	for _, issue := range issues {
 		epicName := fmt.Sprint(issue.Fields.Unknowns["customfield_10008"])
-		fle = append(fle, []string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName, issue.ID})
 		err := writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName, issue.ID})
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
-	writer.Flush()
-
-	buff := &bytes.Buffer{}
-	mwriter := multipart.NewWriter(buff)
-	part, _ := mwriter.CreateFormFile("file", filename+".csv")
-	if _, err := io.Copy(part, body); err != nil {
-		return err
-	}
-	logrus.Debug(buff)
-	logrus.Debug(mwriter.FormDataContentType())
-	err = a.Slack.UploadFile(channel, mwriter.FormDataContentType(), buff)
-	if err != nil {
-		return err
-	}
-	return nil
+	return filename + ".csv", nil
 }
 
 // SendFileToSlack
@@ -490,7 +479,6 @@ func (a *App) SendFileToSlack(channel, fileName string) error {
 	}
 	writer.Close()
 	err = a.Slack.UploadFile(channel, writer.FormDataContentType(), body)
-	logrus.Debug(writer.FormDataContentType())
 	if err != nil {
 		return err
 	}
