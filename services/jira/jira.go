@@ -32,10 +32,11 @@ func New(config *config.Jira) Jira {
 
 // Status variables for jql requests
 var (
-	StatusClosed        = "Closed"
-	StatusTlReview      = "TL Review"
-	StatusPeerReview    = "In peer review"
-	StatusEmptyAssignee = "empty"
+	StatusClosed          = "Closed"
+	StatusTlReview        = "TL Review"
+	StatusPeerReview      = "In peer review"
+	StatusEmptyAssignee   = "empty"
+	StatusInClarification = "In clarification"
 )
 
 // issues searches issues in all sprints which opened now and returning list with issues in this sprints list
@@ -50,7 +51,7 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 				//Determines how to validate the JQL query and treat the validation results.
 				ValidateQuery: "strict", //strict Returns a 400 response code if any errors are found, along with a list of all errors (and warnings).
 				Fields: []string{
-					"customfield_10026",
+					"customfield_10026", //developer field
 					"timetracking",
 					"timespent",
 					"timeoriginalestimate",
@@ -195,4 +196,14 @@ func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
 		}
 	}
 	return issuesAfterReview, nil
+}
+
+// AssigneeOpenIssues searches Issues in all sprints which opened now and returning list with issues in this sprints list
+func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
+	request := fmt.Sprintf(`assignee != "%s" AND Sprint IN openSprints()`, StatusEmptyAssignee)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't create jira client: %s", err)
+	}
+	return issues, nil
 }
