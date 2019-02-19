@@ -51,7 +51,7 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 				ValidateQuery: "strict", //strict Returns a 400 response code if any errors are found, along with a list of all errors (and warnings).
 				Fields: []string{
 					"customfield_10026",
-					"customfield_10008",
+					"customfield_10008", //epic issue
 					"timetracking",
 					"timespent",
 					"timeoriginalestimate",
@@ -209,7 +209,6 @@ func (j *Jira) IssuesClosedForSprintReport(project string) ([]Issue, error) {
 	for _, issue := range issues {
 		if issue.Fields.Status.Name == StatusClosed {
 			issuesWithClosedStatus = append(issuesWithClosedStatus, issue)
-			continue
 		}
 	}
 	return issuesWithClosedStatus, nil
@@ -258,7 +257,6 @@ Loop:
 
 // IssuesFromFutureSprintReport retrieves issues from future sprint (bugs and stories)
 func (j *Jira) IssuesFromFutureSprintReport(project string) ([]Issue, error) {
-	//TODO только в следующем спринте
 	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in futureSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
 	issues, err := j.issues(request)
 	if err != nil {
