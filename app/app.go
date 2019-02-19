@@ -339,3 +339,50 @@ func (a *App) SqlCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCac
 	}
 	return newMapSqlCommits, nil
 }
+
+// ReportGitMigrations create report about new git migrations
+func (a *App) ReportSprintStatus() {
+	var developers = make(map[string][]jira.Issue)
+	issues, err := a.Jira.IssuesOfOpenSprints()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about issues of open sprint from jira")
+		return
+	}
+	if len(issues) == 0 {
+		a.Slack.SendMessage("There are no issues of open sprint", a.Slack.ChanBackofficeApp)
+		return
+	}
+	msgBody := "Sprint status:\n"
+	for _, issue := range issues {
+		developer := "No developer"
+		developerMap, err := issue.Fields.Unknowns.MarshalMap("customfield_10026")
+		if err != nil {
+			logrus.WithError(err).WithField("developerMap", fmt.Sprintf("%+v", developerMap)).
+				Error("can't make customfield_10026 map marshaling")
+		}
+		if developerMap != nil {
+			displayName, ok := developerMap["displayName"].(string)
+			if !ok {
+				logrus.WithField("displayName", fmt.Sprintf("%+v", developerMap["displayName"])).
+					Error("can't assert to string map displayName field")
+			}
+			developer = displayName
+		}
+		developers[developer] = append(developers[developer], issue)
+	}
+	for developer, issues := range developers {
+		var message string
+		for _, issue := range issues {
+			if issue.Fields.Status.Name != jira.StatusClosed && issue.Fields.Status.Name != jira.StatusInClarification {
+				message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+			}
+		}
+		if message == "" {
+			msgBody += fmt.Sprintf(developer + " - all tasks closed.\n")
+			continue
+		}
+		msgBody += fmt.Sprintf(developer + " - has open tasks:\n" + message)
+	}
+	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
+}
