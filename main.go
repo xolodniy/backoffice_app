@@ -99,6 +99,11 @@ func main() {
 				panic(err)
 			}
 
+			err = tm.AddTask(cfg.Cron.ReportSprintStatus, application.ReportSprintStatus)
+			if err != nil {
+				panic(err)
+			}
+
 			tm.Start()
 
 			log.Println("Task scheduler started.")
@@ -174,6 +179,14 @@ func main() {
 				Action: func(c *cli.Context) {
 					application := app.New(cfg)
 					application.ReportSlackEndingFreeSpace()
+				},
+			},
+			{
+				Name:  "get-slack-report-open-sprint-status",
+				Usage: "Gets report about open sprint status",
+				Action: func(c *cli.Context) {
+					application := app.New(cfg)
+					application.ReportSprintStatus()
 				},
 			},
 			{
