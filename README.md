@@ -149,6 +149,16 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
     Day of month | Yes        | 1-31            | * / , - ?
     Month        | Yes        | 1-12 or JAN-DEC | * / , -
     Day of week  | Yes        | 0-6 or SUN-SAT  | * / , - ?
+    
+You may use one of several pre-defined schedules in place of a cron expression.
+
+    Entry                  | Description                                | Equivalent To
+    -----                  | -----------                                | -------------
+    @yearly (or @annually) | Run once a year, midnight, Jan. 1st        | 0 0 0 1 1 *
+    @monthly               | Run once a month, midnight, first of month | 0 0 0 1 * *
+    @weekly                | Run once a week, midnight between Sat/Sun  | 0 0 0 * * 0
+    @daily (or @midnight)  | Run once a day, midnight                   | 0 0 0 * * *
+    @hourly                | Run once an hour, beginning of hour        | 0 0 * * * *
 
 #### Config.yml variables for cron 
     dailyworkersworkedtime: "00 00 07 * * *"    — preference to send daily worked time of worker
@@ -158,6 +168,7 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
     employeesexceededtasks: "00 00 07 * * *"    — preference to send report about employers that have exceeded tasks
     reportslackspaceending: "00 00 07 * * *"    — start everyday at 7:00 to send report if free space on slack < 0.5GB
     reportgitmigrations: "@hourly"              — preference to send report about new git migrations
+    reportsprintstatus: "00 00 07 * * MON"      - preference to send report about open sprint status
 
 ### API Description
 

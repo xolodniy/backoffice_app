@@ -21,6 +21,7 @@ type Main struct {
 		EmployeesExceededEstimateTime string
 		ReportSlackSpaceEnding        string
 		ReportGitMigrations           string
+		ReportSprintStatus            string
 	}
 	Jira
 	Hubstaff
