@@ -2,10 +2,7 @@ package app
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha256"
 	"encoding/csv"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -352,7 +349,7 @@ func (a *App) SqlCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCac
 }
 
 // ReportSprintsIsuues create report about Completed issues, Completed but not verified, Issues left for the next, Issues in next sprint
-func (a *App) ReportSprintsIsuues(project, chanel string) error {
+func (a *App) ReportSprintsIsuues(project, channel string) error {
 	issuesWithClosedStatus, err := a.Jira.IssuesClosedForSprintReport(project)
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about issues with closed status from jira")
@@ -396,78 +393,89 @@ func (a *App) ReportSprintsIsuues(project, chanel string) error {
 	if msgBody == "" {
 		msgBody = "There are no issues for report\n"
 	}
-	a.Slack.SendMessage(msgBody, chanel, true)
+	a.Slack.SendMessage(msgBody, channel, true)
 
-	fileIssuesClosedSubtasks, err := a.CreateIssuesCsvReport(issuesWithClosedSubtasks, "issuesWithClosedSubtasks")
+	err = a.CreateIssuesCsvReport(issuesWithClosedSubtasks, "issuesWithClosedSubtasks", channel)
 	if err != nil && err.Error() != "empty" {
 		logrus.WithError(err).Error("can't create csv file of issues with closed subtasks from jira")
 		return err
 	}
-	fileIssuesNextSptint, err := a.CreateIssuesCsvReport(issuesForNextSprint, "issuesForNextSprint")
+	err = a.CreateIssuesCsvReport(issuesForNextSprint, "issuesForNextSprint", channel)
 	if err != nil && err.Error() != "empty" {
 		logrus.WithError(err).Error("can't create csv file of issues stands for next sprint from jira")
 		return err
 	}
-	fileIssuesFromFutureSprint, err := a.CreateIssuesCsvReport(issuesFromFutureSprint, "issuesFromFutureSprint")
+	err = a.CreateIssuesCsvReport(issuesFromFutureSprint, "issuesFromFutureSprint", channel)
 	if err != nil && err.Error() != "empty" {
 		logrus.WithError(err).Error("can't create csv file of issues from future sprint from jira")
 		return err
 	}
 
-	if fileIssuesClosedSubtasks != "" {
-		err := a.SendFileToSlack(chanel, fileIssuesClosedSubtasks)
-		if err != nil {
-			logrus.WithError(err).Error("can't send csv file to slack")
-			return err
-		}
-	}
-	if fileIssuesNextSptint != "" {
-		err := a.SendFileToSlack(chanel, fileIssuesNextSptint)
-		if err != nil {
-			logrus.WithError(err).Error("can't send csv file to slack")
-			return err
-		}
-	}
-	if fileIssuesFromFutureSprint != "" {
-		err := a.SendFileToSlack(chanel, fileIssuesFromFutureSprint)
-		if err != nil {
-			logrus.WithError(err).Error("can't send csv file to slack")
-			return err
-		}
-	}
+	//if fileIssuesClosedSubtasks != "" {
+	//	err := a.SendFileToSlack(channel, fileIssuesClosedSubtasks)
+	//	if err != nil {
+	//		logrus.WithError(err).Error("can't send csv file to slack")
+	//		return err
+	//	}
+	//}
+	//if fileIssuesNextSptint != "" {
+	//	err := a.SendFileToSlack(channel, fileIssuesNextSptint)
+	//	if err != nil {
+	//		logrus.WithError(err).Error("can't send csv file to slack")
+	//		return err
+	//	}
+	//}
+	//if fileIssuesFromFutureSprint != "" {
+	//	err := a.SendFileToSlack(channel, fileIssuesFromFutureSprint)
+	//	if err != nil {
+	//		logrus.WithError(err).Error("can't send csv file to slack")
+	//		return err
+	//	}
+	//}
 	return nil
 }
 
 // ReportSprintsIsuues create csv file with report about issues
-func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename string) (string, error) {
+func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel string) error {
 	if len(issues) == 0 {
-		return "", errors.New("empty")
+		return errors.New("empty")
 	}
-	file, err := os.Create(filename + ".csv")
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
 
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	err = writer.Write([]string{"Type", "Key", "Summary", "Status", "Epic", "Name"})
+	body := &bytes.Buffer{}
+	writer := csv.NewWriter(body)
+	var fle [][]string
+	fle = append(fle, []string{"Type", "Key", "Summary", "Status", "Epic", "Name"})
+	err := writer.Write([]string{"Type", "Key", "Summary", "Status", "Epic", "Name"})
 	if err != nil {
-		return "", err
+		return err
 	}
 	for _, issue := range issues {
 		epicName := fmt.Sprint(issue.Fields.Unknowns["customfield_10008"])
+		fle = append(fle, []string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName, issue.ID})
 		err := writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName, issue.ID})
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
-	return filename + ".csv", nil
+	writer.Flush()
+
+	buff := &bytes.Buffer{}
+	mwriter := multipart.NewWriter(buff)
+	part, _ := mwriter.CreateFormFile("file", filename+".csv")
+	if _, err := io.Copy(part, body); err != nil {
+		return err
+	}
+	logrus.Debug(buff)
+	logrus.Debug(mwriter.FormDataContentType())
+	err = a.Slack.UploadFile(channel, mwriter.FormDataContentType(), buff)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // SendFileToSlack
-func (a *App) SendFileToSlack(chanel, fileName string) error {
+func (a *App) SendFileToSlack(channel, fileName string) error {
 	fileDir, _ := os.Getwd()
 	filePath := path.Join(fileDir, fileName)
 	file, _ := os.Open(filePath)
@@ -481,17 +489,11 @@ func (a *App) SendFileToSlack(chanel, fileName string) error {
 		return err
 	}
 	writer.Close()
-	err = a.Slack.UploadFile(chanel, writer.FormDataContentType(), body)
+	err = a.Slack.UploadFile(channel, writer.FormDataContentType(), body)
+	logrus.Debug(writer.FormDataContentType())
 	if err != nil {
 		return err
 	}
 	defer os.Remove(filePath)
 	return nil
-}
-
-func (a *App) CheckSignature(signature string, signatureExpected []byte) bool {
-	secret := []byte(a.Slack.Secret)
-	hash := hmac.New(sha256.New, secret)
-	hash.Write(signatureExpected)
-	return "v0="+hex.EncodeToString(hash.Sum(nil)) == signature
 }

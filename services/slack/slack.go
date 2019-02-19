@@ -112,8 +112,7 @@ func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.OutToken))
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -199,16 +198,11 @@ func (s *Slack) DeleteFile(id string) error {
 	return err
 }
 
-func (s *Slack) UploadFile(chanel, contentType string, file *bytes.Buffer) error {
-	u, err := url.ParseRequestURI(s.APIURL)
-	if err != nil {
-		return err
-	}
-	u.Path = "/api/files.upload"
-	urlStr := u.String()
+func (s *Slack) UploadFile(channel, contentType string, file *bytes.Buffer) error {
+	urlStr := s.APIURL + "/files.upload"
 
 	v := url.Values{}
-	v.Add("channels", chanel)
+	v.Add("channels", channel)
 
 	req, err := http.NewRequest("POST", urlStr, file)
 	if err != nil {
@@ -217,8 +211,7 @@ func (s *Slack) UploadFile(chanel, contentType string, file *bytes.Buffer) error
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.OutToken))
 	req.URL.RawQuery = v.Encode()
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
