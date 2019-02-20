@@ -3,15 +3,15 @@ package app
 import (
 	"bytes"
 	"encoding/csv"
-	"errors"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
-	"net/http"
 	"strings"
 	"time"
 
@@ -93,7 +93,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	for _, worker := range hubstaffResponse.Workers {
 		message += fmt.Sprintf("\n%s %s", worker.TimeWorked, worker.Name)
 	}
-	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp, false)
+	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp)
 }
 
 // GetDetailedWorkersWorkedTimeAndSendToSlack gather detailed workers work time made through period between dates and send it to Slack channel
@@ -132,7 +132,7 @@ func (a *App) GetDetailedWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWo
 		}
 	}
 
-	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp, false)
+	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp)
 }
 
 // ReportIsuuesWithClosedSubtasks create report about issues with closed subtasks
@@ -143,7 +143,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues with all closed subtasks", a.Slack.ChanBackofficeApp, false)
+		a.Slack.SendMessage("There are no issues with all closed subtasks", a.Slack.ChanBackofficeApp)
 		return
 	}
 	msgBody := "Issues have all closed subtasks:\n"
@@ -151,7 +151,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 	}
-	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp, false)
+	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
 }
 
 // ReportEmployeesWithExceededEstimateTime create report about employees with ETA overhead
@@ -170,7 +170,7 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 		jiraRemainingEtaMap[issue.Fields.Assignee.EmailAddress] += issue.Fields.TimeTracking.RemainingEstimateSeconds
 	}
 	if len(jiraRemainingEtaMap) == 0 {
-		a.Slack.SendMessage("There are no issues with remaining ETA.", a.Slack.ChanBackofficeApp, false)
+		a.Slack.SendMessage("There are no issues with remaining ETA.", a.Slack.ChanBackofficeApp)
 		return
 	}
 	//get logged time from Hubstaff for this week
@@ -215,7 +215,7 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 		message = "No one developer has exceeded estimate time"
 	}
 
-	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message), a.Slack.ChanBackofficeApp, false)
+	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message), a.Slack.ChanBackofficeApp)
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
@@ -226,7 +226,7 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no employees with exceeded subtasks", a.Slack.ChanBackofficeApp, false)
+		a.Slack.SendMessage("There are no employees with exceeded subtasks", a.Slack.ChanBackofficeApp)
 		return
 	}
 	var index = 1
@@ -240,7 +240,7 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 			index++
 		}
 	}
-	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp, false)
+	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
 }
 
 // ReportIsuuesAfterSecondReview create report about issues after second review round
@@ -251,7 +251,7 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues after second review round", a.Slack.ChanBackofficeApp, false)
+		a.Slack.SendMessage("There are no issues after second review round", a.Slack.ChanBackofficeApp)
 		return
 	}
 	msgBody := "Issues after second review round:\n"
@@ -259,7 +259,7 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 	}
-	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp, false)
+	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
@@ -273,7 +273,7 @@ func (a *App) ReportSlackEndingFreeSpace() {
 		return
 	}
 	msgBody := fmt.Sprintf("Free space on slack end.\n")
-	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp, false)
+	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
 }
 
 // ReportGitMigrations create report about new git migrations
@@ -285,7 +285,7 @@ func (a *App) ReportGitMigrations() {
 	}
 	for _, message := range messages {
 		if message != "" {
-			a.Slack.SendMessage(message, a.Slack.ChanMigrations, false)
+			a.Slack.SendMessage(message, a.Slack.ChanMigrations)
 		}
 	}
 }
@@ -381,7 +381,7 @@ func (a *App) SendLastActivityReportNow() {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
-	a.Slack.SendMessage(report, a.Slack.ChanBackofficeApp, false)
+	a.Slack.SendMessage(report, a.Slack.ChanBackofficeApp)
 }
 
 // ReportSprintsIsuues create report about Completed issues, Completed but not verified, Issues left for the next, Issues in next sprint
@@ -429,74 +429,53 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 	if msgBody == "" {
 		msgBody = "There are no issues for report\n"
 	}
-	a.Slack.SendMessage(msgBody, channel, true)
+	a.Slack.SendMessage(msgBody, channel)
 
-	fileIssuesClosedSubtasks, err := a.CreateIssuesCsvReport(issuesWithClosedSubtasks, "issuesWithClosedSubtasks")
+	err = a.CreateIssuesCsvReport(issuesWithClosedSubtasks, "issuesWithClosedSubtasks", channel)
 	if err != nil && err.Error() != "empty" {
-		logrus.WithError(err).Error("can't create csv file of issues with closed subtasks from jira")
+		logrus.WithError(err).Error("can't create report of issues with closed subtasks from jira")
 		return err
 	}
-	fileIssuesNextSptint, err := a.CreateIssuesCsvReport(issuesForNextSprint, "issuesForNextSprint")
+	err = a.CreateIssuesCsvReport(issuesForNextSprint, "issuesForNextSprint", channel)
 	if err != nil && err.Error() != "empty" {
-		logrus.WithError(err).Error("can't create csv file of issues stands for next sprint from jira")
+		logrus.WithError(err).Error("can't create report of issues stands for next sprint from jira")
 		return err
 	}
-	fileIssuesFromFutureSprint, err := a.CreateIssuesCsvReport(issuesFromFutureSprint, "issuesFromFutureSprint")
+	err = a.CreateIssuesCsvReport(issuesFromFutureSprint, "issuesFromFutureSprint", channel)
 	if err != nil && err.Error() != "empty" {
-		logrus.WithError(err).Error("can't create csv file of issues from future sprint from jira")
+		logrus.WithError(err).Error("can't create report of issues from future sprint from jira")
 		return err
-	}
-
-	if fileIssuesClosedSubtasks != "" {
-		err := a.SendFileToSlack(channel, fileIssuesClosedSubtasks)
-		if err != nil {
-			logrus.WithError(err).Error("can't send csv file to slack")
-			return err
-		}
-	}
-	if fileIssuesNextSptint != "" {
-		err := a.SendFileToSlack(channel, fileIssuesNextSptint)
-		if err != nil {
-			logrus.WithError(err).Error("can't send csv file to slack")
-			return err
-		}
-	}
-	if fileIssuesFromFutureSprint != "" {
-		err := a.SendFileToSlack(channel, fileIssuesFromFutureSprint)
-		if err != nil {
-			logrus.WithError(err).Error("can't send csv file to slack")
-			return err
-		}
 	}
 	return nil
 }
 
 // ReportSprintsIsuues create csv file with report about issues
-func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename string) (string, error) {
+func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel string) error {
 	if len(issues) == 0 {
-		return "", errors.New("empty")
+		return errors.New("empty")
 	}
 	file, err := os.Create(filename + ".csv")
 	if err != nil {
-		return "", err
+		return err
 	}
-	defer file.Close()
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
 	err = writer.Write([]string{"Type", "Key", "Summary", "Status", "Epic", "Name"})
 	if err != nil {
-		return "", err
+		return err
 	}
 	for _, issue := range issues {
 		epicName := fmt.Sprint(issue.Fields.Unknowns["customfield_10008"])
 		err := writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName, issue.ID})
 		if err != nil {
-			return "", err
+			return err
 		}
 	}
-	return filename + ".csv", nil
+	writer.Flush()
+	file.Close()
+	return a.SendFileToSlack(channel, filename+".csv")
 }
 
 // SendFileToSlack
