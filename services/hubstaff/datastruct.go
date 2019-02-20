@@ -27,8 +27,8 @@ func (wt WorkingTime) String() string {
 	return fmt.Sprintf("%.2d:%.2d", hours, minutes)
 }
 
-// APIResponse used to reflect an api response from /by_date endpoint
-type APIResponse struct {
+// CustomResponse is universal struct to reflect an custom response https://developer.hubstaff.com/docs/api#!/custom
+type CustomResponse struct {
 	ID         int64       `json:"id"`
 	Name       string      `json:"name"`
 	TimeWorked WorkingTime `json:"duration"`
@@ -53,17 +53,24 @@ type APIResponse struct {
 	} `json:"dates"`
 }
 
-// UserDTO type for query Hubstaff's users
-type UserDTO struct {
+// User type for query Hubstaff's users https://developer.hubstaff.com/docs/api#!/users/getV1Users
+type User struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
 }
 
-// APIResponseLastActivity type for query last activity of users
-type APIResponseLastActivity struct {
+// LastActivity type for query last activity of users
+// https://developer.hubstaff.com/docs/api#!/organizations/getV1OrganizationsIdLastActivity
+type LastActivity struct {
 	LastTaskID    int `json:"last_task_id"`
 	LastProjectID int `json:"last_project_id"`
 	User          struct {
 		Name string `json:"name" binding:"required"`
 	} `json:"user" binding:"required"`
+}
+
+// Task type for task of user https://developer.hubstaff.com/docs/api#!/tasks/getV1TasksId
+type Task struct {
+	JiraKey string `json:"remote_alternate_id"`
+	Summary string `json:"summary"`
 }
