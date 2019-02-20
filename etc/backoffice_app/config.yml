@@ -10,7 +10,7 @@ cron:
   employeesexceededestimatetime: "00 00 07 * * *"
   reportslackspaceending: "00 00 07 * * *"
   reportgitmigrations: "@hourly"
-  reportsprintstatus: "00 00 07 * * MON"
+  reportsprintstatus: "00 00 04 * * MON"
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
