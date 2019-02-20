@@ -210,7 +210,7 @@ func main() {
 				Usage: "Send last activity report right now",
 				Action: func(c *cli.Context) {
 					application := app.New(cfg)
-					application.SendLastActivityReportNow()
+					application.ReportLastActivity()
 				},
 			},
 		}
