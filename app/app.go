@@ -49,7 +49,7 @@ func New(conf *config.Main) *App {
 
 // MakeWorkersWorkedReportLastWeek preparing a last week report and send it to Slack
 func (a *App) MakeWorkersWorkedReportLastWeek(mode string) {
-	a.GetWorkersWorkedTimeAndSendToSlack(
+	a.ReportWorkersWorkedTime(
 		fmt.Sprintf("Weekly work time report (%s)", mode),
 		now.BeginningOfWeek().AddDate(0, 0, -7),
 		now.EndOfWeek().AddDate(0, 0, -7))
@@ -57,29 +57,21 @@ func (a *App) MakeWorkersWorkedReportLastWeek(mode string) {
 
 // MakeWorkersWorkedReportYesterday preparing a last day report and send it to Slack
 func (a *App) MakeWorkersWorkedReportYesterday(mode string) {
-	a.GetDetailedWorkersWorkedTimeAndSendToSlack(
+	a.ReportWorkersWorkedTimeDetailed(
 		fmt.Sprintf("Daily detailed report (%s)", mode),
 		now.BeginningOfDay().AddDate(0, 0, -1),
 		now.EndOfDay().AddDate(0, 0, -1))
 }
 
-// GetWorkersWorkedTimeAndSendToSlack gather workers work time made through period between dates and send it to Slack channel
-func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
-	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
-	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
-
-	apiURL := fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
-		dateStart, dateEnd, a.Hubstaff.OrgID)
-	hubstaffResponse, err := a.Hubstaff.RequestAndParseTimelogs(apiURL)
+// ReportWorkersWorkedTime gather workers work time made through period between dates and send it to Slack channel
+func (a *App) ReportWorkersWorkedTime(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
+	hubstaffResponse, err := a.Hubstaff.WorkersWorkedTime(dateOfWorkdaysStart, dateOfWorkdaysEnd)
 	if err != nil {
-		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
+		logrus.WithError(err).Error("can't get workers worked time from Hubstaff")
 		return
 	}
 	var message = fmt.Sprintf(
-		"%s:\n\n"+
-			"From: %v %v\n"+
-			"To: %v %v\n",
-		prefix,
+		"%s:\n\nFrom: %v %v\nTo: %v %v\n", prefix,
 		dateOfWorkdaysStart.Format("02.01.06"), "00:00:00",
 		dateOfWorkdaysEnd.Format("02.01.06"), "23:59:59",
 	)
@@ -89,21 +81,14 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp)
 }
 
-// GetDetailedWorkersWorkedTimeAndSendToSlack gather detailed workers work time made through period between dates and send it to Slack channel
-func (a *App) GetDetailedWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
-	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
-	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
-
-	apiURL := fmt.Sprintf("/v1/custom/by_date/team/?start_date=%s&end_date=%s&organizations=%d&show_notes=%t",
-		dateStart, dateEnd, a.Hubstaff.OrgID, true)
-	hubstaffResponse, err := a.Hubstaff.RequestAndParseTimelogs(apiURL)
+// ReportWorkersWorkedTimeDetailed gather detailed workers work time made through period between dates and send it to Slack channel
+func (a *App) ReportWorkersWorkedTimeDetailed(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
+	hubstaffResponse, err := a.Hubstaff.WorkersWorkedTimeDetailed(dateOfWorkdaysStart, dateOfWorkdaysEnd)
 	if err != nil {
-		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
+		logrus.WithError(err).Error("can't get detailed workers worked time from Hubstaff")
 		return
 	}
-
 	var message = prefix + "\n"
-
 	for _, separatedDate := range hubstaffResponse.Dates {
 		if separatedDate.TimeWorked == 0 {
 			continue
@@ -124,7 +109,6 @@ func (a *App) GetDetailedWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWo
 			}
 		}
 	}
-
 	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp)
 }
 
@@ -166,26 +150,19 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 		a.Slack.SendMessage("There are no issues with remaining ETA.", a.Slack.ChanBackofficeApp)
 		return
 	}
-	//get logged time from Hubstaff for this week
-	var dateStart = now.BeginningOfWeek().Format("2006-01-02")
-	var dateEnd = now.EndOfWeek().Format("2006-01-02")
-
-	apiURL := fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
-		dateStart, dateEnd, a.Hubstaff.OrgID)
-	hubstaffResponse, err := a.Hubstaff.RequestAndParseTimelogs(apiURL)
+	hubstaffResponse, err := a.Hubstaff.WorkersWorkedTime(now.BeginningOfWeek(), now.EndOfWeek())
 	if err != nil {
 		logrus.WithError(err).Error("can't get logged time from Hubstaff")
 		return
 	}
 	//get hubstaff's user list
-	hubstaffUsers, err := a.Hubstaff.GetAllHubstaffUsers()
+	hubstaffUsers, err := a.Hubstaff.Users()
 	if err != nil {
 		logrus.WithError(err).Error("failed to fetch data from hubstaff")
 		return
 	}
 	// prepare the content
-	messageHeader := fmt.Sprintf("\nExceeded estimate time report:\n\n*%v*\n",
-		now.BeginningOfDay().Format("02.01.2006"))
+	messageHeader := fmt.Sprintf("\nExceeded estimate time report:\n\n*%v*\n", now.BeginningOfDay().Format("02.01.2006"))
 	message := ""
 	var maxWeekWorkingHours float32 = 30.0
 	for _, userWithTime := range hubstaffResponse.Workers {
@@ -255,7 +232,7 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
 }
 
-// ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
+// ReportSlackEndingFreeSpace create report about employees that have exceeded tasks
 func (a *App) ReportSlackEndingFreeSpace() {
 	size, err := a.Slack.FilesSize()
 	if err != nil {
@@ -326,7 +303,7 @@ func (a *App) MigrationMessages() ([]string, error) {
 	return files, nil
 }
 
-// SqlCommits returns commits cache with sql migration
+// SqlCommitsCache returns commits cache with sql migration
 func (a *App) SqlCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCache, error) {
 	newMapSqlCommits := make(map[string]CommitsCache)
 	for _, commit := range commits {
@@ -343,18 +320,37 @@ func (a *App) SqlCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCac
 	return newMapSqlCommits, nil
 }
 
-// MakeLastActivityReportWithCallback posts last activity to slack to defined callbackUrl
-func (a *App) MakeLastActivityReportWithCallback(callbackURL string) {
-	report, err := a.Hubstaff.GetLastActivityReport()
+// ReportLastActivityCallback posts last activity to slack user by callbackUrl
+func (a *App) ReportLastActivityCallback(callbackURL string) {
+	activities, err := a.Hubstaff.LastActivities()
 	if err != nil {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
+	if len(activities) == 0 {
+		a.Slack.SendMessage("No logged activities have found", a.Slack.ChanBackofficeApp)
+		return
+	}
+
+	message := ""
+	for _, activity := range activities {
+		projectName, err := a.Hubstaff.ProjectName(activity.LastProjectID)
+		if err != nil {
+			continue
+		}
+		task, _ := a.Hubstaff.JiraTask(activity.LastTaskID)
+		if projectName != "" || task.JiraKey != "" {
+			message += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, projectName)
+			if task.JiraKey != "" {
+				message += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>", task.JiraKey, task.Summary)
+			}
+		}
+	}
 	jsonReport, err := json.Marshal(struct {
 		Text string `json:"text"`
-	}{Text: report})
+	}{Text: message})
 	if err != nil {
-		logrus.WithError(err).Errorf("Can't convert last activity report to json. Report is:\n%s", report)
+		logrus.WithError(err).Errorf("Can't convert last activity report to json. Report is:\n%s", message)
 		return
 	}
 	resp, err := http.Post(callbackURL, "application/json", bytes.NewReader(jsonReport))
@@ -368,11 +364,31 @@ func (a *App) MakeLastActivityReportWithCallback(callbackURL string) {
 	}
 }
 
-func (a *App) SendLastActivityReportNow() {
-	report, err := a.Hubstaff.GetLastActivityReport()
+// ReportLastActivity sends report of last activity to back office channel
+func (a *App) ReportLastActivity() {
+	activities, err := a.Hubstaff.LastActivities()
 	if err != nil {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
-	a.Slack.SendMessage(report, a.Slack.ChanBackofficeApp)
+	if len(activities) == 0 {
+		a.Slack.SendMessage("No logged activities have found", a.Slack.ChanBackofficeApp)
+		return
+	}
+
+	message := ""
+	for _, activity := range activities {
+		projectName, err := a.Hubstaff.ProjectName(activity.LastProjectID)
+		if err != nil {
+			continue
+		}
+		task, _ := a.Hubstaff.JiraTask(activity.LastTaskID)
+		if projectName != "" || task.JiraKey != "" {
+			message += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, projectName)
+			if task.JiraKey != "" {
+				message += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>", task.JiraKey, task.Summary)
+			}
+		}
+	}
+	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp)
 }
