@@ -24,6 +24,7 @@ type Slack struct {
 	APIURL            string
 	TotalVolume       float64
 	RestVolume        float64
+	AppTokenIn        string
 	Secret            string
 }
 
@@ -58,6 +59,7 @@ func New(config *config.Slack) Slack {
 		APIURL:            config.APIURL,
 		TotalVolume:       config.TotalVolume,
 		RestVolume:        config.RestVolume,
+		AppTokenIn:        config.AppTokenIn,
 		Secret:            config.Secret,
 	}
 }

@@ -58,3 +58,12 @@ type UserDTO struct {
 	Name  string `json:"name"`
 	Email string `json:"email"`
 }
+
+// APIResponseLastActivity type for query last activity of users
+type APIResponseLastActivity struct {
+	LastTaskID    int `json:"last_task_id"`
+	LastProjectID int `json:"last_project_id"`
+	User          struct {
+		Name string `json:"name" binding:"required"`
+	} `json:"user" binding:"required"`
+}

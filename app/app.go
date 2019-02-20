@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"encoding/csv"
 	"errors"
+	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"os"
 	"path"
 	"path/filepath"
+	"net/http"
 	"strings"
 	"time"
 
@@ -346,6 +348,40 @@ func (a *App) SqlCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCac
 		}
 	}
 	return newMapSqlCommits, nil
+}
+
+// MakeLastActivityReportWithCallback posts last activity to slack to defined callbackUrl
+func (a *App) MakeLastActivityReportWithCallback(callbackURL string) {
+	report, err := a.Hubstaff.GetLastActivityReport()
+	if err != nil {
+		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
+		return
+	}
+	jsonReport, err := json.Marshal(struct {
+		Text string `json:"text"`
+	}{Text: report})
+	if err != nil {
+		logrus.WithError(err).Errorf("Can't convert last activity report to json. Report is:\n%s", report)
+		return
+	}
+	resp, err := http.Post(callbackURL, "application/json", bytes.NewReader(jsonReport))
+	if err != nil {
+		logrus.WithError(err).Errorf("Can't send last activity report by url : %s", callbackURL)
+		return
+	}
+	if resp.StatusCode != http.StatusOK {
+		logrus.Errorf("Error while sending last activity report by url : %s, status code : %d",
+			callbackURL, resp.StatusCode)
+	}
+}
+
+func (a *App) SendLastActivityReportNow() {
+	report, err := a.Hubstaff.GetLastActivityReport()
+	if err != nil {
+		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
+		return
+	}
+	a.Slack.SendMessage(report, a.Slack.ChanBackofficeApp, false)
 }
 
 // ReportSprintsIsuues create report about Completed issues, Completed but not verified, Issues left for the next, Issues in next sprint
