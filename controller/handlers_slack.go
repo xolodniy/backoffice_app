@@ -40,5 +40,4 @@ func (c *Controller) sprintReport(ctx *gin.Context) {
 		}
 	}()
 	ctx.JSON(http.StatusOK, "ok, wait for report")
-	return
 }
