@@ -377,7 +377,7 @@ func (a *App) SendLastActivityReportNow() {
 	a.Slack.SendMessage(report, a.Slack.ChanBackofficeApp)
 }
 
-// ReportGitMigrations create report about new git migrations
+// ReportSprintStatus create report about sprint status
 func (a *App) ReportSprintStatus() {
 	var developers = make(map[string][]jira.Issue)
 	issues, err := a.Jira.IssuesOfOpenSprints()
@@ -392,6 +392,7 @@ func (a *App) ReportSprintStatus() {
 	msgBody := "Sprint status:\n"
 	for _, issue := range issues {
 		developer := "No developer"
+		// Convert to marshal map to find developer displayName of issue field customfield_10026
 		developerMap, err := issue.Fields.Unknowns.MarshalMap("customfield_10026")
 		if err != nil {
 			logrus.WithError(err).WithField("developerMap", fmt.Sprintf("%+v", developerMap)).
