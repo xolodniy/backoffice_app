@@ -200,16 +200,15 @@ func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
 
 // IssuesClosedForSprintReport retrieves issues with closed status (bugs and stories)
 func (j *Jira) IssuesClosedForSprintReport(project string) ([]Issue, error) {
-	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	request := fmt.Sprintf(`status IN ("%s") AND project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`,
+		StatusClosed, project)
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, err
 	}
 	var issuesWithClosedStatus []Issue
 	for _, issue := range issues {
-		if issue.Fields.Status.Name == StatusClosed {
-			issuesWithClosedStatus = append(issuesWithClosedStatus, issue)
-		}
+		issuesWithClosedStatus = append(issuesWithClosedStatus, issue)
 	}
 	return issuesWithClosedStatus, nil
 }
