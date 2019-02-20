@@ -24,7 +24,6 @@ type Slack struct {
 	APIURL            string
 	TotalVolume       float64
 	RestVolume        float64
-	AppTokenIn        string
 	Secret            string
 }
 
@@ -59,20 +58,17 @@ func New(config *config.Slack) Slack {
 		APIURL:            config.APIURL,
 		TotalVolume:       config.TotalVolume,
 		RestVolume:        config.RestVolume,
-		AppTokenIn:        config.AppTokenIn,
 		Secret:            config.Secret,
 	}
 }
 
 // SendMessage is main message sending method
-func (s *Slack) SendMessage(text, channel string, asUser bool) {
+func (s *Slack) SendMessage(text, channel string) {
 	var message = &types.PostChannelMessage{
-		Token:    s.OutToken,
-		Channel:  channel,
-		AsUser:   asUser,
-		Text:     text,
-		Username: s.BotName,
-		IconURL:  "",
+		Token:   s.OutToken,
+		Channel: channel,
+		AsUser:  true,
+		Text:    text,
 	}
 
 	jsonMessage, err := json.Marshal(message)
