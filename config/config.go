@@ -58,6 +58,7 @@ type Slack struct {
 	APIURL            string
 	TotalVolume       float64
 	RestVolume        float64
+	AppTokenIn        string
 }
 
 // Bitbucket is template to storing bitbucket configuration
