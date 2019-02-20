@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -452,7 +451,7 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 // ReportSprintsIsuues create csv file with report about issues
 func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel string) error {
 	if len(issues) == 0 {
-		return errors.New("empty")
+		return nil
 	}
 	file, err := os.Create(filename + ".csv")
 	if err != nil {
@@ -460,7 +459,6 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 	}
 
 	writer := csv.NewWriter(file)
-	defer writer.Flush()
 
 	err = writer.Write([]string{"Type", "Key", "Summary", "Status", "Epic", "Name"})
 	if err != nil {
@@ -480,15 +478,23 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 
 // SendFileToSlack
 func (a *App) SendFileToSlack(channel, fileName string) error {
-	fileDir, _ := os.Getwd()
+	fileDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
 	filePath := path.Join(fileDir, fileName)
-	file, _ := os.Open(filePath)
-	defer file.Close()
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
-	part, _ := writer.CreateFormFile("file", filepath.Base(file.Name()))
-	_, err := io.Copy(part, file)
+	part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(part, file)
 	if err != nil {
 		return err
 	}
@@ -497,6 +503,7 @@ func (a *App) SendFileToSlack(channel, fileName string) error {
 	if err != nil {
 		return err
 	}
+	file.Close()
 	defer os.Remove(filePath)
 	return nil
 }
