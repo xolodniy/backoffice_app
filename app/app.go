@@ -27,23 +27,25 @@ type CommitsCache struct {
 
 // App is main App implementation
 type App struct {
-	Hubstaff     hubstaff.Hubstaff
-	Slack        slack.Slack
-	Jira         jira.Jira
-	Bitbucket    bitbucket.Bitbucket
-	Config       config.Main
-	CommitsCache map[string]CommitsCache
+	Hubstaff            hubstaff.Hubstaff
+	Slack               slack.Slack
+	Jira                jira.Jira
+	Bitbucket           bitbucket.Bitbucket
+	Config              config.Main
+	CommitsCache        map[string]CommitsCache
+	MaxWeekWorkingHours float32
 }
 
 // New is main App constructor
 func New(conf *config.Main) *App {
 	return &App{
-		Hubstaff:     hubstaff.New(&conf.Hubstaff),
-		Slack:        slack.New(&conf.Slack),
-		Jira:         jira.New(&conf.Jira),
-		Bitbucket:    bitbucket.New(&conf.Bitbucket),
-		Config:       *conf,
-		CommitsCache: make(map[string]CommitsCache),
+		Hubstaff:            hubstaff.New(&conf.Hubstaff),
+		Slack:               slack.New(&conf.Slack),
+		Jira:                jira.New(&conf.Jira),
+		Bitbucket:           bitbucket.New(&conf.Bitbucket),
+		Config:              *conf,
+		CommitsCache:        make(map[string]CommitsCache),
+		MaxWeekWorkingHours: conf.MaxWeekWorkingHours,
 	}
 }
 
@@ -65,7 +67,7 @@ func (a *App) MakeWorkersWorkedReportYesterday(mode string) {
 
 // ReportWorkersWorkedTime gather workers work time made through period between dates and send it to Slack channel
 func (a *App) ReportWorkersWorkedTime(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
-	hubstaffResponse, err := a.Hubstaff.WorkersWorkedTime(dateOfWorkdaysStart, dateOfWorkdaysEnd)
+	hubstaffResponse, err := a.Hubstaff.WorkersWorkedTimeDetailed(dateOfWorkdaysStart, dateOfWorkdaysEnd)
 	if err != nil {
 		logrus.WithError(err).Error("can't get workers worked time from Hubstaff")
 		return
@@ -75,8 +77,18 @@ func (a *App) ReportWorkersWorkedTime(prefix string, dateOfWorkdaysStart, dateOf
 		dateOfWorkdaysStart.Format("02.01.06"), "00:00:00",
 		dateOfWorkdaysEnd.Format("02.01.06"), "23:59:59",
 	)
-	for _, worker := range hubstaffResponse.Workers {
-		message += fmt.Sprintf("\n%s %s", worker.TimeWorked, worker.Name)
+	var workers = make(map[string]int)
+	for _, separatedDate := range hubstaffResponse.Dates {
+		if separatedDate.Duration == 0 {
+			continue
+		}
+		for _, worker := range separatedDate.Workers {
+			workers[worker.Name] += worker.Duration
+		}
+	}
+	for name, duration := range workers {
+		//employee name print
+		message += fmt.Sprintf("%s (%s total)\n", name, a.TimeWorkedConverter(duration))
 	}
 	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp)
 }
@@ -90,19 +102,16 @@ func (a *App) ReportWorkersWorkedTimeDetailed(prefix string, dateOfWorkdaysStart
 	}
 	var message = prefix + "\n"
 	for _, separatedDate := range hubstaffResponse.Dates {
-		if separatedDate.TimeWorked == 0 {
+		if separatedDate.Duration == 0 {
 			continue
 		}
 		//separatedDate print
-		message += fmt.Sprintf(
-			"\n\n\n*%s*", separatedDate.Date)
+		message += fmt.Sprintf("\n\n\n*%s*", separatedDate.Date)
 		for _, worker := range separatedDate.Workers {
 			//employee name print
-			message += fmt.Sprintf(
-				"\n\n\n*%s (%s total)*\n", worker.Name, worker.TimeWorked)
+			message += fmt.Sprintf("\n\n\n*%s (%s total)*\n", worker.Name, a.TimeWorkedConverter(worker.Duration))
 			for _, project := range worker.Projects {
-				message += fmt.Sprintf(
-					"\n%s - %s", project.TimeWorked, project.Name)
+				message += fmt.Sprintf("\n%s - %s", a.TimeWorkedConverter(project.Duration), project.Name)
 				for _, note := range project.Notes {
 					message += fmt.Sprintf("\n - %s", note.Description)
 				}
@@ -141,22 +150,19 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 		return
 	}
 	for _, issue := range issues {
-		if issue.Fields.Assignee == nil || issue.Fields.Assignee.DisplayName == "Unassigned" {
-			continue
-		}
 		jiraRemainingEtaMap[issue.Fields.Assignee.EmailAddress] += issue.Fields.TimeTracking.RemainingEstimateSeconds
 	}
 	if len(jiraRemainingEtaMap) == 0 {
 		a.Slack.SendMessage("There are no issues with remaining ETA.", a.Slack.ChanBackofficeApp)
 		return
 	}
-	hubstaffResponse, err := a.Hubstaff.WorkersWorkedTime(now.BeginningOfWeek(), now.EndOfWeek())
+	hubstaffResponse, err := a.Hubstaff.WorkersWorkedTimeDetailed(now.BeginningOfWeek(), now.EndOfWeek())
 	if err != nil {
 		logrus.WithError(err).Error("can't get logged time from Hubstaff")
 		return
 	}
 	//get hubstaff's user list
-	hubstaffUsers, err := a.Hubstaff.Users()
+	response, err := a.Hubstaff.Users()
 	if err != nil {
 		logrus.WithError(err).Error("failed to fetch data from hubstaff")
 		return
@@ -164,27 +170,26 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 	// prepare the content
 	messageHeader := fmt.Sprintf("\nExceeded estimate time report:\n\n*%v*\n", now.BeginningOfDay().Format("02.01.2006"))
 	message := ""
-	var maxWeekWorkingHours float32 = 30.0
-	for _, userWithTime := range hubstaffResponse.Workers {
-		var workerEmail = ""
-		for _, userWithEmail := range hubstaffUsers {
-			if userWithEmail.Name == userWithTime.Name {
-				workerEmail = userWithEmail.Email
-				break
-			}
+	var workers = make(map[string]int)
+	for _, separatedDate := range hubstaffResponse.Dates {
+		if separatedDate.Duration == 0 {
+			continue
 		}
-		jiraEta := jiraRemainingEtaMap[workerEmail]
-		if jiraEta > 0 {
-			workVolume := float32(jiraEta+int(userWithTime.TimeWorked)) / 3600.0
-			if workVolume > maxWeekWorkingHours {
-				message += fmt.Sprintf("\n%s late for %.2f hours", userWithTime.Name, workVolume-maxWeekWorkingHours)
+		for _, worker := range separatedDate.Workers {
+			workers[worker.Name] += worker.Duration
+		}
+	}
+	for _, user := range response.Users {
+		if jiraRemainingEtaMap[user.Email] > 0 {
+			workVolume := float32(jiraRemainingEtaMap[user.Email]+workers[user.Name]) / 3600.0
+			if workVolume > a.MaxWeekWorkingHours {
+				message += fmt.Sprintf("\n%s late for %.2f hours", user.Name, workVolume-a.MaxWeekWorkingHours)
 			}
 		}
 	}
 	if message == "" {
 		message = "No one developer has exceeded estimate time"
 	}
-
 	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message), a.Slack.ChanBackofficeApp)
 }
 
@@ -322,27 +327,32 @@ func (a *App) SqlCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCac
 
 // ReportLastActivityCallback posts last activity to slack user by callbackUrl
 func (a *App) ReportLastActivityCallback(callbackURL string) {
-	activities, err := a.Hubstaff.LastActivities()
+	response, err := a.Hubstaff.LastActivities()
 	if err != nil {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
-	if len(activities) == 0 {
+	if len(response.LastActivities) == 0 {
 		a.Slack.SendMessage("No logged activities have found", a.Slack.ChanBackofficeApp)
 		return
 	}
 
 	message := ""
-	for _, activity := range activities {
+	for _, activity := range response.LastActivities {
 		projectName, err := a.Hubstaff.ProjectName(activity.LastProjectID)
 		if err != nil {
 			continue
 		}
-		task, _ := a.Hubstaff.JiraTask(activity.LastTaskID)
-		if projectName != "" || task.JiraKey != "" {
+		response, err := a.Hubstaff.JiraTask(activity.LastTaskID)
+		if err != nil {
+			logrus.WithError(err).Error("Can't get jira task from Hubstaff.")
+			return
+		}
+		if projectName != "" || response.Task.JiraKey != "" {
 			message += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, projectName)
-			if task.JiraKey != "" {
-				message += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>", task.JiraKey, task.Summary)
+			if response.Task.JiraKey != "" {
+				message += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
+					response.Task.JiraKey, response.Task.Summary)
 			}
 		}
 	}
@@ -366,29 +376,39 @@ func (a *App) ReportLastActivityCallback(callbackURL string) {
 
 // ReportLastActivity sends report of last activity to back office channel
 func (a *App) ReportLastActivity() {
-	activities, err := a.Hubstaff.LastActivities()
+	response, err := a.Hubstaff.LastActivities()
 	if err != nil {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
-	if len(activities) == 0 {
+	if len(response.LastActivities) == 0 {
 		a.Slack.SendMessage("No logged activities have found", a.Slack.ChanBackofficeApp)
 		return
 	}
 
 	message := ""
-	for _, activity := range activities {
+	for _, activity := range response.LastActivities {
 		projectName, err := a.Hubstaff.ProjectName(activity.LastProjectID)
 		if err != nil {
 			continue
 		}
-		task, _ := a.Hubstaff.JiraTask(activity.LastTaskID)
-		if projectName != "" || task.JiraKey != "" {
+		response, _ := a.Hubstaff.JiraTask(activity.LastTaskID)
+		if projectName != "" || response.Task.JiraKey != "" {
 			message += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, projectName)
-			if task.JiraKey != "" {
-				message += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>", task.JiraKey, task.Summary)
+			if response.Task.JiraKey != "" {
+				message += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
+					response.Task.JiraKey, response.Task.Summary)
 			}
 		}
 	}
 	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp)
+}
+
+// TimeWorked converts seconds value to 00:00 (hours with leading zero:minutes with leading zero) time format
+func (a *App) TimeWorkedConverter(dur int) string {
+	secInMin := 60
+	secInHour := 60 * secInMin
+	hours := int(dur) / secInHour
+	minutes := int(dur) % secInHour / secInMin
+	return fmt.Sprintf("%.2d:%.2d", hours, minutes)
 }
