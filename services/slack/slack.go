@@ -18,12 +18,15 @@ type Slack struct {
 	InToken           string
 	OutToken          string
 	BotName           string
+	ProjectManager    string
+	ChanGeneral       string
 	ChanBackofficeApp string
 	ChanMigrations    string
 	APIURL            string
 	TotalVolume       float64
 	RestVolume        float64
 	AppTokenIn        string
+	IgnoreList        []string
 }
 
 // FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
@@ -52,12 +55,15 @@ func New(config *config.Slack) Slack {
 		InToken:           config.InToken,
 		OutToken:          config.OutToken,
 		BotName:           config.BotName,
+		ProjectManager:    "<@" + config.ProjectManager + ">",
+		ChanGeneral:       "#" + config.ChanGeneral,
 		ChanBackofficeApp: "#" + config.ChanBackofficeApp,
 		ChanMigrations:    "#" + config.ChanMigrations,
 		APIURL:            config.APIURL,
 		TotalVolume:       config.TotalVolume,
 		RestVolume:        config.RestVolume,
 		AppTokenIn:        config.AppTokenIn,
+		IgnoreList:        config.IgnoreList,
 	}
 }
 
