@@ -53,12 +53,15 @@ type Slack struct {
 	InToken           string
 	OutToken          string
 	BotName           string
+	ProjectManager    string
+	ChanGeneral       string
 	ChanBackofficeApp string
 	ChanMigrations    string
 	APIURL            string
 	TotalVolume       float64
 	RestVolume        float64
 	AppTokenIn        string
+	IgnoreList        []string
 }
 
 // Bitbucket is template to storing bitbucket configuration
