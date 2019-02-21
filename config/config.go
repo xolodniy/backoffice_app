@@ -9,10 +9,11 @@ import (
 
 // Main is template to storing of all configuration settings needed
 type Main struct {
-	LogLevel     string
-	GinPort      string
-	GinDebugMode bool
-	Cron         struct {
+	LogLevel            string
+	GinPort             string
+	GinDebugMode        bool
+	MaxWeekWorkingHours float32
+	Cron                struct {
 		DailyWorkersWorkedTime        string
 		WeeklyWorkersWorkedTime       string
 		ReportClosedSubtasks          string
