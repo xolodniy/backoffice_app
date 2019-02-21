@@ -54,14 +54,7 @@ func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
 	}
 	defer response.Body.Close()
 
-	t := struct {
-		User struct {
-			ID           int    `json:"id"`
-			AuthToken    string `json:"auth_token"`
-			Name         string `json:"name"`
-			LastActivity string `json:"last_activity"`
-		} `json:"user"`
-	}{}
+	t := CustomResponse{}
 	if err := json.NewDecoder(response.Body).Decode(&t); err != nil {
 		return "", fmt.Errorf("can't decode response: %s", err)
 	}
@@ -69,7 +62,7 @@ func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
 }
 
 // Request is main API GET request method
-func (h *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
+func (h *Hubstaff) Request(path string) ([]byte, error) {
 	request, err := http.NewRequest("GET", h.APIURL+path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("can't create http GET Request: %s", err)
@@ -77,14 +70,6 @@ func (h *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
 
 	request.Header.Set("App-Token", h.AppToken)
 	request.Header.Set("Auth-Token", h.AuthToken)
-
-	if len(q) > 0 {
-		qs := request.URL.Query()
-		for k, v := range q {
-			qs.Add(k, v)
-		}
-		request.URL.RawQuery = qs.Encode()
-	}
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return nil, fmt.Errorf("can't send http Request: %s", err)
@@ -99,7 +84,7 @@ func (h *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
 // TimeLogs returning parsed workers timelogs
 func (h *Hubstaff) TimeLogs(apiURL string) (CustomResponse, error) {
 	res := CustomResponse{}
-	orgsRaw, err := h.Request(apiURL, nil)
+	orgsRaw, err := h.Request(apiURL)
 
 	if err != nil {
 		return res, fmt.Errorf("error on getting workers worked time: %v", err)
@@ -116,45 +101,39 @@ func (h *Hubstaff) TimeLogs(apiURL string) (CustomResponse, error) {
 	if len(orgs.List) == 0 {
 		return res, fmt.Errorf("No tracked time for now or no organization found")
 	}
-	if len(orgs.List[0].Workers) == 0 && len(orgs.List[0].Dates) == 0 {
+	if len(orgs.List[0].Users) == 0 && len(orgs.List[0].Dates) == 0 {
 		return res, fmt.Errorf("No tracked time for now or no workers found")
 	}
 	return orgs.List[0], nil
 }
 
 // Users returns a slice of Hubstaff users
-func (h *Hubstaff) Users() ([]User, error) {
+func (h *Hubstaff) Users() (CustomResponse, error) {
 	apiURL := "/v1/users"
-	orgsRaw, err := h.Request(apiURL, nil)
-
+	orgsRaw, err := h.Request(apiURL)
 	if err != nil {
-		return nil, fmt.Errorf("error on getting workers list: %v", err)
+		return CustomResponse{}, fmt.Errorf("error on getting workers list: %v", err)
 	}
 
-	usersSlice := struct {
-		List []User `json:"users"`
-	}{}
-
+	usersSlice := CustomResponse{}
 	if err = json.Unmarshal(orgsRaw, &usersSlice); err != nil {
-		return nil, fmt.Errorf("can't decode response: %s", err)
+		return CustomResponse{}, fmt.Errorf("can't decode response: %s", err)
 	}
-	return usersSlice.List, nil
+	return usersSlice, nil
 }
 
 // GetLastActivityReport returns a text report about last activities
-func (h *Hubstaff) LastActivities() ([]LastActivity, error) {
-	rawResponse, err := h.Request(fmt.Sprintf("/v1/organizations/%d/last_activity", h.OrgID), nil)
+func (h *Hubstaff) LastActivities() (CustomResponse, error) {
+	rawResponse, err := h.Request(fmt.Sprintf("/v1/organizations/%d/last_activity", h.OrgID))
 	if err != nil {
-		return []LastActivity{}, fmt.Errorf("error on getting last activities list: %v", err)
+		return CustomResponse{}, fmt.Errorf("error on getting last activities list: %v", err)
 	}
-	activities := struct {
-		List []LastActivity `json:"last_activities"`
-	}{}
 
+	activities := CustomResponse{}
 	if err = json.Unmarshal(rawResponse, &activities); err != nil {
-		return []LastActivity{}, fmt.Errorf("can't decode response: %s", err)
+		return CustomResponse{}, fmt.Errorf("can't decode response: %s", err)
 	}
-	return activities.List, nil
+	return activities, nil
 }
 
 // ProjectName retrieves project name by id
@@ -162,57 +141,36 @@ func (h *Hubstaff) ProjectName(projectID int) (string, error) {
 	if projectID == 0 {
 		return "", nil
 	}
-	rawResponse, err := h.Request(fmt.Sprintf("/v1/projects/%d", projectID), nil)
+	rawResponse, err := h.Request(fmt.Sprintf("/v1/projects/%d", projectID))
 	if err != nil {
 		return "", fmt.Errorf("error on getting priject name: %v", err)
 	}
-	response := struct {
-		Project struct {
-			Name string `json:"name"`
-		} `json:"project"`
-	}{}
 
+	response := CustomResponse{}
 	if err = json.Unmarshal(rawResponse, &response); err != nil {
 		return "", fmt.Errorf("can't decode response: %s", err)
 	}
 	if response.Project.Name == "" {
 		return "", fmt.Errorf("No projects have found by id: %d", projectID)
 	}
-
 	return response.Project.Name, nil
 }
 
 // JiraTask retrieves jira task by task id
-func (h *Hubstaff) JiraTask(taskID int) (Task, error) {
+func (h *Hubstaff) JiraTask(taskID int) (CustomResponse, error) {
 	if taskID == 0 {
-		return Task{}, nil
+		return CustomResponse{}, nil
 	}
-	rawResponse, err := h.Request(fmt.Sprintf("/v1/tasks/%d", taskID), nil)
+	rawResponse, err := h.Request(fmt.Sprintf("/v1/tasks/%d", taskID))
 	if err != nil {
-		return Task{}, fmt.Errorf("error on getting jira task: %v", err)
+		return CustomResponse{}, fmt.Errorf("error on getting jira task: %v", err)
 	}
-	response := struct {
-		Task Task `json:"task"`
-	}{}
 
+	response := CustomResponse{}
 	if err = json.Unmarshal(rawResponse, &response); err != nil {
-		return Task{}, fmt.Errorf("can't decode response: %s", err)
+		return CustomResponse{}, fmt.Errorf("can't decode response: %s", err)
 	}
-	if response.Task.JiraKey == "" {
-		return Task{}, fmt.Errorf("No tasks have found by id: %d", taskID)
-	}
-
-	return response.Task, nil
-}
-
-// WorkersWorkedTime retrieves workers worked time
-func (h *Hubstaff) WorkersWorkedTime(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) (CustomResponse, error) {
-	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
-	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
-
-	apiURL := fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
-		dateStart, dateEnd, h.OrgID)
-	return h.TimeLogs(apiURL)
+	return response, nil
 }
 
 // WorkersWorkedTimeDetailed retrieves detailed workers worked time
