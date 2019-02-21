@@ -386,10 +386,11 @@ func (a *App) ReportSprintStatus() {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues of open sprint", a.Slack.ChanBackofficeApp)
+		a.Slack.SendMessage("There are no issues of open sprint", a.Slack.ChanGeneral)
 		return
 	}
-	msgBody := "Sprint status:\n"
+	msgBody := a.Slack.ProjectManager + "\n*Sprint status:*\n"
+
 	for _, issue := range issues {
 		developer := "No developer"
 		// Convert to marshal map to find developer displayName of issue field customfield_10026
@@ -406,21 +407,35 @@ func (a *App) ReportSprintStatus() {
 			}
 			developer = displayName
 		}
-		developers[developer] = append(developers[developer], issue)
+		var isIgnoring bool
+		for _, ignore := range a.Slack.IgnoreList {
+			if ignore == developer {
+				isIgnoring = true
+			}
+		}
+		if !isIgnoring {
+			developers[developer] = append(developers[developer], issue)
+		}
 	}
 	for developer, issues := range developers {
 		var message string
 		for _, issue := range issues {
 			if issue.Fields.Status.Name != jira.StatusClosed && issue.Fields.Status.Name != jira.StatusInClarification {
+				logrus.Debug(msgBody)
+				if issue.Fields.Parent != nil {
+					message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s> / ", issue.Fields.Parent.Key)
+				}
 				message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 			}
 		}
-		if message == "" {
-			msgBody += fmt.Sprintf(developer + " - all tasks closed.\n")
+		if message != "" {
+			msgBody += fmt.Sprintf(developer + " - has open tasks:\n" + message)
 			continue
 		}
-		msgBody += fmt.Sprintf(developer + " - has open tasks:\n" + message)
+		if developer != "No developer" {
+			msgBody += fmt.Sprintf(" " + developer + " - all tasks closed.\n")
+		}
 	}
-	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
+	a.Slack.SendMessage(msgBody, a.Slack.ChanGeneral)
 }
