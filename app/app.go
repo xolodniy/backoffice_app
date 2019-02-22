@@ -86,7 +86,7 @@ func (a *App) GetWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWorkdaysSt
 	for _, worker := range hubstaffResponse.Workers {
 		message += fmt.Sprintf("\n%s %s", worker.TimeWorked, worker.Name)
 	}
-	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp)
+	a.Slack.SendMessage(message, a.Slack.Channels.BackofficeApp)
 }
 
 // GetDetailedWorkersWorkedTimeAndSendToSlack gather detailed workers work time made through period between dates and send it to Slack channel
@@ -125,7 +125,7 @@ func (a *App) GetDetailedWorkersWorkedTimeAndSendToSlack(prefix string, dateOfWo
 		}
 	}
 
-	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp)
+	a.Slack.SendMessage(message, a.Slack.Channels.BackofficeApp)
 }
 
 // ReportIsuuesWithClosedSubtasks create report about issues with closed subtasks
@@ -136,7 +136,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues with all closed subtasks", a.Slack.ChanBackofficeApp)
+		a.Slack.SendMessage("There are no issues with all closed subtasks", a.Slack.Channels.BackofficeApp)
 		return
 	}
 	msgBody := "Issues have all closed subtasks:\n"
@@ -144,7 +144,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 	}
-	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
+	a.Slack.SendMessage(msgBody, a.Slack.Channels.BackofficeApp)
 }
 
 // ReportEmployeesWithExceededEstimateTime create report about employees with ETA overhead
@@ -163,7 +163,7 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 		jiraRemainingEtaMap[issue.Fields.Assignee.EmailAddress] += issue.Fields.TimeTracking.RemainingEstimateSeconds
 	}
 	if len(jiraRemainingEtaMap) == 0 {
-		a.Slack.SendMessage("There are no issues with remaining ETA.", a.Slack.ChanBackofficeApp)
+		a.Slack.SendMessage("There are no issues with remaining ETA.", a.Slack.Channels.BackofficeApp)
 		return
 	}
 	//get logged time from Hubstaff for this week
@@ -208,7 +208,7 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 		message = "No one developer has exceeded estimate time"
 	}
 
-	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message), a.Slack.ChanBackofficeApp)
+	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message), a.Slack.Channels.BackofficeApp)
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
@@ -219,7 +219,7 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no employees with exceeded subtasks", a.Slack.ChanBackofficeApp)
+		a.Slack.SendMessage("There are no employees with exceeded subtasks", a.Slack.Channels.BackofficeApp)
 		return
 	}
 	var index = 1
@@ -233,7 +233,7 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 			index++
 		}
 	}
-	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
+	a.Slack.SendMessage(msgBody, a.Slack.Channels.BackofficeApp)
 }
 
 // ReportIsuuesAfterSecondReview create report about issues after second review round
@@ -244,7 +244,7 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues after second review round", a.Slack.ChanBackofficeApp)
+		a.Slack.SendMessage("There are no issues after second review round", a.Slack.Channels.BackofficeApp)
 		return
 	}
 	msgBody := "Issues after second review round:\n"
@@ -252,10 +252,10 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 	}
-	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
+	a.Slack.SendMessage(msgBody, a.Slack.Channels.BackofficeApp)
 }
 
-// ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
+// ReportSlackEndingFreeSpace create report about employees that have exceeded tasks
 func (a *App) ReportSlackEndingFreeSpace() {
 	size, err := a.Slack.FilesSize()
 	if err != nil {
@@ -266,7 +266,7 @@ func (a *App) ReportSlackEndingFreeSpace() {
 		return
 	}
 	msgBody := fmt.Sprintf("Free space on slack end.\n")
-	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
+	a.Slack.SendMessage(msgBody, a.Slack.Channels.BackofficeApp)
 }
 
 // ReportGitMigrations create report about new git migrations
@@ -278,7 +278,7 @@ func (a *App) ReportGitMigrations() {
 	}
 	for _, message := range messages {
 		if message != "" {
-			a.Slack.SendMessage(message, a.Slack.ChanMigrations)
+			a.Slack.SendMessage(message, a.Slack.Channels.Migrations)
 		}
 	}
 }
@@ -326,7 +326,7 @@ func (a *App) MigrationMessages() ([]string, error) {
 	return files, nil
 }
 
-// SqlCommits returns commits cache with sql migration
+// SqlCommitsCache returns commits cache with sql migration
 func (a *App) SqlCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCache, error) {
 	newMapSqlCommits := make(map[string]CommitsCache)
 	for _, commit := range commits {
@@ -374,23 +374,24 @@ func (a *App) SendLastActivityReportNow() {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
-	a.Slack.SendMessage(report, a.Slack.ChanBackofficeApp)
+	a.Slack.SendMessage(report, a.Slack.Channels.BackofficeApp)
 }
 
 // ReportSprintStatus create report about sprint status
 func (a *App) ReportSprintStatus() {
-	var developers = make(map[string][]jira.Issue)
 	issues, err := a.Jira.IssuesOfOpenSprints()
+	logrus.Debug(issues)
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about issues of open sprint from jira")
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues of open sprint", a.Slack.ChanGeneral)
+		a.Slack.SendMessage("There are no issues of open sprint", a.Slack.Channels.General)
 		return
 	}
 	msgBody := a.Slack.ProjectManager + "\n*Sprint status:*\n"
 
+	var developers = make(map[string][]jira.Issue)
 	for _, issue := range issues {
 		developer := "No developer"
 		// Convert to marshal map to find developer displayName of issue field customfield_10026
@@ -407,21 +408,15 @@ func (a *App) ReportSprintStatus() {
 			}
 			developer = displayName
 		}
-		var isIgnoring bool
-		for _, ignore := range a.Slack.IgnoreList {
-			if ignore == developer {
-				isIgnoring = true
-			}
-		}
-		if !isIgnoring {
-			developers[developer] = append(developers[developer], issue)
-		}
+		developers[developer] = append(developers[developer], issue)
+	}
+	for _, dev := range a.Slack.IgnoreList {
+		delete(developers, dev)
 	}
 	for developer, issues := range developers {
 		var message string
 		for _, issue := range issues {
 			if issue.Fields.Status.Name != jira.StatusClosed && issue.Fields.Status.Name != jira.StatusInClarification {
-				logrus.Debug(msgBody)
 				if issue.Fields.Parent != nil {
 					message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s> / ", issue.Fields.Parent.Key)
 				}
@@ -433,9 +428,10 @@ func (a *App) ReportSprintStatus() {
 			msgBody += fmt.Sprintf(developer + " - has open tasks:\n" + message)
 			continue
 		}
+		// No developer is empty don't add it in report
 		if developer != "No developer" {
 			msgBody += fmt.Sprintf(" " + developer + " - all tasks closed.\n")
 		}
 	}
-	a.Slack.SendMessage(msgBody, a.Slack.ChanGeneral)
+	a.Slack.SendMessage(msgBody, a.Slack.Channels.General)
 }
