@@ -261,7 +261,7 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
 }
 
-// ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
+// ReportSlackEndingFreeSpace create report about employees that have exceeded tasks
 func (a *App) ReportSlackEndingFreeSpace() {
 	size, err := a.Slack.FilesSize()
 	if err != nil {
@@ -332,7 +332,7 @@ func (a *App) MigrationMessages() ([]string, error) {
 	return files, nil
 }
 
-// SqlCommits returns commits cache with sql migration
+// SqlCommitsCache returns commits cache with sql migration
 func (a *App) SqlCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCache, error) {
 	newMapSqlCommits := make(map[string]CommitsCache)
 	for _, commit := range commits {
@@ -374,6 +374,7 @@ func (a *App) MakeLastActivityReportWithCallback(callbackURL string) {
 	}
 }
 
+// SendLastActivityReportNow sends last activity report
 func (a *App) SendLastActivityReportNow() {
 	report, err := a.Hubstaff.GetLastActivityReport()
 	if err != nil {
@@ -431,24 +432,24 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 	a.Slack.SendMessage(msgBody, channel)
 
 	err = a.CreateIssuesCsvReport(issuesWithClosedSubtasks, "issuesWithClosedSubtasks", channel)
-	if err != nil && err.Error() != "empty" {
+	if err != nil {
 		logrus.WithError(err).Error("can't create report of issues with closed subtasks from jira")
 		return err
 	}
 	err = a.CreateIssuesCsvReport(issuesForNextSprint, "issuesForNextSprint", channel)
-	if err != nil && err.Error() != "empty" {
+	if err != nil {
 		logrus.WithError(err).Error("can't create report of issues stands for next sprint from jira")
 		return err
 	}
 	err = a.CreateIssuesCsvReport(issuesFromFutureSprint, "issuesFromFutureSprint", channel)
-	if err != nil && err.Error() != "empty" {
+	if err != nil {
 		logrus.WithError(err).Error("can't create report of issues from future sprint from jira")
 		return err
 	}
 	return nil
 }
 
-// ReportSprintsIsuues create csv file with report about issues
+// CreateIssuesCsvReport create csv file with report about issues
 func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel string) error {
 	if len(issues) == 0 {
 		return nil
@@ -476,7 +477,7 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 	return a.SendFileToSlack(channel, filename+".csv")
 }
 
-// SendFileToSlack
+// SendFileToSlack sends file to slack
 func (a *App) SendFileToSlack(channel, fileName string) error {
 	fileDir, err := os.Getwd()
 	if err != nil {
@@ -504,6 +505,6 @@ func (a *App) SendFileToSlack(channel, fileName string) error {
 		return err
 	}
 	file.Close()
-	defer os.Remove(filePath)
+	os.Remove(filePath)
 	return nil
 }

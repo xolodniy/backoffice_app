@@ -196,6 +196,7 @@ func (s *Slack) DeleteFile(id string) error {
 	return err
 }
 
+// UploadFile uploads file to slack channel
 func (s *Slack) UploadFile(channel, contentType string, file *bytes.Buffer) error {
 	urlStr := s.APIURL + "/files.upload"
 
