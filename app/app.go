@@ -27,25 +27,23 @@ type CommitsCache struct {
 
 // App is main App implementation
 type App struct {
-	Hubstaff            hubstaff.Hubstaff
-	Slack               slack.Slack
-	Jira                jira.Jira
-	Bitbucket           bitbucket.Bitbucket
-	Config              config.Main
-	CommitsCache        map[string]CommitsCache
-	MaxWeekWorkingHours float32
+	Hubstaff     hubstaff.Hubstaff
+	Slack        slack.Slack
+	Jira         jira.Jira
+	Bitbucket    bitbucket.Bitbucket
+	Config       config.Main
+	CommitsCache map[string]CommitsCache
 }
 
 // New is main App constructor
 func New(conf *config.Main) *App {
 	return &App{
-		Hubstaff:            hubstaff.New(&conf.Hubstaff),
-		Slack:               slack.New(&conf.Slack),
-		Jira:                jira.New(&conf.Jira),
-		Bitbucket:           bitbucket.New(&conf.Bitbucket),
-		Config:              *conf,
-		CommitsCache:        make(map[string]CommitsCache),
-		MaxWeekWorkingHours: conf.MaxWeekWorkingHours,
+		Hubstaff:     hubstaff.New(&conf.Hubstaff),
+		Slack:        slack.New(&conf.Slack),
+		Jira:         jira.New(&conf.Jira),
+		Bitbucket:    bitbucket.New(&conf.Bitbucket),
+		Config:       *conf,
+		CommitsCache: make(map[string]CommitsCache),
 	}
 }
 
@@ -182,8 +180,8 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 	for _, user := range response.Users {
 		if jiraRemainingEtaMap[user.Email] > 0 {
 			workVolume := float32(jiraRemainingEtaMap[user.Email]+workers[user.Name]) / 3600.0
-			if workVolume > a.MaxWeekWorkingHours {
-				message += fmt.Sprintf("\n%s late for %.2f hours", user.Name, workVolume-a.MaxWeekWorkingHours)
+			if workVolume > a.Config.MaxWeekWorkingHours {
+				message += fmt.Sprintf("\n%s late for %.2f hours", user.Name, workVolume-a.Config.MaxWeekWorkingHours)
 			}
 		}
 	}
@@ -272,12 +270,12 @@ func (a *App) FillCache() {
 		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
 		return
 	}
-	mapSqlCommits, err := a.SqlCommitsCache(commits)
+	mapSQLCommits, err := a.SQLCommitsCache(commits)
 	if err != nil {
 		logrus.WithError(err).Error("can't take diff information from bitbucket")
 		return
 	}
-	a.CommitsCache = mapSqlCommits
+	a.CommitsCache = mapSQLCommits
 }
 
 // MigrationMessages returns slice of all miigration files
@@ -288,7 +286,7 @@ func (a *App) MigrationMessages() ([]string, error) {
 		return []string{}, err
 	}
 
-	newCommitsCache, err := a.SqlCommitsCache(commits)
+	newCommitsCache, err := a.SQLCommitsCache(commits)
 	if err != nil {
 		logrus.WithError(err).Error("can't take diff information from bitbucket")
 		return nil, err
@@ -308,9 +306,9 @@ func (a *App) MigrationMessages() ([]string, error) {
 	return files, nil
 }
 
-// SqlCommitsCache returns commits cache with sql migration
-func (a *App) SqlCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCache, error) {
-	newMapSqlCommits := make(map[string]CommitsCache)
+// SQLCommitsCache returns commits cache with sql migration
+func (a *App) SQLCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCache, error) {
+	newMapSQLCommits := make(map[string]CommitsCache)
 	for _, commit := range commits {
 		diffStats, err := a.Bitbucket.CommitsDiffStats(commit.Repository.Name, commit.Hash)
 		if err != nil {
@@ -318,11 +316,11 @@ func (a *App) SqlCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCac
 		}
 		for _, diffStat := range diffStats {
 			if strings.Contains(diffStat.New.Path, ".sql") {
-				newMapSqlCommits[commit.Hash] = CommitsCache{Repository: commit.Repository.Name, Path: diffStat.New.Path, Message: commit.Message}
+				newMapSQLCommits[commit.Hash] = CommitsCache{Repository: commit.Repository.Name, Path: diffStat.New.Path, Message: commit.Message}
 			}
 		}
 	}
-	return newMapSqlCommits, nil
+	return newMapSQLCommits, nil
 }
 
 // ReportLastActivityCallback posts last activity to slack user by callbackUrl
@@ -392,7 +390,11 @@ func (a *App) ReportLastActivity() {
 		if err != nil {
 			continue
 		}
-		response, _ := a.Hubstaff.JiraTask(activity.LastTaskID)
+		response, err := a.Hubstaff.JiraTask(activity.LastTaskID)
+		if err != nil {
+			a.Slack.SendMessage("Can't take last activity from hubstaff", a.Slack.ChanBackofficeApp)
+			return
+		}
 		if projectName != "" || response.Task.JiraKey != "" {
 			message += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, projectName)
 			if response.Task.JiraKey != "" {
@@ -404,7 +406,7 @@ func (a *App) ReportLastActivity() {
 	a.Slack.SendMessage(message, a.Slack.ChanBackofficeApp)
 }
 
-// TimeWorked converts seconds value to 00:00 (hours with leading zero:minutes with leading zero) time format
+// TimeWorkedConverter converts seconds value to 00:00 (hours with leading zero:minutes with leading zero) time format
 func (a *App) TimeWorkedConverter(dur int) string {
 	secInMin := 60
 	secInHour := 60 * secInMin
