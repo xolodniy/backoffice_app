@@ -15,18 +15,22 @@ import (
 
 // Slack is main Slack client app implementation
 type Slack struct {
-	InToken           string
-	OutToken          string
-	BotName           string
-	ProjectManager    string
-	ChanGeneral       string
-	ChanBackofficeApp string
-	ChanMigrations    string
-	APIURL            string
-	TotalVolume       float64
-	RestVolume        float64
-	AppTokenIn        string
-	IgnoreList        []string
+	InToken        string
+	OutToken       string
+	BotName        string
+	ProjectManager string
+	Channels       Channels
+	APIURL         string
+	TotalVolume    float64
+	RestVolume     float64
+	IgnoreList     []string
+}
+
+// Slack is main Slack client app implementation
+type Channels struct {
+	General       string
+	BackofficeApp string
+	Migrations    string
 }
 
 // FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
@@ -52,18 +56,19 @@ type Files struct {
 // New creates new slack
 func New(config *config.Slack) Slack {
 	return Slack{
-		InToken:           config.InToken,
-		OutToken:          config.OutToken,
-		BotName:           config.BotName,
-		ProjectManager:    "<@" + config.ProjectManager + ">",
-		ChanGeneral:       "#" + config.ChanGeneral,
-		ChanBackofficeApp: "#" + config.ChanBackofficeApp,
-		ChanMigrations:    "#" + config.ChanMigrations,
-		APIURL:            config.APIURL,
-		TotalVolume:       config.TotalVolume,
-		RestVolume:        config.RestVolume,
-		AppTokenIn:        config.AppTokenIn,
-		IgnoreList:        config.IgnoreList,
+		InToken:        config.InToken,
+		OutToken:       config.OutToken,
+		BotName:        config.BotName,
+		ProjectManager: "<@" + config.ProjectManager + ">",
+		Channels: Channels{
+			"#" + config.Channels.General,
+			"#" + config.Channels.BackofficeApp,
+			"#" + config.Channels.Migrations,
+		},
+		APIURL:      config.APIURL,
+		TotalVolume: config.TotalVolume,
+		RestVolume:  config.RestVolume,
+		IgnoreList:  config.IgnoreList,
 	}
 }
 
