@@ -122,7 +122,7 @@ func (h *Hubstaff) Users() (CustomResponse, error) {
 	return usersSlice, nil
 }
 
-// GetLastActivityReport returns a text report about last activities
+// LastActivities returns a text report about last activities
 func (h *Hubstaff) LastActivities() (CustomResponse, error) {
 	rawResponse, err := h.Request(fmt.Sprintf("/v1/organizations/%d/last_activity", h.OrgID))
 	if err != nil {
