@@ -52,6 +52,7 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 				Fields: []string{
 					"customfield_10026",
 					"customfield_10008", //epic issue
+					"customfield_10010", //sprint slice
 					"timetracking",
 					"timespent",
 					"timeoriginalestimate",
@@ -262,4 +263,16 @@ func (j *Jira) IssuesFromFutureSprintReport(project string) ([]Issue, error) {
 		return nil, err
 	}
 	return issues, nil
+}
+
+// IssueSummary retrieves issue summary
+func (j *Jira) EpicName(issueKey string) (string, error) {
+	options := jira.GetQueryOptions{}
+	epicIssue, resp, err := j.Issue.Get(issueKey, &options)
+	if err != nil {
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira this jira issue")
+		return "", err
+	}
+
+	return fmt.Sprint(epicIssue.Fields.Unknowns["customfield_10005"]), nil
 }
