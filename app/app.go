@@ -465,7 +465,7 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 
 	writer := csv.NewWriter(file)
 
-	err = writer.Write([]string{"Type", "Key", "Summary", "Status", "Epic", "Name"})
+	err = writer.Write([]string{"Type", "Key", "Summary", "Status", "Epic"})
 	if err != nil {
 		return err
 	}
@@ -477,7 +477,7 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 				logrus.WithError(err).Error("can't get issue summary from jira")
 			}
 		}
-		err = writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName, issue.ID})
+		err = writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName})
 		if err != nil {
 			return err
 		}
