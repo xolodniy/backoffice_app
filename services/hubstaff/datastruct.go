@@ -27,9 +27,10 @@ func (wt WorkingTime) String() string {
 	return fmt.Sprintf("%.2d:%.2d", hours, minutes)
 }
 
-// UserReport used to reflect an api response from /by_member endpoint
+// UserReport used to reflect an api response from /by_member endpoint and for query Hubstaff's users
 type UserReport struct {
 	Name       string      `json:"name"`
+	Email      string      `json:"email"`
 	TimeWorked WorkingTime `json:"duration"`
 }
 
@@ -48,12 +49,6 @@ type DateReport struct {
 			} `json:"notes"`
 		} `json:"projects"`
 	} `json:"users"`
-}
-
-// UserInfo type for query Hubstaff's users
-type UserInfo struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
 }
 
 // LastActivity type for query last activity of users

@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"backoffice_app/config"
-
-	"github.com/jinzhu/now"
 )
 
 // Hubstaff is main Hubstaff implementation
@@ -94,7 +92,7 @@ func (h *Hubstaff) do(path string) ([]byte, error) {
 }
 
 // HubstaffUsers returns a slice of Hubstaff users
-func (h *Hubstaff) HubstaffUsers() ([]UserInfo, error) {
+func (h *Hubstaff) HubstaffUsers() ([]UserReport, error) {
 	apiURL := "/v1/users"
 	orgsRaw, err := h.do(apiURL)
 	if err != nil {
@@ -102,7 +100,7 @@ func (h *Hubstaff) HubstaffUsers() ([]UserInfo, error) {
 	}
 
 	usersSlice := struct {
-		List []UserInfo `json:"users"`
+		List []UserReport `json:"users"`
 	}{}
 
 	if err = json.Unmarshal(orgsRaw, &usersSlice); err != nil {
@@ -214,6 +212,20 @@ func (h *Hubstaff) UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd 
 	if len(orgs.List[0].Users) == 0 {
 		return []UserReport{}, fmt.Errorf("No workers found")
 	}
+
+	//get hubstaff's user list to add emails
+	hubstaffUsers, err := h.HubstaffUsers()
+	if err != nil {
+		return []UserReport{}, fmt.Errorf("failed to fetch data from hubstaff")
+	}
+	for i, userReport := range orgs.List[0].Users {
+		for _, user := range hubstaffUsers {
+			if user.Name == userReport.Name {
+				orgs.List[0].Users[i].Email = user.Email
+				break
+			}
+		}
+	}
 	return orgs.List[0].Users, nil
 }
 
@@ -245,27 +257,4 @@ func (h *Hubstaff) UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd ti
 		return []DateReport{}, fmt.Errorf("No tracked time for now found")
 	}
 	return orgs.List[0].Dates, nil
-}
-
-// UsersWorkTimeMapByEmail retrieves users work time map by email string
-func (h *Hubstaff) UsersWorkTimeMapByEmail(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) (map[string]UserReport, error) {
-	usersReports, err := h.UsersWorkTimeByMember(now.BeginningOfWeek(), now.EndOfWeek())
-	if err != nil {
-		return map[string]UserReport{}, fmt.Errorf("can't get logged time from Hubstaff")
-	}
-	//get hubstaff's user list
-	hubstaffUsers, err := h.HubstaffUsers()
-	if err != nil {
-		return map[string]UserReport{}, fmt.Errorf("failed to fetch data from hubstaff")
-	}
-	var usersMap = make(map[string]UserReport)
-	for _, userReport := range usersReports {
-		for _, user := range hubstaffUsers {
-			if user.Name == userReport.Name {
-				usersMap[user.Email] = userReport
-				break
-			}
-		}
-	}
-	return usersMap, nil
 }
