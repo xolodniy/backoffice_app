@@ -7,27 +7,26 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"backoffice_app/config"
 )
 
 // Hubstaff is main Hubstaff implementation
 type Hubstaff struct {
-	APIURL     string
-	AppToken   string
-	AuthToken  string
-	HTTPClient *http.Client
-	OrgID      int64
+	APIURL    string
+	AppToken  string
+	AuthToken string
+	OrgID     int64
 }
 
 // New creates new Hubstaff
 func New(config *config.Hubstaff) Hubstaff {
 	return Hubstaff{
-		HTTPClient: http.DefaultClient,
-		AppToken:   config.Auth.AppToken,
-		AuthToken:  config.Auth.Token,
-		APIURL:     config.APIURL,
-		OrgID:      config.OrgsID,
+		AppToken:  config.Auth.AppToken,
+		AuthToken: config.Auth.Token,
+		APIURL:    config.APIURL,
+		OrgID:     config.OrgsID,
 	}
 }
 
@@ -49,7 +48,7 @@ func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
 	request.Header.Set("App-Token", h.AppToken)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
-	response, err := h.HTTPClient.Do(request)
+	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return "", fmt.Errorf("can't send http Request: %s", err)
 	}
@@ -73,7 +72,7 @@ func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
 }
 
 // Request is main API GET request method
-func (h *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
+func (h *Hubstaff) do(path string) ([]byte, error) {
 	request, err := http.NewRequest("GET", h.APIURL+path, nil)
 	if err != nil {
 		return nil, fmt.Errorf("can't create http GET Request: %s", err)
@@ -81,15 +80,7 @@ func (h *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
 
 	request.Header.Set("App-Token", h.AppToken)
 	request.Header.Set("Auth-Token", h.AuthToken)
-
-	if len(q) > 0 {
-		qs := request.URL.Query()
-		for k, v := range q {
-			qs.Add(k, v)
-		}
-		request.URL.RawQuery = qs.Encode()
-	}
-	response, err := h.HTTPClient.Do(request)
+	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return nil, fmt.Errorf("can't send http Request: %s", err)
 	}
@@ -100,43 +91,16 @@ func (h *Hubstaff) Request(path string, q map[string]string) ([]byte, error) {
 	return s, err
 }
 
-// RequestAndParseTimelogs returning parsed workers timelogs
-func (h *Hubstaff) RequestAndParseTimelogs(apiURL string) (APIResponse, error) {
-
-	orgsRaw, err := h.Request(apiURL, nil)
-
-	if err != nil {
-		return APIResponse{}, fmt.Errorf("error on getting workers worked time: %v", err)
-	}
-
-	orgs := struct {
-		List []APIResponse `json:"organizations"`
-	}{}
-
-	if err = json.Unmarshal(orgsRaw, &orgs); err != nil {
-		return APIResponse{}, fmt.Errorf("can't decode response: %s", err)
-	}
-
-	if len(orgs.List) == 0 {
-		return APIResponse{}, fmt.Errorf("No tracked time for now or no organization found")
-	}
-	if len(orgs.List[0].Workers) == 0 && len(orgs.List[0].Dates) == 0 {
-		return APIResponse{}, fmt.Errorf("No tracked time for now or no workers found")
-	}
-	return orgs.List[0], nil
-}
-
-// GetAllHubstaffUsers returns a slice of Hubstaff users
-func (h *Hubstaff) GetAllHubstaffUsers() ([]UserDTO, error) {
+// HubstaffUsers returns a slice of Hubstaff users
+func (h *Hubstaff) HubstaffUsers() ([]UserReport, error) {
 	apiURL := "/v1/users"
-	orgsRaw, err := h.Request(apiURL, nil)
-
+	orgsRaw, err := h.do(apiURL)
 	if err != nil {
 		return nil, fmt.Errorf("error on getting workers list: %v", err)
 	}
 
 	usersSlice := struct {
-		List []UserDTO `json:"users"`
+		List []UserReport `json:"users"`
 	}{}
 
 	if err = json.Unmarshal(orgsRaw, &usersSlice); err != nil {
@@ -145,45 +109,40 @@ func (h *Hubstaff) GetAllHubstaffUsers() ([]UserDTO, error) {
 	return usersSlice.List, nil
 }
 
-// GetLastActivityReport returns a text report about last activities
-func (h *Hubstaff) GetLastActivityReport() (string, error) {
-	rawResponse, err := h.Request(fmt.Sprintf("/v1/organizations/%d/last_activity", h.OrgID), nil)
+// LastActivity returns a text report about last activities
+func (h *Hubstaff) LastActivity() ([]LastActivity, error) {
+	rawResponse, err := h.do(fmt.Sprintf("/v1/organizations/%d/last_activity", h.OrgID))
 	if err != nil {
-		return "", fmt.Errorf("error on getting last activities data: %v", err)
+		return []LastActivity{}, fmt.Errorf("error on getting last activities data: %v", err)
 	}
 	activities := struct {
-		List []APIResponseLastActivity `json:"last_activities"`
+		List []LastActivity `json:"last_activities"`
 	}{}
 
 	if err = json.Unmarshal(rawResponse, &activities); err != nil {
-		return "", fmt.Errorf("can't decode response: %s", err)
+		return []LastActivity{}, fmt.Errorf("can't decode response: %s", err)
 	}
 	if len(activities.List) == 0 {
-		return "No logged activities have found", nil
+		return []LastActivity{}, nil
 	}
-
-	message := ""
-	for _, activity := range activities.List {
-		projectName, err := h.getProjectNameByID(activity.LastProjectID)
+	for i, activity := range activities.List {
+		activities.List[i].ProjectName, err = h.getProjectNameByID(activity.LastProjectID)
 		if err != nil {
 			continue
 		}
-		taskJiraKey, taskSummary, _ := h.getJiraTaskKeyByID(activity.LastTaskID)
-		if projectName != "" || taskJiraKey != "" {
-			message += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, projectName)
-			if taskJiraKey != "" {
-				message += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>", taskJiraKey, taskSummary)
-			}
+		activities.List[i].TaskJiraKey, activities.List[i].TaskSummary, err = h.getJiraTaskKeyByID(activity.LastTaskID)
+		if err != nil {
+			continue
 		}
 	}
-	return message, nil
+	return activities.List, nil
 }
 
 func (h *Hubstaff) getProjectNameByID(projectID int) (string, error) {
 	if projectID == 0 {
 		return "", nil
 	}
-	rawResponse, err := h.Request(fmt.Sprintf("/v1/projects/%d", projectID), nil)
+	rawResponse, err := h.do(fmt.Sprintf("/v1/projects/%d", projectID))
 	if err != nil {
 		return "", err
 	}
@@ -199,7 +158,6 @@ func (h *Hubstaff) getProjectNameByID(projectID int) (string, error) {
 	if response.Project.Name == "" {
 		return "", fmt.Errorf("No projects have found by id: %d", projectID)
 	}
-
 	return response.Project.Name, nil
 }
 
@@ -207,7 +165,7 @@ func (h *Hubstaff) getJiraTaskKeyByID(taskID int) (string, string, error) {
 	if taskID == 0 {
 		return "", "", nil
 	}
-	rawResponse, err := h.Request(fmt.Sprintf("/v1/tasks/%d", taskID), nil)
+	rawResponse, err := h.do(fmt.Sprintf("/v1/tasks/%d", taskID))
 	if err != nil {
 		return "", "", err
 	}
@@ -224,6 +182,79 @@ func (h *Hubstaff) getJiraTaskKeyByID(taskID int) (string, string, error) {
 	if response.Task.JiraKey == "" {
 		return "", "", fmt.Errorf("No tasks have found by id: %d", taskID)
 	}
-
 	return response.Task.JiraKey, response.Task.Summary, nil
+}
+
+// UsersWorkTimeByMember retrieves work time of user reports slice by member
+func (h *Hubstaff) UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) ([]UserReport, error) {
+	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
+	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
+	apiURL := fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
+		dateStart, dateEnd, h.OrgID)
+
+	orgsRaw, err := h.do(apiURL)
+	if err != nil {
+		return []UserReport{}, fmt.Errorf("error on getting workers worked time: %v", err)
+	}
+	orgs := struct {
+		List []struct {
+			Users []UserReport `json:"users"`
+		} `json:"organizations"`
+	}{}
+
+	if err = json.Unmarshal(orgsRaw, &orgs); err != nil {
+		return []UserReport{}, fmt.Errorf("can't decode response: %s", err)
+	}
+
+	if len(orgs.List) == 0 {
+		return []UserReport{}, fmt.Errorf("No tracked time for now or no organization found")
+	}
+	if len(orgs.List[0].Users) == 0 {
+		return []UserReport{}, fmt.Errorf("No workers found")
+	}
+
+	//get hubstaff's user list to add emails
+	hubstaffUsers, err := h.HubstaffUsers()
+	if err != nil {
+		return []UserReport{}, fmt.Errorf("failed to fetch data from hubstaff")
+	}
+	for i, userReport := range orgs.List[0].Users {
+		for _, user := range hubstaffUsers {
+			if user.Name == userReport.Name {
+				orgs.List[0].Users[i].Email = user.Email
+				break
+			}
+		}
+	}
+	return orgs.List[0].Users, nil
+}
+
+// UsersWorkTimeByDate retrieves work time of date reports slice by date
+func (h *Hubstaff) UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) ([]DateReport, error) {
+	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
+	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
+	apiURL := fmt.Sprintf("/v1/custom/by_date/team/?start_date=%s&end_date=%s&organizations=%d&show_notes=%t",
+		dateStart, dateEnd, h.OrgID, true)
+
+	orgsRaw, err := h.do(apiURL)
+	if err != nil {
+		return []DateReport{}, fmt.Errorf("error on getting workers worked time: %v", err)
+	}
+	orgs := struct {
+		List []struct {
+			Dates []DateReport `json:"dates"`
+		} `json:"organizations"`
+	}{}
+
+	if err = json.Unmarshal(orgsRaw, &orgs); err != nil {
+		return []DateReport{}, fmt.Errorf("can't decode response: %s", err)
+	}
+
+	if len(orgs.List) == 0 {
+		return []DateReport{}, fmt.Errorf("No tracked time for now or no organization found")
+	}
+	if len(orgs.List[0].Dates) == 0 {
+		return []DateReport{}, fmt.Errorf("No tracked time for now found")
+	}
+	return orgs.List[0].Dates, nil
 }
