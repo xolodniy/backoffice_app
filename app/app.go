@@ -144,7 +144,7 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 		a.Slack.SendMessage("There are no issues with remaining ETA.", a.Slack.ChanBackofficeApp)
 		return
 	}
-	usersMapByEmail, err := a.Hubstaff.UsersWorkTimeByMember(now.BeginningOfWeek(), now.EndOfWeek())
+	usersReports, err := a.Hubstaff.UsersWorkTimeByMember(now.BeginningOfWeek(), now.EndOfWeek())
 	if err != nil {
 		logrus.WithError(err).Error("can't get logged time from Hubstaff")
 		return
@@ -153,7 +153,7 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 	messageHeader := fmt.Sprintf("\nExceeded estimate time report:\n\n*%v*\n", now.BeginningOfDay().Format("02.01.2006"))
 	message := ""
 	var maxWeekWorkingHours float32 = 30.0
-	for _, userReport := range usersMapByEmail {
+	for _, userReport := range usersReports {
 		if jiraRemainingEtaMap[userReport.Email] > 0 {
 			workVolume := float32(jiraRemainingEtaMap[userReport.Email]+int(userReport.TimeWorked)) / 3600.0
 			if workVolume > maxWeekWorkingHours {
