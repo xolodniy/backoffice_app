@@ -18,6 +18,7 @@ type Slack struct {
 	InToken           string
 	OutToken          string
 	BotName           string
+	ProjectManager    string
 	ChanBackofficeApp string
 	ChanMigrations    string
 	APIURL            string
@@ -52,6 +53,7 @@ func New(config *config.Slack) Slack {
 		InToken:           config.InToken,
 		OutToken:          config.OutToken,
 		BotName:           config.BotName,
+		ProjectManager:    "<@" + config.ProjectManager + ">",
 		ChanBackofficeApp: "#" + config.ChanBackofficeApp,
 		ChanMigrations:    "#" + config.ChanMigrations,
 		APIURL:            config.APIURL,

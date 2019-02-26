@@ -53,6 +53,7 @@ type Slack struct {
 	InToken           string
 	OutToken          string
 	BotName           string
+	ProjectManager    string
 	ChanBackofficeApp string
 	ChanMigrations    string
 	APIURL            string
