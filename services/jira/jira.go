@@ -32,14 +32,15 @@ func New(config *config.Jira) Jira {
 
 // Status variables for jql requests
 var (
-	StatusClosed        = "Closed"
-	StatusTlReview      = "TL Review"
-	StatusPeerReview    = "In peer review"
-	StatusEmptyAssignee = "empty"
-	FieldEpicName       = "customfield_10005"
-	FieldEpicKey        = "customfield_10008"
-	FieldSprintInfo     = "customfield_10010"
-	FieldDeveloperMap   = "customfield_10026"
+	StatusClosed          = "Closed"
+	StatusTlReview        = "TL Review"
+	StatusPeerReview      = "In peer review"
+	StatusEmptyAssignee   = "empty"
+	FieldEpicName         = "customfield_10005"
+	FieldEpicKey          = "customfield_10008"
+	FieldSprintInfo       = "customfield_10010"
+	FieldDeveloperMap     = "customfield_10026"
+	StatusInClarification = "In clarification"
 )
 
 // issues searches issues in all sprints which opened now and returning list with issues in this sprints list
@@ -65,6 +66,7 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 					"issuetype",
 					"subtasks",
 					"assignee",
+					"parent",
 				},
 			},
 		)
@@ -90,7 +92,7 @@ func (j *Jira) AssigneeOpenIssues() ([]Issue, error) {
 	request := fmt.Sprintf(`assignee != %s AND Sprint IN openSprints() AND (status NOT IN ("%s")) AND issuetype IN subTaskIssueTypes()`, StatusEmptyAssignee, StatusClosed)
 	issues, err := j.issues(request)
 	if err != nil {
-		return nil, fmt.Errorf("can't create jira client: %s", err)
+		return nil, fmt.Errorf("can't take open jira issues type in subtasks of open sprints: %s", err)
 	}
 	return issues, nil
 }
@@ -279,4 +281,14 @@ func (j *Jira) EpicName(issueKey string) (string, error) {
 	}
 
 	return fmt.Sprint(epicIssue.Fields.Unknowns[FieldEpicName]), nil
+}
+
+// IssuesOfOpenSprints searches Issues in all sprints which opened now and returning list with issues in this sprints list
+func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
+	request := fmt.Sprintf(`assignee != %s AND type not in (story, bug) AND Sprint IN openSprints()`, StatusEmptyAssignee)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't take jira issues with type not in (story, bug) of open sprints: %s", err)
+	}
+	return issues, nil
 }

@@ -11,6 +11,7 @@ cron:
   employeesexceededestimatetime: "00 00 07 * * *"
   reportslackspaceending: "00 00 07 * * *"
   reportgitmigrations: "@hourly"
+  reportsprintstatus: "00 00 05 * * MON"
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
@@ -26,14 +27,24 @@ bitbucket:
 
 slack:
   apiurl: https://slack.com/api
-  chanbackofficeapp: back-office-app
-  chanmigrations: migrations
+  channels:
+    general: general
+    backofficeapp: back-office-app
+    migrations: migrations
   botname: Back Office Bot
+  projectmanager: U9FDU5W4D
   intoken: xoxp-281270780213-532563372454-545645521588-6e70abc49c386bb1ad94465d19866188
   outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
   totalVolume: 5.0
   restVolume: 0.0
   secret: 046b6a43f79bca89a7f9056921906b25
+  ignorelist:
+    - 'Pavel Palenin'
+    - 'Oleg Raev'
+    - 'Rodion Golovushkin'
+    - 'Ivan Tomilov'
+    - 'Former user'
+    - 'No developer'
 
 hubstaff:
   apiurl: https://api.hubstaff.com
