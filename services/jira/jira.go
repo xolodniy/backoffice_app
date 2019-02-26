@@ -113,7 +113,7 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 	developerMap, err := issue.Fields.Unknowns.MarshalMap(FieldDeveloperMap)
 	if err != nil {
 		logrus.WithError(err).WithField("developerMap", fmt.Sprintf("%+v", developerMap)).
-			Error("can't make %s map marshaling", FieldDeveloperMap)
+			Errorf("can't make %s map marshaling", FieldDeveloperMap)
 	} else if developerMap != nil {
 		displayName, ok := developerMap["displayName"].(string)
 		if !ok {
