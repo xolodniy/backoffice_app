@@ -30,7 +30,7 @@ func (c *Controller) sprintReport(ctx *gin.Context) {
 	}{}
 	err := ctx.ShouldBindWith(&request, binding.FormPost)
 	if err != nil {
-		ctx.String(http.StatusBadRequest, err.Error())
+		ctx.String(http.StatusOK, "Failed! Project key is empty! Please, type /sprintreport [project key]")
 		return
 	}
 	go func() {
