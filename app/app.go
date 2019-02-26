@@ -478,9 +478,7 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 
 // FindLastSprintSequence will find sequence of sprint from issue.Fields.Unknowns["customfield_10010"].([]interface{})
 func (a *App) FindLastSprintSequence(sprints []interface{}) (int, error) {
-	var (
-		lastSequence = 0
-	)
+	var lastSequence = 0
 	rSeq, err := regexp.Compile(`sequence=(\d+)`)
 	if err != nil {
 		return 0, err
@@ -490,10 +488,11 @@ func (a *App) FindLastSprintSequence(sprints []interface{}) (int, error) {
 		if !ok {
 			return 0, fmt.Errorf("can't parse to string: %v", sprints[i])
 		}
-		// Find string submatch and get slice of ["sequence=20" "20"]
+		// Find string submatch and get slice of match string and this sequence
 		// For example, one of sprint:
 		// "com.atlassian.greenhopper.service.sprint.Sprint@6f00eb7b[id=47,rapidViewId=12,state=ACTIVE,name=Sprint 46,
 		// goal=,startDate=2019-02-20T04:19:23.907Z,endDate=2019-02-25T04:19:00.000Z,completeDate=<null>,sequence=47]"
+		// we get string submatch of slice ["sequence=47" "47"] and then parse "47" as integer number to find the biggest one
 		m := rSeq.FindStringSubmatch(s)
 		if len(m) != 2 {
 			return 0, fmt.Errorf("can't find submatch string to sequence: %v", sprints[i])
