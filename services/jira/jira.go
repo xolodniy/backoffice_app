@@ -199,8 +199,8 @@ func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
 	return issuesAfterReview, nil
 }
 
-// SetPMReviewStatus set PM transition for issue
-func (j *Jira) SetPMReviewStatus(issueKey string) error {
+// IssueSetPMReviewStatus set PM transition for issue
+func (j *Jira) IssueSetPMReviewStatus(issueKey string) error {
 	transitions, resp, err := j.Issue.GetTransitions(issueKey)
 	if err != nil {
 		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira transisions list of issue")

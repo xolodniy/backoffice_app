@@ -127,7 +127,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 		}
 		if issue.Fields.Status.Name != jira.StatusPMReview {
-			err := a.Jira.SetPMReviewStatus(issue.Key)
+			err := a.Jira.IssueSetPMReviewStatus(issue.Key)
 			if err != nil {
 				logrus.WithError(err).Error("can't set PM review status for issue")
 			}
