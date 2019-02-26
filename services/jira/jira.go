@@ -32,14 +32,14 @@ func New(config *config.Jira) Jira {
 
 // Status variables for jql requests
 var (
-	StatusClosed        = "Closed"
-	StatusTlReview      = "TL Review"
-	StatusPeerReview    = "In peer review"
-	StatusEmptyAssignee = "empty"
-	FieldEpicName       = "customfield_10005"
-	FieldEpicKey        = "customfield_10008"
-	FieldSprintInfo     = "customfield_10010"
-	FieldDeveloperMap   = "customfield_10026"
+	StatusClosed          = "Closed"
+	StatusTlReview        = "TL Review"
+	StatusPeerReview      = "In peer review"
+	StatusEmptyAssignee   = "empty"
+	FieldEpicName         = "customfield_10005"
+	FieldEpicKey          = "customfield_10008"
+	FieldSprintInfo       = "customfield_10010"
+	FieldDeveloperMap     = "customfield_10026"
 	StatusInClarification = "In clarification"
 )
 

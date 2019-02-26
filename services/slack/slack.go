@@ -16,15 +16,15 @@ import (
 
 // Slack is main Slack client app implementation
 type Slack struct {
-	InToken           string
-	OutToken          string
-	BotName           string
-	ChanBackofficeApp string
-	ChanMigrations    string
-	APIURL            string
-	TotalVolume       float64
-	RestVolume        float64
-	Secret            string
+	InToken        string
+	OutToken       string
+	BotName        string
+	ProjectManager string
+	Channels       Channels
+	APIURL         string
+	TotalVolume    float64
+	RestVolume     float64
+	Secret         string
 	IgnoreList     []string
 }
 
@@ -69,7 +69,7 @@ func New(config *config.Slack) Slack {
 		},
 		APIURL:      config.APIURL,
 		TotalVolume: config.TotalVolume,
-		Secret:            config.Secret,
+		Secret:      config.Secret,
 		RestVolume:  config.RestVolume,
 		IgnoreList:  config.IgnoreList,
 	}
