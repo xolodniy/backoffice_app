@@ -28,7 +28,7 @@ type Slack struct {
 	IgnoreList     []string
 }
 
-// Slack is main Slack client app implementation
+// Channels is struct of channels
 type Channels struct {
 	General       string
 	BackofficeApp string

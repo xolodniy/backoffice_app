@@ -143,8 +143,7 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
     restVolume: 0.0     -variable of rest space, when we want send report.
     intoken: 123456     -the user token for slack's user api
     outtoken: 123456    -the bot token for slack's bot api
-    apptokenin: 123456  -the slack's app input token for income request authorization
-
+ 
 #### Cron manager parameters 
     "00 00 07 * * *"    — cron prefence for adding tasks
    
