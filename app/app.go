@@ -417,10 +417,8 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 // textMessageAboutIssuesStatus create text message for report about issues
 func (a *App) textMessageAboutIssuesStatus(messagePrefix string, issues []jira.Issue) string {
 	var message string
-	if len(issues) != 0 {
-		for _, issue := range issues {
-			message += fmt.Sprintf("%s %s %s\n", issue.Fields.Type.Name, issue.Key, issue.Fields.Summary)
-		}
+	for _, issue := range issues {
+		message += fmt.Sprintf("%s %s %s\n", issue.Fields.Type.Name, issue.Key, issue.Fields.Summary)
 	}
 	if message == "" {
 		message += fmt.Sprintf("- %[1]s:\nThere are no %[1]s\n", messagePrefix)
@@ -444,6 +442,9 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 	writer := csv.NewWriter(file)
 	if withAdditionalInfo {
 		err = writer.Write([]string{"Type", "Key", "Summary", "Status", "Epic"})
+		if err != nil {
+			return err
+		}
 		for _, issue := range issues {
 			epicName := "empty"
 			if issue.Fields.Unknowns[jira.FieldEpicKey] != nil {
@@ -453,12 +454,21 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 				}
 			}
 			err = writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName})
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if !withAdditionalInfo {
 		err = writer.Write([]string{"Type", "Key", "Summary"})
+		if err != nil {
+			return err
+		}
 		for _, issue := range issues {
 			err = writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary})
+			if err != nil {
+				return err
+			}
 		}
 	}
 	writer.Flush()
@@ -480,10 +490,13 @@ func (a *App) FindLastSprintSequence(sprints []interface{}) (int, error) {
 		if !ok {
 			return 0, fmt.Errorf("can't parse to string: %v", sprints[i])
 		}
-		// find string submatch and get slice of ["sequence=20" "20"]
+		// Find string submatch and get slice of ["sequence=20" "20"]
+		// For example, one of sprint:
+		// "com.atlassian.greenhopper.service.sprint.Sprint@6f00eb7b[id=47,rapidViewId=12,state=ACTIVE,name=Sprint 46,
+		// goal=,startDate=2019-02-20T04:19:23.907Z,endDate=2019-02-25T04:19:00.000Z,completeDate=<null>,sequence=47]"
 		m := rSeq.FindStringSubmatch(s)
 		if len(m) != 2 {
-			return 0, err
+			return 0, fmt.Errorf("can't find submatch string to sequence: %v", sprints[i])
 		}
 		n, err := strconv.Atoi(m[1])
 		if err != nil {

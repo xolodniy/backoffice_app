@@ -203,7 +203,7 @@ func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
 	return issuesAfterReview, nil
 }
 
-// IssuesClosed retrieves issues with closed status (bugs and stories)
+// IssuesClosedFromOpenSprint retrieves issues with closed status (bugs and stories)
 func (j *Jira) IssuesClosedFromOpenSprint(project string) ([]Issue, error) {
 	request := fmt.Sprintf(`status IN ("%s") AND project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`,
 		StatusClosed, project)
@@ -218,7 +218,7 @@ func (j *Jira) IssuesClosedFromOpenSprint(project string) ([]Issue, error) {
 	return issuesWithClosedStatus, nil
 }
 
-// IssuesClosedSubtasks retrieves issues with closed subtasks (bugs and stories)
+// IssuesClosedSubtasksFromOpenSprint retrieves issues with closed subtasks (bugs and stories)
 func (j *Jira) IssuesClosedSubtasksFromOpenSprint(project string) ([]Issue, error) {
 	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
 	issues, err := j.issues(request)
@@ -238,7 +238,7 @@ Loop:
 	return issuesWithClosedSubtasks, nil
 }
 
-// IssuesForNextSprintReport retrieves issues that stands for next sprint (bugs and stories)
+// IssuesForNextSprint retrieves issues that stands for next sprint (bugs and stories)
 func (j *Jira) IssuesForNextSprint(project string) ([]Issue, error) {
 	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
 	issues, err := j.issues(request)
@@ -259,7 +259,7 @@ Loop:
 	return issues, nil
 }
 
-// IssuesFromFutureSprintReport retrieves issues from future sprint (bugs and stories)
+// IssuesFromFutureSprint retrieves issues from future sprint (bugs and stories)
 func (j *Jira) IssuesFromFutureSprint(project string) ([]Issue, error) {
 	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in futureSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
 	issues, err := j.issues(request)
@@ -269,7 +269,7 @@ func (j *Jira) IssuesFromFutureSprint(project string) ([]Issue, error) {
 	return issues, nil
 }
 
-// IssueSummary retrieves issue summary
+// EpicName retrieves issue summary
 func (j *Jira) EpicName(issueKey string) (string, error) {
 	options := jira.GetQueryOptions{}
 	epicIssue, resp, err := j.Issue.Get(issueKey, &options)
