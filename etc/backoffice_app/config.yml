@@ -38,7 +38,11 @@ slack:
   totalVolume: 5.0
   restVolume: 0.0
   apptokenin: t2LZHz5L0rNuCxSkDt07dVzu
-  ignorelist: [Pavel Palenin, Oleg Raev, Rodion Golovushkin, Ivan Tomilov]
+  ignorelist:
+    - 'Pavel Palenin'
+    - 'Oleg Raev'
+    - 'Rodion Golovushkin'
+    - 'Ivan Tomilov'
 
 hubstaff:
   apiurl: https://api.hubstaff.com
