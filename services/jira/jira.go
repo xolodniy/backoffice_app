@@ -203,8 +203,8 @@ func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
 	return issuesAfterReview, nil
 }
 
-// IssuesClosedForSprintReport retrieves issues with closed status (bugs and stories)
-func (j *Jira) IssuesClosedForSprintReport(project string) ([]Issue, error) {
+// IssuesClosed retrieves issues with closed status (bugs and stories)
+func (j *Jira) IssuesClosedFromOpenSprint(project string) ([]Issue, error) {
 	request := fmt.Sprintf(`status IN ("%s") AND project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`,
 		StatusClosed, project)
 	issues, err := j.issues(request)
@@ -218,8 +218,8 @@ func (j *Jira) IssuesClosedForSprintReport(project string) ([]Issue, error) {
 	return issuesWithClosedStatus, nil
 }
 
-// IssuesClosedSubtasksForSprintReport retrieves issues with closed subtasks (bugs and stories)
-func (j *Jira) IssuesClosedSubtasksForSprintReport(project string) ([]Issue, error) {
+// IssuesClosedSubtasks retrieves issues with closed subtasks (bugs and stories)
+func (j *Jira) IssuesClosedSubtasksFromOpenSprint(project string) ([]Issue, error) {
 	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
 	issues, err := j.issues(request)
 	if err != nil {
@@ -239,7 +239,7 @@ Loop:
 }
 
 // IssuesForNextSprintReport retrieves issues that stands for next sprint (bugs and stories)
-func (j *Jira) IssuesForNextSprintReport(project string) ([]Issue, error) {
+func (j *Jira) IssuesForNextSprint(project string) ([]Issue, error) {
 	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
 	issues, err := j.issues(request)
 	if err != nil {
@@ -260,7 +260,7 @@ Loop:
 }
 
 // IssuesFromFutureSprintReport retrieves issues from future sprint (bugs and stories)
-func (j *Jira) IssuesFromFutureSprintReport(project string) ([]Issue, error) {
+func (j *Jira) IssuesFromFutureSprint(project string) ([]Issue, error) {
 	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in futureSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
 	issues, err := j.issues(request)
 	if err != nil {
