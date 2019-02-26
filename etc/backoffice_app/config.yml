@@ -1,6 +1,7 @@
 loglevel: debug
 ginport: 1234
 gindebugmode: true
+maxweekworkinghours: 30.0
 cron:
   dailyworkersworkedtime: "00 00 07 * * *"
   weeklyworkersworkedtime: "00 00 07 * * 1"

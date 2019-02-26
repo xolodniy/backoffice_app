@@ -22,5 +22,5 @@ func (c *Controller) slackLastActivityHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"text": "Report is preparing. Your request will be processed soon.",
 	})
-	go c.App.MakeLastActivityReportWithCallback(form.ResponseURL)
+	go c.App.ReportLastActivityWithCallback(form.ResponseURL)
 }
