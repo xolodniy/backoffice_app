@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
 	"backoffice_app/config"
 	"backoffice_app/types"
@@ -23,7 +24,7 @@ type Slack struct {
 	APIURL            string
 	TotalVolume       float64
 	RestVolume        float64
-	AppTokenIn        string
+	Secret            string
 }
 
 // FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
@@ -57,19 +58,17 @@ func New(config *config.Slack) Slack {
 		APIURL:            config.APIURL,
 		TotalVolume:       config.TotalVolume,
 		RestVolume:        config.RestVolume,
-		AppTokenIn:        config.AppTokenIn,
+		Secret:            config.Secret,
 	}
 }
 
 // SendMessage is main message sending method
 func (s *Slack) SendMessage(text, channel string) {
 	var message = &types.PostChannelMessage{
-		Token:    s.OutToken,
-		Channel:  channel,
-		AsUser:   false,
-		Text:     text,
-		Username: s.BotName,
-		IconURL:  "",
+		Token:   s.OutToken,
+		Channel: channel,
+		AsUser:  true,
+		Text:    text,
 	}
 
 	jsonMessage, err := json.Marshal(message)
@@ -111,8 +110,7 @@ func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.OutToken))
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -126,9 +124,9 @@ func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 func (s *Slack) Files() ([]Files, error) {
 	var files []Files
 	for i := 0; ; i++ {
-		url := fmt.Sprintf("%s/files.list?token=%s&page=%v", s.APIURL, s.InToken, i)
+		urlStr := fmt.Sprintf("%s/files.list?token=%s&page=%v", s.APIURL, s.InToken, i)
 
-		req, err := http.NewRequest("GET", url, nil)
+		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -196,4 +194,43 @@ func (s *Slack) DeleteFile(id string) error {
 	}
 
 	return err
+}
+
+// UploadFile uploads file to slack channel
+func (s *Slack) UploadFile(channel, contentType string, file *bytes.Buffer) error {
+	urlStr := s.APIURL + "/files.upload"
+
+	v := url.Values{}
+	v.Add("channels", channel)
+
+	req, err := http.NewRequest("POST", urlStr, file)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.OutToken))
+	req.URL.RawQuery = v.Encode()
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	var responseBody struct {
+		Ok      bool   `json:"ok"`
+		Error   string `json:"error"`
+		Warning string `json:"warning"`
+	}
+	if err := json.Unmarshal(respBody, &responseBody); err != nil {
+		return err
+	}
+	if !responseBody.Ok {
+		return fmt.Errorf(responseBody.Error)
+	}
+
+	return nil
 }

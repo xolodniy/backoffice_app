@@ -2,9 +2,17 @@ package app
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
+	"os"
+	"path"
+	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -349,4 +357,185 @@ func (a *App) stringFromLastActivitiesList(activitiesList []hubstaff.LastActivit
 		}
 	}
 	return message
+}
+
+// ReportSprintsIsuues create report about Completed issues, Completed but not verified, Issues left for the next, Issues in next sprint
+func (a *App) ReportSprintsIsuues(project, channel string) error {
+	issuesWithClosedStatus, err := a.Jira.IssuesClosedFromOpenSprint(project)
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about issues with closed status from jira")
+		return err
+	}
+	issuesWithClosedSubtasks, err := a.Jira.IssuesClosedSubtasksFromOpenSprint(project)
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about issues with closed subtasks from jira")
+		return err
+	}
+	issuesForNextSprint, err := a.Jira.IssuesForNextSprint(project)
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about issues stands for next sprint from jira")
+		return err
+	}
+	issuesFromFutureSprint, err := a.Jira.IssuesFromFutureSprint(project)
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about issues from future sprint from jira")
+		return err
+	}
+	var textIssuesReport string
+	textIssuesReport += a.textMessageAboutIssuesStatus("Completed issues", issuesWithClosedStatus)
+	textIssuesReport += a.textMessageAboutIssuesStatus("Completed, but not verified", issuesWithClosedSubtasks)
+	textIssuesReport += a.textMessageAboutIssuesStatus("Issues left for the next sprint", issuesForNextSprint)
+	textIssuesReport += a.textMessageAboutIssuesStatus("Issues from future sprint", issuesFromFutureSprint)
+	a.Slack.SendMessage(textIssuesReport, channel)
+
+	sprintInterface, ok := issuesWithClosedSubtasks[0].Fields.Unknowns[jira.FieldSprintInfo].([]interface{})
+	if !ok {
+		logrus.WithError(err).Error("can't parse interface from map")
+		return fmt.Errorf("can't parse to interface: %v", issuesWithClosedSubtasks[0].Fields.Unknowns[jira.FieldSprintInfo])
+	}
+	sprintSequence, err := a.FindLastSprintSequence(sprintInterface)
+	if err != nil {
+		logrus.WithError(err).Error("can't find sprint of closed subtasks")
+		return err
+	}
+	err = a.CreateIssuesCsvReport(issuesWithClosedSubtasks, fmt.Sprintf("Spring %v Closing", sprintSequence-1), channel, true)
+	if err != nil {
+		logrus.WithError(err).Error("can't create report of issues with closed subtasks from jira")
+		return err
+	}
+	for _, issue := range issuesFromFutureSprint {
+		issuesForNextSprint = append(issuesForNextSprint, issue)
+	}
+	err = a.CreateIssuesCsvReport(issuesForNextSprint, fmt.Sprintf("Spring %v Open", sprintSequence), channel, false)
+	if err != nil {
+		logrus.WithError(err).Error("can't create report of issues stands for next sprint from jira")
+		return err
+	}
+	return nil
+}
+
+// textMessageAboutIssuesStatus create text message for report about issues
+func (a *App) textMessageAboutIssuesStatus(messagePrefix string, issues []jira.Issue) string {
+	var message string
+	for _, issue := range issues {
+		message += fmt.Sprintf("%s %s %s\n", issue.Fields.Type.Name, issue.Key, issue.Fields.Summary)
+	}
+	if message == "" {
+		message += fmt.Sprintf("- %[1]s:\nThere are no %[1]s\n", messagePrefix)
+		return message
+	}
+	message = fmt.Sprintf("- %s:\n", messagePrefix) + message
+	return message
+}
+
+// CreateIssuesCsvReport create csv file with report about issues
+func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel string, withAdditionalInfo bool) error {
+	if len(issues) == 0 {
+		a.Slack.SendMessage("There are no issues for "+filename+" file", channel)
+		return nil
+	}
+	file, err := os.Create(filename + ".csv")
+	if err != nil {
+		return err
+	}
+
+	writer := csv.NewWriter(file)
+	if withAdditionalInfo {
+		err = writer.Write([]string{"Type", "Key", "Summary", "Status", "Epic"})
+		if err != nil {
+			return err
+		}
+		for _, issue := range issues {
+			epicName := "empty"
+			if issue.Fields.Unknowns[jira.FieldEpicKey] != nil {
+				epicName, err = a.Jira.EpicName(fmt.Sprint(issue.Fields.Unknowns[jira.FieldEpicKey]))
+				if err != nil {
+					logrus.WithError(err).Error("can't get issue summary from jira")
+				}
+			}
+			err = writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if !withAdditionalInfo {
+		err = writer.Write([]string{"Type", "Key", "Summary"})
+		if err != nil {
+			return err
+		}
+		for _, issue := range issues {
+			err = writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	writer.Flush()
+	file.Close()
+	return a.SendFileToSlack(channel, filename+".csv")
+}
+
+// FindLastSprintSequence will find sequence of sprint from issue.Fields.Unknowns["customfield_10010"].([]interface{})
+func (a *App) FindLastSprintSequence(sprints []interface{}) (int, error) {
+	var lastSequence = 0
+	rSeq, err := regexp.Compile(`sequence=(\d+)`)
+	if err != nil {
+		return 0, err
+	}
+	for i := range sprints {
+		s, ok := sprints[i].(string)
+		if !ok {
+			return 0, fmt.Errorf("can't parse to string: %v", sprints[i])
+		}
+		// Find string submatch and get slice of match string and this sequence
+		// For example, one of sprint:
+		// "com.atlassian.greenhopper.service.sprint.Sprint@6f00eb7b[id=47,rapidViewId=12,state=ACTIVE,name=Sprint 46,
+		// goal=,startDate=2019-02-20T04:19:23.907Z,endDate=2019-02-25T04:19:00.000Z,completeDate=<null>,sequence=47]"
+		// we get string submatch of slice ["sequence=47" "47"] and then parse "47" as integer number to find the biggest one
+		m := rSeq.FindStringSubmatch(s)
+		if len(m) != 2 {
+			return 0, fmt.Errorf("can't find submatch string to sequence: %v", sprints[i])
+		}
+		n, err := strconv.Atoi(m[1])
+		if err != nil {
+			return 0, err
+		}
+		if n > lastSequence {
+			lastSequence = n
+		}
+	}
+	return lastSequence, nil
+}
+
+// SendFileToSlack sends file to slack
+func (a *App) SendFileToSlack(channel, fileName string) error {
+	fileDir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	filePath := path.Join(fileDir, fileName)
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return err
+	}
+	writer.Close()
+	err = a.Slack.UploadFile(channel, writer.FormDataContentType(), body)
+	if err != nil {
+		return err
+	}
+	file.Close()
+	os.Remove(filePath)
+	return nil
 }
