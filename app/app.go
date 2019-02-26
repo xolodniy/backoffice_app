@@ -388,12 +388,17 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 	textIssuesReport += a.textMessageAboutIssuesStatus("Issues from future sprint", issuesFromFutureSprint)
 	a.Slack.SendMessage(textIssuesReport, channel)
 
-	sptintSequence, err := a.FindLastSprintSequence(issuesWithClosedSubtasks[0].Fields.Unknowns[jira.FieldSprintInfo].([]interface{}))
+	sprintInterface, ok := issuesWithClosedSubtasks[0].Fields.Unknowns[jira.FieldSprintInfo].([]interface{})
+	if !ok {
+		logrus.WithError(err).Error("can't parse interface from map")
+		return fmt.Errorf("can't parse to interface: %v", issuesWithClosedSubtasks[0].Fields.Unknowns[jira.FieldSprintInfo])
+	}
+	sprintSequence, err := a.FindLastSprintSequence(sprintInterface)
 	if err != nil {
 		logrus.WithError(err).Error("can't find sprint of closed subtasks")
 		return err
 	}
-	err = a.CreateIssuesCsvReport(issuesWithClosedSubtasks, fmt.Sprintf("Spring %v Closing", sptintSequence-1), channel, true)
+	err = a.CreateIssuesCsvReport(issuesWithClosedSubtasks, fmt.Sprintf("Spring %v Closing", sprintSequence-1), channel, true)
 	if err != nil {
 		logrus.WithError(err).Error("can't create report of issues with closed subtasks from jira")
 		return err
@@ -401,7 +406,7 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 	for _, issue := range issuesFromFutureSprint {
 		issuesForNextSprint = append(issuesForNextSprint, issue)
 	}
-	err = a.CreateIssuesCsvReport(issuesForNextSprint, fmt.Sprintf("Spring %v Open", sptintSequence), channel, false)
+	err = a.CreateIssuesCsvReport(issuesForNextSprint, fmt.Sprintf("Spring %v Open", sprintSequence), channel, false)
 	if err != nil {
 		logrus.WithError(err).Error("can't create report of issues stands for next sprint from jira")
 		return err
@@ -435,7 +440,6 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 	if err != nil {
 		return err
 	}
-	writer := csv.NewWriter(file)
 
 	var csvReport [][]string
 	if withAdditionalInfo {
@@ -457,6 +461,8 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 			csvReport = append(csvReport, []string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary})
 		}
 	}
+
+	writer := csv.NewWriter(file)
 	for _, line := range csvReport {
 		err = writer.Write(line)
 		if err != nil {
@@ -478,7 +484,10 @@ func (a *App) FindLastSprintSequence(sprints []interface{}) (int, error) {
 		return 0, err
 	}
 	for i := range sprints {
-		s := sprints[i].(string)
+		s, ok := sprints[i].(string)
+		if !ok {
+			return 0, fmt.Errorf("can't parse to string: %v", sprints[i])
+		}
 		// find string submatch and get slice of ["sequence=20" "20"]
 		m := rSeq.FindStringSubmatch(s)
 		if len(m) != 2 {
