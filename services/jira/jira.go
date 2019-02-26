@@ -36,6 +36,10 @@ var (
 	StatusTlReview      = "TL Review"
 	StatusPeerReview    = "In peer review"
 	StatusEmptyAssignee = "empty"
+	FieldEpicName       = "customfield_10005"
+	FieldEpicKey        = "customfield_10008"
+	FieldSprintInfo     = "customfield_10010"
+	FieldDeveloperMap   = "customfield_10026"
 )
 
 // issues searches issues in all sprints which opened now and returning list with issues in this sprints list
@@ -50,9 +54,9 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 				//Determines how to validate the JQL query and treat the validation results.
 				ValidateQuery: "strict", //strict Returns a 400 response code if any errors are found, along with a list of all errors (and warnings).
 				Fields: []string{
-					"customfield_10026",
-					"customfield_10008", //epic issue
-					"customfield_10010", //sprint slice
+					FieldDeveloperMap,
+					FieldEpicKey,
+					FieldSprintInfo,
 					"timetracking",
 					"timespent",
 					"timeoriginalestimate",
@@ -106,10 +110,10 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 
 	//TODO разобраться со вложенностями
 	var developer = "No developer"
-	developerMap, err := issue.Fields.Unknowns.MarshalMap("customfield_10026")
+	developerMap, err := issue.Fields.Unknowns.MarshalMap(FieldDeveloperMap)
 	if err != nil {
 		logrus.WithError(err).WithField("developerMap", fmt.Sprintf("%+v", developerMap)).
-			Error("can't make customfield_10026 map marshaling")
+			Error("can't make %s map marshaling", FieldDeveloperMap)
 	} else if developerMap != nil {
 		displayName, ok := developerMap["displayName"].(string)
 		if !ok {
@@ -274,5 +278,5 @@ func (j *Jira) EpicName(issueKey string) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprint(epicIssue.Fields.Unknowns["customfield_10005"]), nil
+	return fmt.Sprint(epicIssue.Fields.Unknowns[FieldEpicName]), nil
 }

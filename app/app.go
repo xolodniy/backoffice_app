@@ -415,7 +415,7 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 	textIssuesReport += a.textMessageAboutIssuesStatus("Issues from future sprint", issuesFromFutureSprint)
 	a.Slack.SendMessage(textIssuesReport, channel)
 
-	sptintSequence, err := a.FindLastSprintSequence(issuesWithClosedSubtasks[0].Fields.Unknowns["customfield_10010"].([]interface{}))
+	sptintSequence, err := a.FindLastSprintSequence(issuesWithClosedSubtasks[0].Fields.Unknowns[jira.FieldSprintInfo].([]interface{}))
 	if err != nil {
 		logrus.WithError(err).Error("can't find sprint of closed subtasks")
 		return err
@@ -471,8 +471,8 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 	}
 	for _, issue := range issues {
 		epicName := "empty"
-		if issue.Fields.Unknowns["customfield_10008"] != nil {
-			epicName, err = a.Jira.EpicName(fmt.Sprint(issue.Fields.Unknowns["customfield_10008"]))
+		if issue.Fields.Unknowns[jira.FieldEpicKey] != nil {
+			epicName, err = a.Jira.EpicName(fmt.Sprint(issue.Fields.Unknowns[jira.FieldEpicKey]))
 			if err != nil {
 				logrus.WithError(err).Error("can't get issue summary from jira")
 			}
