@@ -141,6 +141,8 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
 
     totalVolume: 5.0    -variable of availible total space on slack.
     restVolume: 0.0     -variable of rest space, when we want send report.
+    intoken: 123456     -the user token for slack's user api
+    outtoken: 123456    -the bot token for slack's bot api
     apptokenin: 123456  -the slack's app input token for income request authorization
 
 #### Cron manager parameters 

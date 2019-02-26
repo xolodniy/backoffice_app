@@ -37,6 +37,7 @@ slack:
   outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
   totalVolume: 5.0
   restVolume: 0.0
+  apptokenin: t2LZHz5L0rNuCxSkDt07dVzu
   ignorelist: [Pavel Palenin, Oleg Raev, Rodion Golovushkin, Ivan Tomilov]
 
 hubstaff:
