@@ -32,10 +32,14 @@ func New(config *config.Jira) Jira {
 
 // Status variables for jql requests
 var (
-	StatusClosed          = "Closed"
-	StatusTlReview        = "TL Review"
-	StatusPeerReview      = "In peer review"
-	StatusEmptyAssignee   = "empty"
+	StatusClosed        = "Closed"
+	StatusTlReview      = "TL Review"
+	StatusPeerReview    = "In peer review"
+	StatusEmptyAssignee = "empty"
+	FieldEpicName       = "customfield_10005"
+	FieldEpicKey        = "customfield_10008"
+	FieldSprintInfo     = "customfield_10010"
+	FieldDeveloperMap   = "customfield_10026"
 	StatusInClarification = "In clarification"
 )
 
@@ -51,7 +55,9 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 				//Determines how to validate the JQL query and treat the validation results.
 				ValidateQuery: "strict", //strict Returns a 400 response code if any errors are found, along with a list of all errors (and warnings).
 				Fields: []string{
-					"customfield_10026", //developer field
+					FieldDeveloperMap,
+					FieldEpicKey,
+					FieldSprintInfo,
 					"timetracking",
 					"timespent",
 					"timeoriginalestimate",
@@ -106,10 +112,10 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 
 	//TODO разобраться со вложенностями
 	var developer = "No developer"
-	developerMap, err := issue.Fields.Unknowns.MarshalMap("customfield_10026")
+	developerMap, err := issue.Fields.Unknowns.MarshalMap(FieldDeveloperMap)
 	if err != nil {
 		logrus.WithError(err).WithField("developerMap", fmt.Sprintf("%+v", developerMap)).
-			Error("can't make customfield_10026 map marshaling")
+			Errorf("can't make %s map marshaling", FieldDeveloperMap)
 	} else if developerMap != nil {
 		displayName, ok := developerMap["displayName"].(string)
 		if !ok {
@@ -197,6 +203,84 @@ func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
 		}
 	}
 	return issuesAfterReview, nil
+}
+
+// IssuesClosedFromOpenSprint retrieves issues with closed status (bugs and stories)
+func (j *Jira) IssuesClosedFromOpenSprint(project string) ([]Issue, error) {
+	request := fmt.Sprintf(`status IN ("%s") AND project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`,
+		StatusClosed, project)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, err
+	}
+	var issuesWithClosedStatus []Issue
+	for _, issue := range issues {
+		issuesWithClosedStatus = append(issuesWithClosedStatus, issue)
+	}
+	return issuesWithClosedStatus, nil
+}
+
+// IssuesClosedSubtasksFromOpenSprint retrieves issues with closed subtasks (bugs and stories)
+func (j *Jira) IssuesClosedSubtasksFromOpenSprint(project string) ([]Issue, error) {
+	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, err
+	}
+	var issuesWithClosedSubtasks []Issue
+Loop:
+	for _, issue := range issues {
+		for _, subtask := range issue.Fields.Subtasks {
+			if subtask.Fields.Status.Name != StatusClosed {
+				continue Loop
+			}
+		}
+		issuesWithClosedSubtasks = append(issuesWithClosedSubtasks, issue)
+	}
+	return issuesWithClosedSubtasks, nil
+}
+
+// IssuesForNextSprint retrieves issues that stands for next sprint (bugs and stories)
+func (j *Jira) IssuesForNextSprint(project string) ([]Issue, error) {
+	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, err
+	}
+
+	var issuesForNextSprint []Issue
+Loop:
+	for _, issue := range issues {
+		for _, subtask := range issue.Fields.Subtasks {
+			if subtask.Fields.Status.Name != StatusClosed {
+				issuesForNextSprint = append(issuesForNextSprint, issue)
+				continue Loop
+			}
+		}
+	}
+	return issues, nil
+}
+
+// IssuesFromFutureSprint retrieves issues from future sprint (bugs and stories)
+func (j *Jira) IssuesFromFutureSprint(project string) ([]Issue, error) {
+	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in futureSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, err
+	}
+	return issues, nil
+}
+
+// EpicName retrieves issue summary
+func (j *Jira) EpicName(issueKey string) (string, error) {
+	options := jira.GetQueryOptions{}
+	epicIssue, resp, err := j.Issue.Get(issueKey, &options)
+	if err != nil {
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira this jira issue")
+		return "", err
+	}
+
+	return fmt.Sprint(epicIssue.Fields.Unknowns[FieldEpicName]), nil
 }
 
 // IssuesOfOpenSprints searches Issues in all sprints which opened now and returning list with issues in this sprints list
