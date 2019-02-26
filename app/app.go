@@ -354,17 +354,15 @@ func (a *App) stringFromLastActivitiesList(activitiesList []hubstaff.LastActivit
 // ReportSprintStatus create report about sprint status
 func (a *App) ReportSprintStatus() {
 	issues, err := a.Jira.IssuesOfOpenSprints()
-	logrus.Debug(issues)
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about issues of open sprint from jira")
 		return
 	}
+	msgBody := a.Slack.ProjectManager + "\n*Sprint status:*\n"
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues of open sprint", a.Slack.Channels.General)
+		a.Slack.SendMessage(msgBody+"Open issues was not found. All issues of open sprint was closed.", a.Slack.Channels.General)
 		return
 	}
-	msgBody := a.Slack.ProjectManager + "\n*Sprint status:*\n"
-
 	var developers = make(map[string][]jira.Issue)
 	for _, issue := range issues {
 		developer := "No developer"
@@ -402,10 +400,7 @@ func (a *App) ReportSprintStatus() {
 			msgBody += fmt.Sprintf(developer + " - has open tasks:\n" + message)
 			continue
 		}
-		// No developer is empty don't add it in report
-		if developer != "No developer" {
-			msgBody += fmt.Sprintf(" " + developer + " - all tasks closed.\n")
-		}
+		msgBody += fmt.Sprintf(" " + developer + " - all tasks closed.\n")
 	}
 	a.Slack.SendMessage(msgBody, a.Slack.Channels.General)
 }
