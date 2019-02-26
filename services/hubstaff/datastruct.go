@@ -27,42 +27,37 @@ func (wt WorkingTime) String() string {
 	return fmt.Sprintf("%.2d:%.2d", hours, minutes)
 }
 
-// APIResponse used to reflect an api response from /by_date endpoint
-type APIResponse struct {
-	ID         int64       `json:"id"`
+// UserReport used to reflect an api response from /by_member endpoint and for query Hubstaff's users
+type UserReport struct {
 	Name       string      `json:"name"`
+	Email      string      `json:"email"`
 	TimeWorked WorkingTime `json:"duration"`
-	Workers    []struct {
+}
+
+// DateReport used to reflect an api response from /by_date endpoint
+type DateReport struct {
+	Date       string      `json:"date"`
+	TimeWorked WorkingTime `json:"duration"`
+	Users      []struct {
 		Name       string      `json:"name"`
 		TimeWorked WorkingTime `json:"duration"`
-	} `json:"users"`
-	Dates []struct {
-		Date       string      `json:"date"`
-		TimeWorked WorkingTime `json:"duration"`
-		Workers    []struct {
+		Projects   []struct {
 			Name       string      `json:"name"`
 			TimeWorked WorkingTime `json:"duration"`
-			Projects   []struct {
-				Name       string      `json:"name"`
-				TimeWorked WorkingTime `json:"duration"`
-				Notes      []struct {
-					Description string `json:"description"`
-				} `json:"notes"`
-			} `json:"projects"`
-		} `json:"users"`
-	} `json:"dates"`
+			Notes      []struct {
+				Description string `json:"description"`
+			} `json:"notes"`
+		} `json:"projects"`
+	} `json:"users"`
 }
 
-// UserDTO type for query Hubstaff's users
-type UserDTO struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
-}
-
-// APIResponseLastActivity type for query last activity of users
-type APIResponseLastActivity struct {
-	LastTaskID    int `json:"last_task_id"`
-	LastProjectID int `json:"last_project_id"`
+// LastActivity type for query last activity of users
+type LastActivity struct {
+	LastTaskID    int    `json:"last_task_id"`
+	LastProjectID int    `json:"last_project_id"`
+	ProjectName   string `json:"projectname"`
+	TaskJiraKey   string `json:"taskjirakey"`
+	TaskSummary   string `json:"tasksummary"`
 	User          struct {
 		Name string `json:"name" binding:"required"`
 	} `json:"user" binding:"required"`
