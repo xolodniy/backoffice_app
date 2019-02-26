@@ -120,10 +120,12 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 		a.Slack.SendMessage("There are no issues with all closed subtasks", a.Slack.ChanBackofficeApp)
 		return
 	}
-	msgBody := "Issues have all closed subtasks:\n"
+	msgBody := a.Slack.ProjectManager + "\nIssues have all closed subtasks:\n"
 	for _, issue := range issues {
-		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+		if issue.Fields.Status.Name != jira.StatusReadyForDemo {
+			msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+		}
 	}
 	a.Slack.SendMessage(msgBody, a.Slack.ChanBackofficeApp)
 }

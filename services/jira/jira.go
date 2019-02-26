@@ -36,6 +36,7 @@ var (
 	StatusTlReview      = "TL Review"
 	StatusPeerReview    = "In peer review"
 	StatusEmptyAssignee = "empty"
+	StatusReadyForDemo  = "Ready for demo"
 )
 
 // issues searches issues in all sprints which opened now and returning list with issues in this sprints list
