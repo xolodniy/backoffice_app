@@ -309,6 +309,7 @@ func (j *Jira) IssueSetPMReviewStatus(issueKey string) error {
 				logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't do transition from transisions list of issue")
 				return err
 			}
+			break
 		}
 	}
 	return nil
