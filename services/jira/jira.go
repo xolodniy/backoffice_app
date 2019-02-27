@@ -35,7 +35,7 @@ var (
 	StatusClosed          = "Closed"
 	StatusTlReview        = "TL Review"
 	StatusPeerReview      = "In peer review"
-	StatusPMReview        = "In PM review"
+	StatusCloseLastTask   = "Close last task"
 	StatusReadyForDemo    = "Ready for demo"
 	StatusEmptyAssignee   = "empty"
 	FieldEpicName         = "customfield_10005"
@@ -296,14 +296,14 @@ func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
 }
 
 // IssueSetPMReviewStatus set PM transition for issue
-func (j *Jira) IssueSetPMReviewStatus(issueKey string) error {
+func (j *Jira) IssueSetStatusCloseLastTask(issueKey string) error {
 	transitions, resp, err := j.Issue.GetTransitions(issueKey)
 	if err != nil {
 		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira transisions list of issue")
 		return err
 	}
 	for _, transition := range transitions {
-		if transition.Name == StatusPMReview {
+		if transition.Name == StatusCloseLastTask {
 			resp, err := j.Issue.DoTransition(issueKey, transition.ID)
 			if err != nil {
 				logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't do transition from transisions list of issue")

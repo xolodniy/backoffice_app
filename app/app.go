@@ -134,8 +134,8 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 			msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 		}
-		if issue.Fields.Status.Name != jira.StatusPMReview {
-			err := a.Jira.IssueSetPMReviewStatus(issue.Key)
+		if issue.Fields.Status.Name != jira.StatusCloseLastTask {
+			err := a.Jira.IssueSetStatusCloseLastTask(issue.Key)
 			if err != nil {
 				logrus.WithError(err).Error("can't set PM review status for issue")
 			}
