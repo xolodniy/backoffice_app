@@ -128,10 +128,18 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 		a.Slack.SendMessage("There are no issues with all closed subtasks", a.Slack.Channels.BackofficeApp)
 		return
 	}
-	msgBody := "Issues have all closed subtasks:\n"
+	msgBody := a.Slack.ProjectManager + "\nIssues have all closed subtasks:\n"
 	for _, issue := range issues {
-		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+		if issue.Fields.Status.Name != jira.StatusReadyForDemo {
+			msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+		}
+		if issue.Fields.Status.Name != jira.StatusCloseLastTask {
+			err := a.Jira.IssueSetStatusCloseLastTask(issue.Key)
+			if err != nil {
+				logrus.WithError(err).Error("can't set PM review status for issue")
+			}
+		}
 	}
 	a.Slack.SendMessage(msgBody, a.Slack.Channels.BackofficeApp)
 }
