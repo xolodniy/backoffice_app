@@ -22,6 +22,7 @@ type Main struct {
 		EmployeesExceededEstimateTime string
 		ReportSlackSpaceEnding        string
 		ReportGitMigrations           string
+		ReportSprintStatus            string
 	}
 	Jira
 	Hubstaff
@@ -50,16 +51,21 @@ type Hubstaff struct {
 
 // Slack is template to storing slack configuration
 type Slack struct {
-	InToken           string
-	OutToken          string
-	BotName           string
-	ProjectManager    string
-	ChanBackofficeApp string
-	ChanMigrations    string
-	APIURL            string
-	TotalVolume       float64
-	RestVolume        float64
-	AppTokenIn        string
+	InToken        string
+	OutToken       string
+	BotName        string
+	ProjectManager string
+	Channels       struct {
+		General       string
+		BackofficeApp string
+		Migrations    string
+	}
+	APIURL      string
+	TotalVolume float64
+	RestVolume  float64
+	Secret      string
+	AppTokenIn  string
+	IgnoreList  []string
 }
 
 // Bitbucket is template to storing bitbucket configuration
