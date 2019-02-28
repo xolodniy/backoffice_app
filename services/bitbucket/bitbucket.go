@@ -264,7 +264,6 @@ func (b *Bitbucket) createBranch(repoSlug, branchName, targetHash string) error 
 	if err != nil {
 		return err
 	}
-	logrus.Debug(string(res))
 	var CheckResponse = struct {
 		Type  string `json:"type"`
 		Error Error  `json:"error"`

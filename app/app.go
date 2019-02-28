@@ -599,19 +599,22 @@ func (a *App) CreateIssueBranches(issue jira.Issue) {
 	if issue.Fields.Type.Name == "Story" && !issue.Fields.Type.Subtask {
 		err := a.Bitbucket.FindTargetCommitAndCreateBranch(issue.Key, "story/"+issue.Key, "master", issue.Fields.Project.Key)
 		if err != nil {
-			logrus.Debug(err)
+			logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
+				Error("can't create branch with error")
 			return
 		}
 	}
 	if issue.Fields.Type.Subtask {
 		err := a.Bitbucket.FindTargetCommitAndCreateBranch(issue.Key, "story/"+issue.Fields.Parent.Key, "master", issue.Fields.Project.Key)
 		if err != nil {
-			logrus.Debug(err)
+			logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
+				Error("can't create branch with error")
 			return
 		}
 		err = a.Bitbucket.FindTargetCommitAndCreateBranch(issue.Key, issue.Fields.Parent.Key+"/"+issue.Key, "story/"+issue.Fields.Parent.Key, issue.Fields.Project.Key)
 		if err != nil {
-			logrus.Debug(err)
+			logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
+				Error("can't create branch with error")
 			return
 		}
 	}
