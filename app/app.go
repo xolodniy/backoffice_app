@@ -593,3 +593,26 @@ func (a *App) ReportSprintStatus() {
 	}
 	a.Slack.SendMessage(msgBody, a.Slack.Channels.General)
 }
+
+// CreateIssueBranches create branch of issue and its parent
+func (a *App) CreateIssueBranches(issue jira.Issue) {
+	if issue.Fields.Type.Name == "Story" && !issue.Fields.Type.Subtask {
+		err := a.Bitbucket.FindTargetCommitAndCreateBranch(issue.Key, "story/"+issue.Key, "master", issue.Fields.Project.Key)
+		if err != nil {
+			logrus.Debug(err)
+			return
+		}
+	}
+	if issue.Fields.Type.Subtask {
+		err := a.Bitbucket.FindTargetCommitAndCreateBranch(issue.Key, "story/"+issue.Fields.Parent.Key, "master", issue.Fields.Project.Key)
+		if err != nil {
+			logrus.Debug(err)
+			return
+		}
+		err = a.Bitbucket.FindTargetCommitAndCreateBranch(issue.Key, issue.Fields.Parent.Key+"/"+issue.Key, "story/"+issue.Fields.Parent.Key, issue.Fields.Project.Key)
+		if err != nil {
+			logrus.Debug(err)
+			return
+		}
+	}
+}
