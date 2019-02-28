@@ -2,10 +2,14 @@ package bitbucket
 
 import (
 	"backoffice_app/config"
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+
+	"github.com/sirupsen/logrus"
 )
 
 // Bitbucket main struct of jira client
@@ -30,8 +34,8 @@ func New(config *config.Bitbucket) Bitbucket {
 }
 
 // execute initialize and executes request. if pages of answer > 1 do autopaginate and return all slices
-func (b *Bitbucket) do(urlStr string) ([]byte, error) {
-	req, err := http.NewRequest("GET", urlStr, nil)
+func (b *Bitbucket) do(urlStr, method string, jsonBody []byte) ([]byte, error) {
+	req, err := http.NewRequest(method, urlStr, bytes.NewReader(jsonBody))
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +62,7 @@ func (b *Bitbucket) RepositoriesList() ([]repository, error) {
 	}
 	var repos = repositories{Next: b.Url + "/repositories/" + b.Owner}
 	for {
-		res, err := b.do(repos.Next)
+		res, err := b.do(repos.Next, "GET", nil)
 		if err != nil {
 			return []repository{}, err
 		}
@@ -86,7 +90,7 @@ func (b *Bitbucket) PullRequestsList(repoSlug string) ([]pullRequest, error) {
 	}
 	var pr = pullRequests{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests?state=OPEN"}
 	for {
-		res, err := b.do(pr.Next)
+		res, err := b.do(pr.Next, "GET", nil)
 		if err != nil {
 			return []pullRequest{}, err
 		}
@@ -114,7 +118,7 @@ func (b *Bitbucket) PullRequestCommits(repoSlug, prID string) ([]Commit, error) 
 	}
 	var prCommits = commits{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + prID + "/commits"}
 	for {
-		res, err := b.do(prCommits.Next)
+		res, err := b.do(prCommits.Next, "GET", nil)
 		if err != nil {
 			return []Commit{}, err
 		}
@@ -134,7 +138,7 @@ func (b *Bitbucket) PullRequestCommits(repoSlug, prID string) ([]Commit, error) 
 	return prCommits.Values, nil
 }
 
-// CommitsDiff returns files diff of commits by repository slug and commit hash
+// CommitsDiffStats returns files diff of commits by repository slug and commit hash
 func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) {
 	type diffStats struct {
 		Next   string     `json:"next"`
@@ -142,7 +146,7 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 	}
 	var diff = diffStats{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/diffstat/" + spec}
 	for {
-		res, err := b.do(diff.Next)
+		res, err := b.do(diff.Next, "GET", nil)
 		if err != nil {
 			return []diffStat{}, err
 		}
@@ -165,7 +169,7 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 // SrcFile returns files diff of commits by repository slug and commit hash
 func (b *Bitbucket) SrcFile(repoSlug, spec, path string) (string, error) {
 	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/src/" + spec + "/" + path
-	res, err := b.do(urlStr)
+	res, err := b.do(urlStr, "GET", nil)
 	if err != nil {
 		return "", err
 	}
@@ -173,7 +177,7 @@ func (b *Bitbucket) SrcFile(repoSlug, spec, path string) (string, error) {
 	return file, nil
 }
 
-// MigrationCommitsOfOpenedPRs returns commits with migration diff
+// CommitsOfOpenedPRs returns commits with migration diff
 func (b *Bitbucket) CommitsOfOpenedPRs() ([]Commit, error) {
 	repositories, err := b.RepositoriesList()
 	if err != nil {
@@ -202,4 +206,94 @@ func (b *Bitbucket) CommitsOfOpenedPRs() ([]Commit, error) {
 		}
 	}
 	return allCommits, nil
+}
+
+// repoSlugByIsueKey retrieves repo slug by issueKey
+func (b *Bitbucket) repoSlugByProjectKey(projectKey string) (string, error) {
+	type repo struct {
+		Type   string       `json:"type"`
+		Values []repository `json:"values"`
+	}
+	urlStr := b.Url + "/repositories/" + b.Owner + "?q=project.key=\"" + projectKey + "\""
+	res, err := b.do(urlStr, "GET", nil)
+	if err != nil {
+		return "", err
+	}
+	var repositoryInfo repo
+	err = json.Unmarshal(res, &repositoryInfo)
+	if err != nil {
+		return "", err
+	}
+	if len(repositoryInfo.Values) == 0 {
+		return "", fmt.Errorf("There are no projects with \"%s\" project key ", projectKey)
+	}
+	return repositoryInfo.Values[0].Slug, nil
+}
+
+// branchTargetCommitHash retrieves hash of branch
+func (b *Bitbucket) branchTargetCommitHash(repoSlug, branchName string) (string, error) {
+	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/refs/branches/" + branchName
+	res, err := b.do(urlStr, "GET", nil)
+	if err != nil {
+		return "", err
+	}
+	var branchInfo BranchInfo
+	err = json.Unmarshal(res, &branchInfo)
+	if err != nil {
+		return "", err
+	}
+	if branchInfo.Type == "error" {
+		return "", fmt.Errorf("Can't take branch hash with error message: %s ", branchInfo.Error.Message)
+	}
+	return branchInfo.Target.Hash, nil
+}
+
+// CreateBranch creates branch in repository
+func (b *Bitbucket) createBranch(repoSlug, branchName, targetHash string) error {
+	request := BranchInfo{Name: branchName, Target: struct {
+		Hash string `json:"hash"`
+	}{targetHash}}
+	jsonReport, err := json.Marshal(request)
+	if err != nil {
+		logrus.WithError(err).Errorf("Can't convert last activity report to json. Report is:\n%s", request)
+		return err
+	}
+
+	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/refs/branches"
+	res, err := b.do(urlStr, "POST", jsonReport)
+	if err != nil {
+		return err
+	}
+	logrus.Debug(string(res))
+	var CheckResponse = struct {
+		Type  string `json:"type"`
+		Error Error  `json:"error"`
+	}{}
+	err = json.Unmarshal(res, &CheckResponse)
+	if err != nil {
+		return err
+	}
+	if CheckResponse.Type == "error" {
+		if CheckResponse.Error.Data.Key != "BRANCH_ALREADY_EXISTS" {
+			return fmt.Errorf("Can't create branch with error message: %s ", CheckResponse.Error.Message)
+		}
+	}
+	return nil
+}
+
+// FindTargetCommitAndCreateBranch get repo slug by project key, get target hash of parent branch, create branch
+func (b *Bitbucket) FindTargetCommitAndCreateBranch(issueKey, branchName, branchParentName, projectKey string) error {
+	repoSlug, err := b.repoSlugByProjectKey(projectKey)
+	if err != nil {
+		return err
+	}
+	targetHash, err := b.branchTargetCommitHash(repoSlug, branchParentName)
+	if err != nil {
+		return err
+	}
+	err = b.createBranch(repoSlug, branchName, targetHash)
+	if err != nil {
+		return err
+	}
+	return nil
 }

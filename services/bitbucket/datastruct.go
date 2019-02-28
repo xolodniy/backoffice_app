@@ -70,6 +70,7 @@ type repository struct {
 	Website   string  `json:"website"`
 	Owner     owner   `json:"owner"`
 	Scm       string  `json:"scm"`
+	Slug      string  `json:"slug"`
 	IsPrivate bool    `json:"is_private"`
 }
 
@@ -160,4 +161,23 @@ type diffStat struct {
 			} `json:"self"`
 		} `json:"links"`
 	} `json:"new"`
+}
+
+// BranchInfo struct of branch information
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/refs/branches/%7Bname%7D
+type BranchInfo struct {
+	Type   string `json:"type"`
+	Error  Error  `json:"error"`
+	Name   string `json:"name"`
+	Target struct {
+		Hash string `json:"hash"`
+	} `json:"target"`
+}
+
+// Error struct for error information
+type Error struct {
+	Message string `json:"message"`
+	Data    struct {
+		Key string `json:"key"`
+	} `json:"data"`
 }
