@@ -17,7 +17,7 @@ type pullRequest struct {
 		Commit struct {
 			Hash string `json:"hash"`
 		} `json:"commit"`
-		Repository Repository `json:"repository"`
+		Repository repository `json:"repository"`
 	} `json:"source"`
 	Destination struct {
 		Branch struct {
@@ -26,7 +26,7 @@ type pullRequest struct {
 		Commit struct {
 			Hash string `json:"hash"`
 		} `json:"commit"`
-		Repository Repository `json:"repository"`
+		Repository repository `json:"repository"`
 	} `json:"destination"`
 	MergeCommit struct {
 		Hash string `json:"hash"`
@@ -50,7 +50,7 @@ type pullRequest struct {
 
 // Repository struct of pull repository from bitbucket
 // https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories
-type Repository struct {
+type repository struct {
 	Type  string `json:"type"`
 	Links struct {
 		Self struct {
@@ -202,7 +202,7 @@ type PullRequestCreateInfo struct {
 // https://confluence.atlassian.com/bitbucket/event-payloads-740262817.html#EventPayloads-entity_repository (Repository events -> Push)
 type RepoPushPayload struct {
 	Actor      owner      `json:"actor"`
-	Repository Repository `json:"repository"`
+	Repository repository `json:"repository"`
 	Push       struct {
 		Changes []struct {
 			New struct {

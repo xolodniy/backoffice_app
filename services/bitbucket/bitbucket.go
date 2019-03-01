@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -281,8 +282,12 @@ func (b *Bitbucket) createBranch(repoSlug, branchName, targetHash string) error 
 }
 
 // FindTargetCommitAndCreateBranch get repo slug by project key, get target hash of parent branch, create branch
-func (b *Bitbucket) FindTargetCommitAndCreateBranch(issueKey, branchName, branchParentName, projectKey string) error {
-	repoSlug, err := b.repoSlugByProjectKey(projectKey)
+func (b *Bitbucket) FindTargetCommitAndCreateBranch(issueKey, branchName, branchParentName string) error {
+	issueKeySlice := strings.Split(issueKey, "-")
+	if len(issueKeySlice) != 2 {
+		return fmt.Errorf("can't take project key from issue key \"%s\", format must be KEY-1", issueKey)
+	}
+	repoSlug, err := b.repoSlugByProjectKey(issueKeySlice[0])
 	if err != nil {
 		return err
 	}
@@ -291,6 +296,66 @@ func (b *Bitbucket) FindTargetCommitAndCreateBranch(issueKey, branchName, branch
 		return err
 	}
 	err = b.createBranch(repoSlug, branchName, targetHash)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// createPullRequest creates pull request in repository
+func (b *Bitbucket) createPullRequest(repoSlug, branchName, branchParentName string) error {
+	request := PullRequestCreateInfo{Title: "", Source: struct {
+		Branch struct {
+			Name string `json:"name"`
+		} `json:"branch"`
+	}{struct {
+		Name string `json:"name"`
+	}{branchName}}, Destination: struct {
+		Branch struct {
+			Name string `json:"name"`
+		} `json:"branch"`
+	}{struct {
+		Name string `json:"name"`
+	}{branchParentName}}}
+
+	jsonReport, err := json.Marshal(request)
+	if err != nil {
+		logrus.WithError(err).Errorf("Can't convert last activity report to json. Report is:\n%s", request)
+		return err
+	}
+
+	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests"
+	res, err := b.do(urlStr, "POST", jsonReport)
+	if err != nil {
+		return err
+	}
+	logrus.Debug(string(res))
+	var CheckResponse = struct {
+		Type  string `json:"type"`
+		Error Error  `json:"error"`
+	}{}
+	err = json.Unmarshal(res, &CheckResponse)
+	if err != nil {
+		return err
+	}
+	if CheckResponse.Type == "error" {
+		return fmt.Errorf("Can't create pull request of brarnch with error message: %s ", CheckResponse.Error.Message)
+	}
+	return nil
+}
+
+// CheckPullRequestExistAndCreate check for existing pullrequest, if don't create new
+func (b *Bitbucket) CheckPullRequestExistAndCreate(repoSlug, branchName, branchParentName string) error {
+	pullRequestsList, err := b.PullRequestsList(repoSlug)
+	if err != nil {
+		return err
+	}
+	for _, pullRequest := range pullRequestsList {
+		if pullRequest.Source.Branch.Name == branchName {
+			return nil
+		}
+	}
+	err = b.createPullRequest(repoSlug, branchName, branchParentName)
 	if err != nil {
 		return err
 	}
