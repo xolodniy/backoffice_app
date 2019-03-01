@@ -304,7 +304,7 @@ func (b *Bitbucket) FindTargetCommitAndCreateBranch(issueKey, branchName, branch
 
 // createPullRequest creates pull request in repository
 func (b *Bitbucket) createPullRequest(repoSlug, branchName, branchParentName string) error {
-	request := PullRequestCreateInfo{Title: "", Source: struct {
+	request := PullRequestCreateInfo{Title: branchName, Source: struct {
 		Branch struct {
 			Name string `json:"name"`
 		} `json:"branch"`
