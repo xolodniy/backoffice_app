@@ -329,7 +329,6 @@ func (b *Bitbucket) createPullRequest(repoSlug, branchName, branchParentName str
 	if err != nil {
 		return err
 	}
-	logrus.Debug(string(res))
 	var CheckResponse = struct {
 		Type  string `json:"type"`
 		Error Error  `json:"error"`
@@ -339,7 +338,9 @@ func (b *Bitbucket) createPullRequest(repoSlug, branchName, branchParentName str
 		return err
 	}
 	if CheckResponse.Type == "error" {
-		return fmt.Errorf("Can't create pull request of brarnch with error message: %s ", CheckResponse.Error.Message)
+		if CheckResponse.Error.Message != "There are no changes to be pulled" {
+			return fmt.Errorf("Can't create pull request of brarnch with error message: %s ", CheckResponse.Error.Message)
+		}
 	}
 	return nil
 }
