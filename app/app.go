@@ -622,6 +622,9 @@ func (a *App) CreateIssueBranches(issue jira.Issue) {
 
 // CreateBranchPullRequest create pull request for first branch commit
 func (a *App) CreateBranchPullRequest(repoPushPayload bitbucket.RepoPushPayload) {
+	if repoPushPayload.Push.Changes[0].New.Name == "" {
+		return
+	}
 	if strings.Contains(repoPushPayload.Push.Changes[0].New.Name, "story/") {
 		err := a.Bitbucket.CheckPullRequestExistAndCreate(repoPushPayload.Repository.Slug, repoPushPayload.Push.Changes[0].New.Name, "master")
 		if err != nil {
