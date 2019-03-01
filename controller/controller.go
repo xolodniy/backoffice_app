@@ -54,10 +54,10 @@ func (c *Controller) initRoutes() {
 	})
 
 	jira := c.Gin.Group("")
-	jira.POST("/rest/jira/webhooks/issue/created", c.issueCreated)
+	jira.POST("/api/v1/jira/webhooks/issue/created", c.issueCreated)
 
 	bitbucket := c.Gin.Group("")
-	bitbucket.POST("/rest/bitbucket/webhooks/commit/pushed", c.commitPushed)
+	bitbucket.POST("/api/v1/bitbucket/webhooks/commit/pushed", c.commitPushed)
 
 	slack := c.Gin.Group("")
 	slack.Use(c.checkSignature)
