@@ -597,7 +597,7 @@ func (a *App) ReportSprintStatus() {
 // CreateIssueBranches create branch of issue and its parent
 func (a *App) CreateIssueBranches(issue jira.Issue) {
 	if issue.Fields.Type.Name == "Story" && !issue.Fields.Type.Subtask {
-		err := a.Bitbucket.FindTargetCommitAndCreateBranch(issue.Key, "story/"+issue.Key, "master")
+		err := a.Bitbucket.CreateBranch(issue.Key, "story/"+issue.Key, "master")
 		if err != nil {
 			logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
 				Error("can't create branch")
@@ -605,13 +605,13 @@ func (a *App) CreateIssueBranches(issue jira.Issue) {
 		}
 	}
 	if issue.Fields.Type.Subtask {
-		err := a.Bitbucket.FindTargetCommitAndCreateBranch(issue.Key, "story/"+issue.Fields.Parent.Key, "master")
+		err := a.Bitbucket.CreateBranch(issue.Key, "story/"+issue.Fields.Parent.Key, "master")
 		if err != nil {
 			logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
 				Error("can't create branch")
 			return
 		}
-		err = a.Bitbucket.FindTargetCommitAndCreateBranch(issue.Key, issue.Fields.Parent.Key+"/"+issue.Key, "story/"+issue.Fields.Parent.Key)
+		err = a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key+"/"+issue.Key, "story/"+issue.Fields.Parent.Key)
 		if err != nil {
 			logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
 				Error("can't create branch")
@@ -626,7 +626,7 @@ func (a *App) CreateBranchPullRequest(repoPushPayload bitbucket.RepoPushPayload)
 		return
 	}
 	if strings.Contains(repoPushPayload.Push.Changes[0].New.Name, "story/") {
-		err := a.Bitbucket.CheckPullRequestExistAndCreate(repoPushPayload.Repository.Slug, repoPushPayload.Push.Changes[0].New.Name, "master")
+		err := a.Bitbucket.CreatePoolRequestIfNotExist(repoPushPayload.Repository.Slug, repoPushPayload.Push.Changes[0].New.Name, "master")
 		if err != nil {
 			logrus.WithError(err).WithField("branch", fmt.Sprintf("%+v", repoPushPayload.Push.Changes[0].New.Name)).
 				Error("can't create pull request of branch")
@@ -641,7 +641,7 @@ func (a *App) CreateBranchPullRequest(repoPushPayload bitbucket.RepoPushPayload)
 			Error("can't take issue key from branch name, format must be KEY-1/KEY-2")
 		return
 	}
-	err := a.Bitbucket.CheckPullRequestExistAndCreate(repoPushPayload.Repository.Name, repoPushPayload.Push.Changes[0].New.Name, "story/"+issuesKey[0])
+	err := a.Bitbucket.CreatePoolRequestIfNotExist(repoPushPayload.Repository.Name, repoPushPayload.Push.Changes[0].New.Name, "story/"+issuesKey[0])
 	if err != nil {
 		logrus.WithError(err).WithField("branch", fmt.Sprintf("%+v", repoPushPayload.Push.Changes[0].New.Name)).
 			Error("can't create pull request of branch")
