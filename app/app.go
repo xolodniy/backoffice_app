@@ -555,19 +555,19 @@ func (a *App) ReportSprintStatus() {
 		logrus.WithError(err).Error("can't take information about issues of open sprint from jira")
 		return
 	}
-	msgBody := a.Slack.ProjectManager + "\n*Sprint status:*\n"
+	msgBody := "*Sprint status*\n"
 	if len(issues) == 0 {
 		a.Slack.SendMessage(msgBody+"Open issues was not found. All issues of open sprint was closed.", a.Slack.Channels.General)
 		return
 	}
 	var developers = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		developer := "No developer"
+		developer := ""
 		// Convert to marshal map to find developer displayName of issue field customfield_10026
 		developerMap, err := issue.Fields.Unknowns.MarshalMap("customfield_10026")
 		if err != nil {
-			logrus.WithError(err).WithField("developerMap", fmt.Sprintf("%+v", developerMap)).
-				Error("can't make customfield_10026 map marshaling")
+			//can't make customfield_10026 map marshaling because field developer is empty
+			developer = "No developer"
 		}
 		if developerMap != nil {
 			displayName, ok := developerMap["displayName"].(string)
@@ -582,6 +582,10 @@ func (a *App) ReportSprintStatus() {
 	for _, dev := range a.Slack.IgnoreList {
 		delete(developers, dev)
 	}
+	var (
+		messageAllTaskClosed string
+		messageNoDeveloper   string
+	)
 	for developer, issues := range developers {
 		var message string
 		for _, issue := range issues {
@@ -593,11 +597,21 @@ func (a *App) ReportSprintStatus() {
 					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 			}
 		}
-		if message != "" {
-			msgBody += fmt.Sprintf(developer + " - has open tasks:\n" + message)
+		if developer == "No developer" {
+			if message != "" {
+				msgBody += fmt.Sprintf("\nTasks with empty developer field:\n" + message)
+			}
 			continue
 		}
-		msgBody += fmt.Sprintf(" " + developer + " - all tasks closed.\n")
+		if message != "" {
+			msgBody += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
+			continue
+		}
+		messageAllTaskClosed += fmt.Sprintf(developer + " - all tasks closed.\n")
 	}
-	a.Slack.SendMessage(msgBody, a.Slack.Channels.General)
+	if messageAllTaskClosed != "" {
+		messageAllTaskClosed = "\n" + messageAllTaskClosed
+	}
+	msgBody += messageAllTaskClosed + messageNoDeveloper
+	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.ProjectManager, a.Slack.Channels.General)
 }
