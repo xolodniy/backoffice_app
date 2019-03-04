@@ -64,7 +64,6 @@ type Slack struct {
 	TotalVolume float64
 	RestVolume  float64
 	Secret      string
-	AppTokenIn  string
 	IgnoreList  []string
 }
 

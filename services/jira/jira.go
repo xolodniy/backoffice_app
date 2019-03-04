@@ -35,6 +35,8 @@ var (
 	StatusClosed          = "Closed"
 	StatusTlReview        = "TL Review"
 	StatusPeerReview      = "In peer review"
+	StatusCloseLastTask   = "Close last task"
+	StatusReadyForDemo    = "Ready for demo"
 	StatusEmptyAssignee   = "empty"
 	FieldEpicName         = "customfield_10005"
 	FieldEpicKey          = "customfield_10008"
@@ -139,7 +141,7 @@ func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
 
 // IssuesWithClosedSubtasks retrieves issues with closed subtasks
 func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
-	request := fmt.Sprintf(`status NOT IN ("%s")  AND Sprint in openSprints()`, StatusClosed)
+	request := fmt.Sprintf(`status NOT IN ("%s") AND type in (story, bug) AND Sprint in openSprints()`, StatusClosed)
 	openIssues, err := j.issues(request)
 	if err != nil {
 		return nil, err
@@ -291,4 +293,24 @@ func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
 		return nil, fmt.Errorf("can't take jira issues with type not in (story, bug) of open sprints: %s", err)
 	}
 	return issues, nil
+}
+
+// IssueSetPMReviewStatus set PM transition for issue
+func (j *Jira) IssueSetStatusCloseLastTask(issueKey string) error {
+	transitions, resp, err := j.Issue.GetTransitions(issueKey)
+	if err != nil {
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira transisions list of issue")
+		return err
+	}
+	for _, transition := range transitions {
+		if transition.Name == StatusCloseLastTask {
+			resp, err := j.Issue.DoTransition(issueKey, transition.ID)
+			if err != nil {
+				logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't do transition from transisions list of issue")
+				return err
+			}
+			break
+		}
+	}
+	return nil
 }
