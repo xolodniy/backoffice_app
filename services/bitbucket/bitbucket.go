@@ -35,7 +35,7 @@ func New(config *config.Bitbucket) Bitbucket {
 	}
 }
 
-// do executes http requests by get method
+// do executes http request
 func (b *Bitbucket) do(request *http.Request) ([]byte, error) {
 	resp, err := http.DefaultClient.Do(request)
 	if err != nil {
@@ -69,7 +69,7 @@ func (b *Bitbucket) do(request *http.Request) ([]byte, error) {
 	return body, nil
 }
 
-// do executes http requests by get method
+// get prepare http request by get method
 func (b *Bitbucket) get(urlStr string) ([]byte, error) {
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
@@ -84,7 +84,7 @@ func (b *Bitbucket) get(urlStr string) ([]byte, error) {
 	return respBody, nil
 }
 
-// post executes post requests
+// post prepare post request by post method
 func (b *Bitbucket) post(urlStr string, jsonBody []byte) ([]byte, error) {
 	req, err := http.NewRequest("POST", urlStr, bytes.NewReader(jsonBody))
 	if err != nil {
@@ -314,8 +314,8 @@ func (b *Bitbucket) CreateBranch(issueKey, branchName, branchParentName string) 
 	return nil
 }
 
-// CreatePoolRequestIfNotExist check for existing pullrequest, if don't create new
-func (b *Bitbucket) CreatePoolRequestIfNotExist(repoSlug, branchName, branchParentName string) error {
+// CreatePullRequestIfNotExist find pull requests and create new if not exist
+func (b *Bitbucket) CreatePullRequestIfNotExist(repoSlug, branchName, branchParentName string) error {
 	pullRequestsList, err := b.PullRequestsList(repoSlug)
 	if err != nil {
 		return err
