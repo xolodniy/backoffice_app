@@ -1,7 +1,6 @@
 package bitbucket
 
 import (
-	"backoffice_app/config"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -9,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"backoffice_app/config"
 
 	"github.com/sirupsen/logrus"
 )
@@ -35,14 +36,8 @@ func New(config *config.Bitbucket) Bitbucket {
 }
 
 // do executes http requests by get method
-func (b *Bitbucket) do(urlStr string) ([]byte, error) {
-	req, err := http.NewRequest("GET", urlStr, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.SetBasicAuth(b.Auth.user, b.Auth.password)
-	resp, err := http.DefaultClient.Do(req)
+func (b *Bitbucket) do(request *http.Request) ([]byte, error) {
+	resp, err := http.DefaultClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +47,41 @@ func (b *Bitbucket) do(urlStr string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	var CheckResponse = struct {
+		Type  string `json:"type"`
+		Error struct {
+			Message string `json:"message"`
+			Data    struct {
+				Key string `json:"key"`
+			} `json:"data"`
+		} `json:"error"`
+	}{}
+	err = json.Unmarshal(body, &CheckResponse)
+	if err != nil {
+		return nil, err
+	}
+	if CheckResponse.Type == "error" {
+		if CheckResponse.Error.Message != "There are no changes to be pulled" && CheckResponse.Error.Data.Key != "BRANCH_ALREADY_EXISTS" {
+			return nil, fmt.Errorf("Request was done with error: %s ", CheckResponse.Error.Message)
+		}
+	}
 	return body, nil
+}
+
+// do executes http requests by get method
+func (b *Bitbucket) get(urlStr string) ([]byte, error) {
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(b.Auth.user, b.Auth.password)
+	respBody, err := b.do(req)
+	if err != nil {
+		return nil, err
+	}
+	return respBody, nil
 }
 
 // post executes post requests
@@ -63,35 +92,11 @@ func (b *Bitbucket) post(urlStr string, jsonBody []byte) ([]byte, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.SetBasicAuth(b.Auth.user, b.Auth.password)
-	resp, err := http.DefaultClient.Do(req)
+	respBody, err := b.do(req)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	//var CheckResponse = struct {
-	//	Type  string `json:"type"`
-	//	Error struct {
-	//		Message string `json:"message"`
-	//		Data    struct {
-	//			Key string `json:"key"`
-	//		} `json:"data"`
-	//	} `json:"error"`
-	//}{}
-	//err = json.Unmarshal(body, &CheckResponse)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if CheckResponse.Type == "error" {
-	//	if CheckResponse.Error.Message != "There are no changes to be pulled" {
-	//		return nil, fmt.Errorf("Can't create pull request of brarnch with error message: %s ", CheckResponse.Error.Message)
-	//	}
-	//}
-	return body, nil
+	return respBody, nil
 }
 
 // RepositoriesList returns list of all repositories
@@ -102,7 +107,7 @@ func (b *Bitbucket) RepositoriesList() ([]repository, error) {
 	}
 	var repos = repositories{Next: b.Url + "/repositories/" + b.Owner}
 	for {
-		res, err := b.do(repos.Next)
+		res, err := b.get(repos.Next)
 		if err != nil {
 			return []repository{}, err
 		}
@@ -130,7 +135,7 @@ func (b *Bitbucket) PullRequestsList(repoSlug string) ([]pullRequest, error) {
 	}
 	var pr = pullRequests{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests?state=OPEN"}
 	for {
-		res, err := b.do(pr.Next)
+		res, err := b.get(pr.Next)
 		if err != nil {
 			return []pullRequest{}, err
 		}
@@ -158,7 +163,7 @@ func (b *Bitbucket) PullRequestCommits(repoSlug, prID string) ([]Commit, error) 
 	}
 	var prCommits = commits{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + prID + "/commits"}
 	for {
-		res, err := b.do(prCommits.Next)
+		res, err := b.get(prCommits.Next)
 		if err != nil {
 			return []Commit{}, err
 		}
@@ -186,7 +191,7 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 	}
 	var diff = diffStats{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/diffstat/" + spec}
 	for {
-		res, err := b.do(diff.Next)
+		res, err := b.get(diff.Next)
 		if err != nil {
 			return []diffStat{}, err
 		}
@@ -209,7 +214,7 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 // SrcFile returns files diff of commits by repository slug and commit hash
 func (b *Bitbucket) SrcFile(repoSlug, spec, path string) (string, error) {
 	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/src/" + spec + "/" + path
-	res, err := b.do(urlStr)
+	res, err := b.get(urlStr)
 	if err != nil {
 		return "", err
 	}
@@ -255,7 +260,7 @@ func (b *Bitbucket) repoSlugByProjectKey(projectKey string) (string, error) {
 		Values []repository `json:"values"`
 	}{}
 	urlStr := b.Url + "/repositories/" + b.Owner + "?q=project.key=\"" + projectKey + "\""
-	res, err := b.do(urlStr)
+	res, err := b.get(urlStr)
 	if err != nil {
 		return "", err
 	}
@@ -272,7 +277,7 @@ func (b *Bitbucket) repoSlugByProjectKey(projectKey string) (string, error) {
 // branchTargetCommitHash retrieves hash of branch
 func (b *Bitbucket) branchTargetCommitHash(repoSlug, branchName string) (string, error) {
 	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/refs/branches/" + branchName
-	res, err := b.do(urlStr)
+	res, err := b.get(urlStr)
 	if err != nil {
 		return "", err
 	}
@@ -281,42 +286,7 @@ func (b *Bitbucket) branchTargetCommitHash(repoSlug, branchName string) (string,
 	if err != nil {
 		return "", err
 	}
-	if branchInfo.Type == "error" {
-		return "", fmt.Errorf("Can't take branch hash with error message: %s ", branchInfo.Error.Message)
-	}
 	return branchInfo.Target.Hash, nil
-}
-
-// createBranch creates branch in repository
-func (b *Bitbucket) createBranch(repoSlug, branchName, targetHash string) error {
-	request := BranchInfo{Name: branchName, Target: struct {
-		Hash string `json:"hash"`
-	}{targetHash}}
-	jsonReport, err := json.Marshal(request)
-	if err != nil {
-		logrus.WithError(err).Errorf("Can't convert last activity report to json. Report is:\n%s", request)
-		return err
-	}
-
-	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/refs/branches"
-	res, err := b.post(urlStr, jsonReport)
-	if err != nil {
-		return err
-	}
-	var CheckResponse = struct {
-		Type  string `json:"type"`
-		Error Error  `json:"error"`
-	}{}
-	err = json.Unmarshal(res, &CheckResponse)
-	if err != nil {
-		return err
-	}
-	if CheckResponse.Type == "error" {
-		if CheckResponse.Error.Data.Key != "BRANCH_ALREADY_EXISTS" {
-			return fmt.Errorf("Can't create branch with error message: %s ", CheckResponse.Error.Message)
-		}
-	}
-	return nil
 }
 
 // CreateBranch create branch in project repository by issueKey, branchName and branchParentName
@@ -333,52 +303,13 @@ func (b *Bitbucket) CreateBranch(issueKey, branchName, branchParentName string) 
 	if err != nil {
 		return err
 	}
-	err = b.createBranch(repoSlug, branchName, targetHash)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
-// createPullRequest creates pull request in repository
-func (b *Bitbucket) createPullRequest(repoSlug, branchName, branchParentName string) error {
-	request := PullRequestCreateInfo{Title: branchName, Source: struct {
-		Branch struct {
-			Name string `json:"name"`
-		} `json:"branch"`
-	}{struct {
-		Name string `json:"name"`
-	}{branchName}}, Destination: struct {
-		Branch struct {
-			Name string `json:"name"`
-		} `json:"branch"`
-	}{struct {
-		Name string `json:"name"`
-	}{branchParentName}}}
-
-	jsonReport, err := json.Marshal(request)
+	requestBody := []byte(fmt.Sprintf(`{"name":"%s","target":{"hash":"%s"}}`, branchName, targetHash))
+	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/refs/branches"
+	res, err := b.post(urlStr, requestBody)
 	if err != nil {
-		logrus.WithError(err).Errorf("Can't convert last activity report to json. Report is:\n%s", request)
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", res)).Error("can't create branch in bitbucket")
 		return err
-	}
-
-	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests"
-	res, err := b.post(urlStr, jsonReport)
-	if err != nil {
-		return err
-	}
-	var CheckResponse = struct {
-		Type  string `json:"type"`
-		Error Error  `json:"error"`
-	}{}
-	err = json.Unmarshal(res, &CheckResponse)
-	if err != nil {
-		return err
-	}
-	if CheckResponse.Type == "error" {
-		if CheckResponse.Error.Message != "There are no changes to be pulled" {
-			return fmt.Errorf("Can't create pull request of brarnch with error message: %s ", CheckResponse.Error.Message)
-		}
 	}
 	return nil
 }
@@ -394,8 +325,13 @@ func (b *Bitbucket) CreatePoolRequestIfNotExist(repoSlug, branchName, branchPare
 			return nil
 		}
 	}
-	err = b.createPullRequest(repoSlug, branchName, branchParentName)
+
+	requestBody := []byte(fmt.Sprintf(`{"title": "%[1]s", "source":{"branch":{"name": "%[1]s"}}, "destination":{"branch":{"name": "%[2]s"}}}`,
+		branchName, branchParentName))
+	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests"
+	res, err := b.post(urlStr, requestBody)
 	if err != nil {
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", res)).Error("can't create pull request in bitbucket")
 		return err
 	}
 	return nil
