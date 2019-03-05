@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (c *Controller) issueCreated(ctx *gin.Context) {
+func (c *Controller) issueStarted(ctx *gin.Context) {
 	webHookBody := struct {
 		Issue jira.Issue `json:"issue"`
 	}{}
