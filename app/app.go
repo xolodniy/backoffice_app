@@ -563,8 +563,8 @@ func (a *App) ReportSprintStatus() {
 	var developers = make(map[string][]jira.Issue)
 	for _, issue := range issues {
 		developer := ""
-		// Convert to marshal map to find developer displayName of issue field customfield_10026
-		developerMap, err := issue.Fields.Unknowns.MarshalMap("customfield_10026")
+		// Convert to marshal map to find developer displayName of issue developer field
+		developerMap, err := issue.Fields.Unknowns.MarshalMap(jira.FieldDeveloperMap)
 		if err != nil {
 			//can't make customfield_10026 map marshaling because field developer is empty
 			developer = "No developer"
@@ -597,21 +597,17 @@ func (a *App) ReportSprintStatus() {
 					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 			}
 		}
+		if message == "" {
+			messageAllTaskClosed += fmt.Sprintf(developer + " - all tasks closed.\n")
+			continue
+		}
 		if developer == "No developer" {
-			if message != "" {
-				msgBody += fmt.Sprintf("\nTasks with empty developer field:\n" + message)
-			}
+			messageNoDeveloper += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
 			continue
 		}
-		if message != "" {
-			msgBody += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
-			continue
-		}
-		messageAllTaskClosed += fmt.Sprintf(developer + " - all tasks closed.\n")
+		msgBody += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
+		continue
 	}
-	if messageAllTaskClosed != "" {
-		messageAllTaskClosed = "\n" + messageAllTaskClosed
-	}
-	msgBody += messageAllTaskClosed + messageNoDeveloper
+	msgBody += messageNoDeveloper + "\n" + messageAllTaskClosed
 	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.ProjectManager, a.Slack.Channels.General)
 }
