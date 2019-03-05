@@ -604,7 +604,7 @@ func (a *App) ReportSprintStatus() {
 
 // CreateIssueBranches create branch of issue and its parent
 func (a *App) CreateIssueBranches(issue jira.Issue) {
-	if issue.Fields.Status.Name == "Started" {
+	if issue.Fields.Status.Name == jira.StatusStarted {
 		if issue.Fields.Type.Name == "Story" && !issue.Fields.Type.Subtask {
 			err := a.Bitbucket.CreateBranch(issue.Key, issue.Key+"-story", "master")
 			if err != nil {
@@ -632,6 +632,7 @@ func (a *App) CreateIssueBranches(issue jira.Issue) {
 
 // CreateBranchPullRequest create pull request for first branch commit
 func (a *App) CreateBranchPullRequest(repoPushPayload bitbucket.RepoPushPayload) {
+	// if commit was deleted or branch was deleted, new name will be empty, and we check it to do nothing
 	if repoPushPayload.Push.Changes[0].New.Name == "" {
 		return
 	}
@@ -640,7 +641,6 @@ func (a *App) CreateBranchPullRequest(repoPushPayload bitbucket.RepoPushPayload)
 		if err != nil {
 			logrus.WithError(err).WithField("branch", fmt.Sprintf("%+v", repoPushPayload.Push.Changes[0].New.Name)).
 				Error("can't create pull request of branch")
-			return
 		}
 		return
 	}
