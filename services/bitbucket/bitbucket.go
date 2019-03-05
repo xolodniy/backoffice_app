@@ -281,7 +281,13 @@ func (b *Bitbucket) branchTargetCommitHash(repoSlug, branchName string) (string,
 	if err != nil {
 		return "", err
 	}
-	var branchInfo BranchInfo
+	var branchInfo = struct {
+		Type   string `json:"type"`
+		Name   string `json:"name"`
+		Target struct {
+			Hash string `json:"hash"`
+		} `json:"target"`
+	}{}
 	err = json.Unmarshal(res, &branchInfo)
 	if err != nil {
 		return "", err

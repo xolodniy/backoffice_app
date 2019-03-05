@@ -163,16 +163,6 @@ type diffStat struct {
 	} `json:"new"`
 }
 
-// BranchInfo struct of branch information
-// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/refs/branches/%7Bname%7D
-type BranchInfo struct {
-	Type   string `json:"type"`
-	Name   string `json:"name"`
-	Target struct {
-		Hash string `json:"hash"`
-	} `json:"target"`
-}
-
 // PullRequestCreateInfo struct for create PR
 // https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/pullrequests#post
 type PullRequestCreateInfo struct {

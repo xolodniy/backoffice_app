@@ -32,6 +32,7 @@ func New(config *config.Jira) Jira {
 
 // Status variables for jql requests
 var (
+	StatusStarted         = "Started"
 	StatusClosed          = "Closed"
 	StatusTlReview        = "TL Review"
 	StatusPeerReview      = "In peer review"
