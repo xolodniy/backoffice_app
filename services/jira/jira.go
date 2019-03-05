@@ -315,3 +315,12 @@ func (j *Jira) IssueSetStatusCloseLastTask(issueKey string) error {
 	}
 	return nil
 }
+
+func (j *Jira) IssueTypeName(issueKey string) (string, error) {
+	issue, resp, err := j.Issue.Get(issueKey, &jira.GetQueryOptions{})
+	if err != nil {
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira issue ")
+		return "", err
+	}
+	return issue.Fields.Status.Name, nil
+}
