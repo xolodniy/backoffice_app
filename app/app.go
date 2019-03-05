@@ -597,16 +597,14 @@ func (a *App) ReportSprintStatus() {
 					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 			}
 		}
-		if message == "" {
+		switch {
+		case developer == "No developer" && message != "":
+			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
+		case message == "" && developer != "No developer":
 			messageAllTaskClosed += fmt.Sprintf(developer + " - all tasks closed.\n")
-			continue
+		case message != "":
+			msgBody += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
 		}
-		if developer == "No developer" {
-			messageNoDeveloper += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
-			continue
-		}
-		msgBody += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
-		continue
 	}
 	msgBody += messageNoDeveloper + "\n" + messageAllTaskClosed
 	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.ProjectManager, a.Slack.Channels.General)
