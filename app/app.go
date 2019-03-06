@@ -194,17 +194,49 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 		a.Slack.SendMessage("There are no employees with exceeded subtasks", channel)
 		return
 	}
-	var index = 1
+
 	msgBody := "Employees have exceeded tasks:\n"
+	var developers = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		if issue.Fields == nil {
-			continue
+		developer := ""
+		// Convert to marshal map to find developer displayName of issue developer field
+		developerMap, err := issue.Fields.Unknowns.MarshalMap(jira.FieldDeveloperMap)
+		if err != nil {
+			//can't make customfield_10026 map marshaling because field developer is empty
+			developer = "No developer"
 		}
-		if listRow := a.Jira.IssueTimeExceededNoTimeRange(issue, index); listRow != "" {
-			msgBody += listRow
-			index++
+		if developerMap != nil {
+			displayName, ok := developerMap["displayName"].(string)
+			if !ok {
+				logrus.WithField("displayName", fmt.Sprintf("%+v", developerMap["displayName"])).
+					Error("can't assert to string map displayName field")
+			}
+			developer = displayName
+		}
+		developers[developer] = append(developers[developer], issue)
+	}
+	for _, dev := range a.Slack.IgnoreList {
+		delete(developers, dev)
+	}
+	var messageNoDeveloper string
+	for developer, issues := range developers {
+		var message string
+		for _, issue := range issues {
+			var worklogString string
+			if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds {
+				worklogString = fmt.Sprintf(" time spent is %s instead %s", issue.Fields.TimeTracking.TimeSpent, issue.Fields.TimeTracking.OriginalEstimate)
+			}
+			message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_%[4]s\n",
+				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, worklogString)
+		}
+		switch {
+		case developer == "No developer" && message != "":
+			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
+		case message != "":
+			msgBody += fmt.Sprintf("\n" + developer + "\n" + message)
 		}
 	}
+	msgBody += messageNoDeveloper
 	a.Slack.SendMessage(msgBody, channel)
 }
 
