@@ -99,46 +99,6 @@ func (j *Jira) AssigneeOpenIssues() ([]Issue, error) {
 	return issues, nil
 }
 
-// IssueTimeExceededNoTimeRange prepares string without employee time excess
-func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
-	if issue.Fields == nil {
-		logrus.WithField("issue", fmt.Sprintf("%+v", issue)).Error("issue fields is empty")
-		return ""
-	}
-
-	var listRow string
-
-	if issue.Fields.TimeTracking.RemainingEstimateSeconds != 0 {
-		return listRow
-	}
-
-	//TODO разобраться со вложенностями
-	var developer = "No developer"
-	developerMap, err := issue.Fields.Unknowns.MarshalMap(FieldDeveloperMap)
-	if err != nil {
-		logrus.WithError(err).WithField("developerMap", fmt.Sprintf("%+v", developerMap)).
-			Errorf("can't make %s map marshaling", FieldDeveloperMap)
-	} else if developerMap != nil {
-		displayName, ok := developerMap["displayName"].(string)
-		if !ok {
-			logrus.WithField("displayName", fmt.Sprintf("%+v", developerMap["displayName"])).
-				Error("can't assert to string map displayName field")
-		} else {
-			developer = displayName
-		}
-	}
-	var worklogString string
-	if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds {
-		worklogString = fmt.Sprintf(" time spent is %s instead %s", issue.Fields.TimeTracking.TimeSpent, issue.Fields.TimeTracking.OriginalEstimate)
-	}
-
-	listRow = fmt.Sprintf("%[1]d. %[2]s - <https://theflow.atlassian.net/browse/%[3]s|%[3]s - %[4]s>: _%[5]s_%[6]s\n",
-		rowIndex, developer, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name,
-		worklogString)
-
-	return listRow
-}
-
 // IssuesWithClosedSubtasks retrieves issues with closed subtasks
 func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
 	request := fmt.Sprintf(`status NOT IN ("%s") AND type in (story, bug) AND Sprint in openSprints()`, StatusClosed)
