@@ -59,6 +59,7 @@ type LastActivity struct {
 	TaskJiraKey   string `json:"taskjirakey"`
 	TaskSummary   string `json:"tasksummary"`
 	User          struct {
-		Name string `json:"name" binding:"required"`
+		Name         string `json:"name" binding:"required"`
+		LastActivity string `json:"last_activity" binding:"required"`
 	} `json:"user" binding:"required"`
 }

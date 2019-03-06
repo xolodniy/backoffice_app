@@ -30,6 +30,11 @@ func New(config *config.Hubstaff) Hubstaff {
 	}
 }
 
+var (
+	CurrentActivityDuration  int64 = 1000
+	InactiveActivityDuration int64 = 2592000
+)
+
 // ObtainAuthToken retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
 func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
@@ -109,8 +114,8 @@ func (h *Hubstaff) HubstaffUsers() ([]UserReport, error) {
 	return usersSlice.List, nil
 }
 
-// LastActivity returns a text report about last activities
-func (h *Hubstaff) LastActivity() ([]LastActivity, error) {
+// CurrentActivity returns a text report about last activities
+func (h *Hubstaff) CurrentActivity() ([]LastActivity, error) {
 	rawResponse, err := h.do(fmt.Sprintf("/v1/organizations/%d/last_activity", h.OrgID))
 	if err != nil {
 		return []LastActivity{}, fmt.Errorf("error on getting last activities data: %v", err)
@@ -126,6 +131,22 @@ func (h *Hubstaff) LastActivity() ([]LastActivity, error) {
 		return []LastActivity{}, nil
 	}
 	for i, activity := range activities.List {
+		layout := "2006-01-02T15:04:05Z"
+		t, err := time.Parse(layout, activity.User.LastActivity)
+		// if time empty or other format we continue to remove many log messages
+		if err != nil {
+			continue
+		}
+		lastActivity := time.Now().Unix() - t.Unix()
+		if lastActivity > InactiveActivityDuration {
+			activities.List[i] = LastActivity{}
+			continue
+		}
+		if lastActivity > CurrentActivityDuration {
+			activities.List[i].ProjectName = "Not at work at the moment"
+			continue
+		}
+
 		activities.List[i].ProjectName, err = h.getProjectNameByID(activity.LastProjectID)
 		if err != nil {
 			continue
