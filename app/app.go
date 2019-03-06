@@ -355,23 +355,23 @@ func (a *App) ReportCurrentActivity() {
 // stringFromCurrentActivitiesList convert slice of last activities in string message report
 func (a *App) stringFromCurrentActivitiesList(activitiesList []hubstaff.LastActivity) string {
 	var (
-		message   string
-		notAtWork string
+		usersAtWork    string
+		usersNotAtWork string
 	)
 	for _, activity := range activitiesList {
 		if activity.ProjectName == "Not at work at the moment" {
-			notAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
+			usersNotAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
 			continue
 		}
 		if activity.ProjectName != "" {
-			message += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
+			usersAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
 			if activity.TaskJiraKey != "" {
-				message += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
+				usersAtWork += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
 					activity.TaskJiraKey, activity.TaskSummary)
 			}
 		}
 	}
-	return message + notAtWork
+	return usersAtWork + usersNotAtWork
 }
 
 // ReportSprintsIsuues create report about Completed issues, Completed but not verified, Issues left for the next, Issues in next sprint
