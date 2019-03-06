@@ -53,7 +53,7 @@ func main() {
 			go application.FillCache()
 
 			wg := sync.WaitGroup{}
-			tm := initCronTasks(wg, cfg.Reports, *application)
+			tm := initCronTasks(wg, cfg, *application)
 
 			gracefulClosing(tm.Stop, &wg)
 		}
@@ -141,7 +141,7 @@ func main() {
 						return
 					}
 					application := app.New(cfg)
-					application.ReportIsuuesWithClosedSubtasks(channel)
+					application.ReportIsuuesAfterSecondReview(channel)
 				},
 			},
 			{
@@ -250,67 +250,67 @@ func main() {
 
 }
 
-func initCronTasks(wg sync.WaitGroup, reports map[string]config.Report, application app.App) *taskmanager.TaskManager {
+func initCronTasks(wg sync.WaitGroup, cfg *config.Main, application app.App) *taskmanager.TaskManager {
 	tm := taskmanager.New(&wg)
 
-	err := tm.AddTask(reports["reportgitmigrations"].Schedule, func() {
-		application.MakeWorkersWorkedReportYesterday("auto", reports["reportgitmigrations"].Channel)
+	err := tm.AddTask(cfg.Reports.DailyWorkersWorkedTime.Schedule, func() {
+		application.MakeWorkersWorkedReportYesterday("auto", cfg.Reports.DailyWorkersWorkedTime.Channel)
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	err = tm.AddTask(reports["weeklyworkersworkedtime"].Schedule, func() {
-		application.MakeWorkersWorkedReportLastWeek("auto", reports["weeklyworkersworkedtime"].Channel)
+	err = tm.AddTask(cfg.Reports.WeeklyWorkersWorkedTime.Schedule, func() {
+		application.MakeWorkersWorkedReportLastWeek("auto", cfg.Reports.WeeklyWorkersWorkedTime.Channel)
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	err = tm.AddTask(reports["employeesexceededestimatetime"].Schedule, func() {
-		application.ReportEmployeesWithExceededEstimateTime(reports["employeesexceededestimatetime"].Channel)
+	err = tm.AddTask(cfg.Reports.EmployeesExceededEstimateTime.Schedule, func() {
+		application.ReportEmployeesWithExceededEstimateTime(cfg.Reports.EmployeesExceededEstimateTime.Channel)
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	err = tm.AddTask(reports["employeesexceededtasks"].Schedule, func() {
-		application.ReportEmployeesHaveExceededTasks(reports["employeesexceededtasks"].Channel)
+	err = tm.AddTask(cfg.Reports.EmployeesExceededTasks.Schedule, func() {
+		application.ReportEmployeesHaveExceededTasks(cfg.Reports.EmployeesExceededTasks.Channel)
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	err = tm.AddTask(reports["reportclosedsubtasks"].Schedule, func() {
-		application.ReportIsuuesWithClosedSubtasks(reports["reportclosedsubtasks"].Channel)
+	err = tm.AddTask(cfg.Reports.ReportClosedSubtasks.Schedule, func() {
+		application.ReportIsuuesWithClosedSubtasks(cfg.Reports.ReportClosedSubtasks.Channel)
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	err = tm.AddTask(reports["reportaftersecondreview"].Schedule, func() {
-		application.ReportIsuuesAfterSecondReview(reports["reportaftersecondreview"].Channel)
+	err = tm.AddTask(cfg.Reports.ReportAfterSecondReview.Schedule, func() {
+		application.ReportIsuuesAfterSecondReview(cfg.Reports.ReportAfterSecondReview.Channel)
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	err = tm.AddTask(reports["reportslackspaceending"].Schedule, func() {
-		application.ReportSlackEndingFreeSpace(reports["reportslackspaceending"].Channel)
+	err = tm.AddTask(cfg.Reports.ReportSlackSpaceEnding.Schedule, func() {
+		application.ReportSlackEndingFreeSpace(cfg.Reports.ReportSlackSpaceEnding.Channel)
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	err = tm.AddTask(reports["reportgitmigrations"].Schedule, func() {
-		application.ReportGitMigrations(reports["reportgitmigrations"].Channel)
+	err = tm.AddTask(cfg.Reports.ReportGitMigrations.Schedule, func() {
+		application.ReportGitMigrations(cfg.Reports.ReportGitMigrations.Channel)
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	err = tm.AddTask(reports["reportsprintstatus"].Schedule, func() {
-		application.ReportSprintStatus(reports["reportsprintstatus"].Channel)
+	err = tm.AddTask(cfg.Reports.ReportSprintStatus.Schedule, func() {
+		application.ReportSprintStatus(cfg.Reports.ReportSprintStatus.Channel)
 	})
 	if err != nil {
 		panic(err)

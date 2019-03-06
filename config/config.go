@@ -17,7 +17,17 @@ type Main struct {
 	Hubstaff
 	Slack
 	Bitbucket
-	Reports map[string]Report
+	Reports struct {
+		DailyWorkersWorkedTime        Report
+		WeeklyWorkersWorkedTime       Report
+		ReportClosedSubtasks          Report
+		ReportAfterSecondReview       Report
+		EmployeesExceededTasks        Report
+		EmployeesExceededEstimateTime Report
+		ReportSlackSpaceEnding        Report
+		ReportGitMigrations           Report
+		ReportSprintStatus            Report
+	}
 }
 
 // Jira is template to storing jira configuration
