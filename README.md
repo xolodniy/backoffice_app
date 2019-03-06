@@ -175,6 +175,13 @@ You may use one of several pre-defined schedules in place of a cron expression.
     reportslackspaceending: "00 00 07 * * *"    — start everyday at 7:00 to send report if free space on slack < 0.5GB
     reportgitmigrations: "@hourly"              — preference to send report about new git migrations
     reportsprintstatus: "00 00 07 * * MON"      - preference to send report about open sprint status
+#### Config.yml variables for slack users id
+    projectmanager: U9FDU5W4D   - this is variable of user id to mention him in messages, or send mmessages to him.
+    
+User id you can find in slack: 
+1. Click on the users name and choose "Show Profile".
+2. Open the "..." menu.
+3. Click button "Copy Member-ID ..."
 
 ### API Description
 
