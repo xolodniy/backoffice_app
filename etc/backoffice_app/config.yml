@@ -2,16 +2,35 @@ loglevel: debug
 ginport: 1234
 gindebugmode: true
 maxweekworkinghours: 30.0
-cron:
-  dailyworkersworkedtime: "00 00 07 * * *"
-  weeklyworkersworkedtime: "00 00 07 * * 1"
-  reportclosedsubtasks: "00 00 07 * * *"
-  reportaftersecondreview: "00 00 07 * * *"
-  employeesexceededtasks: "00 00 07 * * *"
-  employeesexceededestimatetime: "00 00 07 * * *"
-  reportslackspaceending: "00 00 07 * * *"
-  reportgitmigrations: "@hourly"
-  reportsprintstatus: "00 00 05 * * MON"
+reports:
+  dailyworkersworkedtime:
+    schedule: "00 00 07 * * *"
+    channel: "#back-office-app"
+  weeklyworkersworkedtime:
+    schedule: "00 00 07 * * 1"
+    channel: "#back-office-app"
+  reportclosedsubtasks:
+    schedule: "00 00 07 * * *"
+    channel: "#back-office-app"
+  reportaftersecondreview:
+    schedule: "00 00 07 * * *"
+    channel: "U891K2Z2P"
+  employeesexceededtasks:
+    schedule: "00 00 07 * * *"
+    channel: "#back-office-app"
+  employeesexceededestimatetime:
+    schedule: "00 00 07 * * *"
+    channel: "#back-office-app"
+  reportslackspaceending:
+    schedule: "00 00 07 * * *"
+    channel: "#back-office-app"
+  reportgitmigrations:
+    schedule: "@hourly"
+    channel: "#migrations"
+  reportsprintstatus:
+    schedule: "00 00 05 * * MON"
+    channel: "#general"
+
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
@@ -27,10 +46,6 @@ bitbucket:
 
 slack:
   apiurl: https://slack.com/api
-  channels:
-    general: general
-    backofficeapp: back-office-app
-    migrations: migrations
   botname: Back Office Bot
   projectmanager: U9FDU5W4D
   intoken: xoxp-281270780213-532563372454-545645521588-6e70abc49c386bb1ad94465d19866188

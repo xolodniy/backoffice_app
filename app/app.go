@@ -56,23 +56,23 @@ func New(conf *config.Main) *App {
 }
 
 // MakeWorkersWorkedReportLastWeek preparing a last week report and send it to Slack
-func (a *App) MakeWorkersWorkedReportLastWeek(mode string) {
+func (a *App) MakeWorkersWorkedReportLastWeek(mode, channel string) {
 	a.ReportUsersWorkedTimeByMember(
-		fmt.Sprintf("Weekly work time report (%s)", mode),
+		fmt.Sprintf("Weekly work time report (%s)", mode), channel,
 		now.BeginningOfWeek().AddDate(0, 0, -7),
 		now.EndOfWeek().AddDate(0, 0, -7))
 }
 
 // MakeWorkersWorkedReportYesterday preparing a last day report and send it to Slack
-func (a *App) MakeWorkersWorkedReportYesterday(mode string) {
+func (a *App) MakeWorkersWorkedReportYesterday(mode, channel string) {
 	a.ReportUsersWorkedTimeByDate(
-		fmt.Sprintf("Daily detailed report (%s)", mode),
+		fmt.Sprintf("Daily detailed report (%s)", mode), channel,
 		now.BeginningOfDay().AddDate(0, 0, -1),
 		now.EndOfDay().AddDate(0, 0, -1))
 }
 
 // ReportUsersWorkedTimeByMember gather workers work time made through period between dates and send it to Slack channel
-func (a *App) ReportUsersWorkedTimeByMember(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
+func (a *App) ReportUsersWorkedTimeByMember(prefix, channel string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
 	usersReports, err := a.Hubstaff.UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd)
 	if err != nil {
 		logrus.WithError(err).Error("can't get workers worked time by member from Hubstaff")
@@ -86,11 +86,11 @@ func (a *App) ReportUsersWorkedTimeByMember(prefix string, dateOfWorkdaysStart, 
 	for _, user := range usersReports {
 		message += fmt.Sprintf("\n%s %s", user.TimeWorked, user.Name)
 	}
-	a.Slack.SendMessage(message, a.Slack.Channels.BackofficeApp)
+	a.Slack.SendMessage(message, channel)
 }
 
 // ReportUsersWorkedTimeByDate gather detailed workers work time made through period between dates and send it to Slack channel
-func (a *App) ReportUsersWorkedTimeByDate(prefix string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
+func (a *App) ReportUsersWorkedTimeByDate(prefix, channel string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
 	datesReports, err := a.Hubstaff.UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd)
 	if err != nil {
 		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
@@ -114,18 +114,18 @@ func (a *App) ReportUsersWorkedTimeByDate(prefix string, dateOfWorkdaysStart, da
 			}
 		}
 	}
-	a.Slack.SendMessage(message, a.Slack.Channels.BackofficeApp)
+	a.Slack.SendMessage(message, channel)
 }
 
 // ReportIsuuesWithClosedSubtasks create report about issues with closed subtasks
-func (a *App) ReportIsuuesWithClosedSubtasks() {
+func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 	issues, err := a.Jira.IssuesWithClosedSubtasks()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about closed subtasks from jira")
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues with all closed subtasks", a.Slack.Channels.BackofficeApp)
+		a.Slack.SendMessage("There are no issues with all closed subtasks", channel)
 		return
 	}
 	msgBody := a.Slack.ProjectManager + "\nIssues have all closed subtasks:\n"
@@ -141,11 +141,11 @@ func (a *App) ReportIsuuesWithClosedSubtasks() {
 			}
 		}
 	}
-	a.Slack.SendMessage(msgBody, a.Slack.Channels.BackofficeApp)
+	a.Slack.SendMessage(msgBody, channel)
 }
 
 // ReportEmployeesWithExceededEstimateTime create report about employees with ETA overhead
-func (a *App) ReportEmployeesWithExceededEstimateTime() {
+func (a *App) ReportEmployeesWithExceededEstimateTime(channel string) {
 	//getting actual sum of ETA from jira by employees
 	jiraRemainingEtaMap := make(map[string]int)
 	issues, err := a.Jira.AssigneeOpenIssues()
@@ -157,7 +157,7 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 		jiraRemainingEtaMap[issue.Fields.Assignee.EmailAddress] += issue.Fields.TimeTracking.RemainingEstimateSeconds
 	}
 	if len(jiraRemainingEtaMap) == 0 {
-		a.Slack.SendMessage("There are no issues with remaining ETA.", a.Slack.Channels.BackofficeApp)
+		a.Slack.SendMessage("There are no issues with remaining ETA.", channel)
 		return
 	}
 	usersReports, err := a.Hubstaff.UsersWorkTimeByMember(now.BeginningOfWeek(), now.EndOfWeek())
@@ -180,18 +180,18 @@ func (a *App) ReportEmployeesWithExceededEstimateTime() {
 	if message == "" {
 		message = "No one developer has exceeded estimate time"
 	}
-	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message), a.Slack.Channels.BackofficeApp)
+	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message), channel)
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
-func (a *App) ReportEmployeesHaveExceededTasks() {
+func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 	issues, err := a.Jira.AssigneeOpenIssues()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about exceeded tasks of employees from jira")
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no employees with exceeded subtasks", a.Slack.Channels.BackofficeApp)
+		a.Slack.SendMessage("There are no employees with exceeded subtasks", channel)
 		return
 	}
 
@@ -237,18 +237,18 @@ func (a *App) ReportEmployeesHaveExceededTasks() {
 		}
 	}
 	msgBody += messageNoDeveloper
-	a.Slack.SendMessage(msgBody, a.Slack.Channels.BackofficeApp)
+	a.Slack.SendMessage(msgBody, channel)
 }
 
 // ReportIsuuesAfterSecondReview create report about issues after second review round
-func (a *App) ReportIsuuesAfterSecondReview() {
+func (a *App) ReportIsuuesAfterSecondReview(channel string) {
 	issues, err := a.Jira.IssuesAfterSecondReview()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about issues after second review from jira")
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues after second review round", a.Slack.Channels.BackofficeApp)
+		a.Slack.SendMessage("There are no issues after second review round", channel)
 		return
 	}
 	msgBody := "Issues after second review round:\n"
@@ -256,11 +256,11 @@ func (a *App) ReportIsuuesAfterSecondReview() {
 		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 	}
-	a.Slack.SendMessage(msgBody, a.Slack.Channels.BackofficeApp)
+	a.Slack.SendMessage(msgBody, channel)
 }
 
 // ReportSlackEndingFreeSpace create report about employees that have exceeded tasks
-func (a *App) ReportSlackEndingFreeSpace() {
+func (a *App) ReportSlackEndingFreeSpace(channel string) {
 	size, err := a.Slack.FilesSize()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about files size from slack")
@@ -270,11 +270,11 @@ func (a *App) ReportSlackEndingFreeSpace() {
 		return
 	}
 	msgBody := fmt.Sprintf("Free space on slack end.\n")
-	a.Slack.SendMessage(msgBody, a.Slack.Channels.BackofficeApp)
+	a.Slack.SendMessage(msgBody, channel)
 }
 
 // ReportGitMigrations create report about new git migrations
-func (a *App) ReportGitMigrations() {
+func (a *App) ReportGitMigrations(channel string) {
 	messages, err := a.MigrationMessages()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information git migrations from bitbucket")
@@ -282,7 +282,7 @@ func (a *App) ReportGitMigrations() {
 	}
 	for _, message := range messages {
 		if message != "" {
-			a.Slack.SendMessage(message, a.Slack.Channels.Migrations)
+			a.Slack.SendMessage(message, channel)
 		}
 	}
 }
@@ -374,14 +374,14 @@ func (a *App) ReportLastActivityWithCallback(callbackURL string) {
 }
 
 // ReportLastActivity create report and send it to slack
-func (a *App) ReportLastActivity() {
+func (a *App) ReportLastActivity(channel string) {
 	activitiesList, err := a.Hubstaff.LastActivity()
 	if err != nil {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
 	message := a.stringFromLastActivitiesList(activitiesList)
-	a.Slack.SendMessage(message, a.Slack.Channels.BackofficeApp)
+	a.Slack.SendMessage(message, channel)
 }
 
 // stringFromLastActivitiesList convert slice of last activities in string message report
@@ -581,7 +581,7 @@ func (a *App) SendFileToSlack(channel, fileName string) error {
 }
 
 // ReportSprintStatus create report about sprint status
-func (a *App) ReportSprintStatus() {
+func (a *App) ReportSprintStatus(channel string) {
 	issues, err := a.Jira.IssuesOfOpenSprints()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about issues of open sprint from jira")
@@ -589,7 +589,7 @@ func (a *App) ReportSprintStatus() {
 	}
 	msgBody := a.Slack.ProjectManager + "\n*Sprint status:*\n"
 	if len(issues) == 0 {
-		a.Slack.SendMessage(msgBody+"Open issues was not found. All issues of open sprint was closed.", a.Slack.Channels.General)
+		a.Slack.SendMessage(msgBody+"Open issues was not found. All issues of open sprint was closed.", channel)
 		return
 	}
 	var developers = make(map[string][]jira.Issue)
@@ -631,5 +631,5 @@ func (a *App) ReportSprintStatus() {
 		}
 		msgBody += fmt.Sprintf(" " + developer + " - all tasks closed.\n")
 	}
-	a.Slack.SendMessage(msgBody, a.Slack.Channels.General)
+	a.Slack.SendMessage(msgBody, channel)
 }
