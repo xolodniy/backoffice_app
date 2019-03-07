@@ -20,19 +20,11 @@ type Slack struct {
 	OutToken       string
 	BotName        string
 	ProjectManager string
-	Channels       Channels
 	APIURL         string
 	TotalVolume    float64
 	RestVolume     float64
 	Secret         string
 	IgnoreList     []string
-}
-
-// Channels is struct of channels
-type Channels struct {
-	General       string
-	BackofficeApp string
-	Migrations    string
 }
 
 // FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
@@ -62,16 +54,11 @@ func New(config *config.Slack) Slack {
 		OutToken:       config.OutToken,
 		BotName:        config.BotName,
 		ProjectManager: "<@" + config.ProjectManager + ">",
-		Channels: Channels{
-			"#" + config.Channels.General,
-			"#" + config.Channels.BackofficeApp,
-			"#" + config.Channels.Migrations,
-		},
-		APIURL:      config.APIURL,
-		TotalVolume: config.TotalVolume,
-		Secret:      config.Secret,
-		RestVolume:  config.RestVolume,
-		IgnoreList:  config.IgnoreList,
+		APIURL:         config.APIURL,
+		TotalVolume:    config.TotalVolume,
+		Secret:         config.Secret,
+		RestVolume:     config.RestVolume,
+		IgnoreList:     config.IgnoreList,
 	}
 }
 
