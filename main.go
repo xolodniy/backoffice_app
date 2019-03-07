@@ -238,7 +238,7 @@ func main() {
 						return
 					}
 					application := app.New(cfg)
-					application.ReportLastActivity(channel)
+					application.ReportCurrentActivity(channel)
 				},
 			},
 		}

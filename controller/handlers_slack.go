@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin/binding"
 )
 
-func (c *Controller) slackLastActivityHandler(ctx *gin.Context) {
+func (c *Controller) slackCurrentActivityHandler(ctx *gin.Context) {
 	form := struct {
 		ResponseURL string `form:"response_url" binding:"required"`
 	}{}
@@ -20,7 +20,7 @@ func (c *Controller) slackLastActivityHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{
 		"text": "Report is preparing. Your request will be processed soon.",
 	})
-	go c.App.ReportLastActivityWithCallback(form.ResponseURL)
+	go c.App.ReportCurrentActivityWithCallback(form.ResponseURL)
 }
 
 func (c *Controller) sprintReport(ctx *gin.Context) {

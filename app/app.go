@@ -347,14 +347,14 @@ func (a *App) SQLCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCac
 	return newMapSQLCommits, nil
 }
 
-// ReportLastActivityWithCallback posts last activity to slack to defined callbackUrl
-func (a *App) ReportLastActivityWithCallback(callbackURL string) {
-	activitiesList, err := a.Hubstaff.LastActivity()
+// ReportCurrentActivityWithCallback posts last activity to slack to defined callbackUrl
+func (a *App) ReportCurrentActivityWithCallback(callbackURL string) {
+	activitiesList, err := a.Hubstaff.CurrentActivity()
 	if err != nil {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
-	message := a.stringFromLastActivitiesList(activitiesList)
+	message := a.stringFromCurrentActivitiesList(activitiesList)
 	jsonReport, err := json.Marshal(struct {
 		Text string `json:"text"`
 	}{Text: message})
@@ -373,30 +373,37 @@ func (a *App) ReportLastActivityWithCallback(callbackURL string) {
 	}
 }
 
-// ReportLastActivity create report and send it to slack
-func (a *App) ReportLastActivity(channel string) {
-	activitiesList, err := a.Hubstaff.LastActivity()
+// ReportCurrentActivity create report and send it to slack
+func (a *App) ReportCurrentActivity(channel string) {
+	activitiesList, err := a.Hubstaff.CurrentActivity()
 	if err != nil {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
-	message := a.stringFromLastActivitiesList(activitiesList)
+	message := a.stringFromCurrentActivitiesList(activitiesList)
 	a.Slack.SendMessage(message, channel)
 }
 
-// stringFromLastActivitiesList convert slice of last activities in string message report
-func (a *App) stringFromLastActivitiesList(activitiesList []hubstaff.LastActivity) string {
-	var message string
+// stringFromCurrentActivitiesList convert slice of last activities in string message report
+func (a *App) stringFromCurrentActivitiesList(activitiesList []hubstaff.LastActivity) string {
+	var (
+		usersAtWork    string
+		usersNotAtWork string
+	)
 	for _, activity := range activitiesList {
+		if activity.ProjectName == "Not at work at the moment" {
+			usersNotAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
+			continue
+		}
 		if activity.ProjectName != "" {
-			message += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
+			usersAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
 			if activity.TaskJiraKey != "" {
-				message += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
+				usersAtWork += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
 					activity.TaskJiraKey, activity.TaskSummary)
 			}
 		}
 	}
-	return message
+	return usersAtWork + usersNotAtWork
 }
 
 // ReportSprintsIsuues create report about Completed issues, Completed but not verified, Issues left for the next, Issues in next sprint
