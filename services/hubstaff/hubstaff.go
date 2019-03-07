@@ -30,10 +30,7 @@ func New(config *config.Hubstaff) Hubstaff {
 	}
 }
 
-var (
-	CurrentActivityDuration  int64 = 1000
-	InactiveActivityDuration int64 = 2592000
-)
+var CurrentActivityDuration int64 = 1000
 
 // ObtainAuthToken retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
@@ -116,7 +113,7 @@ func (h *Hubstaff) HubstaffUsers() ([]UserReport, error) {
 
 // CurrentActivity returns a text report about last activities
 func (h *Hubstaff) CurrentActivity() ([]LastActivity, error) {
-	rawResponse, err := h.do(fmt.Sprintf("/v1/organizations/%d/last_activity", h.OrgID))
+	rawResponse, err := h.do(fmt.Sprintf("/v1/organizations/%d/last_activity?include_removed=false", h.OrgID))
 	if err != nil {
 		return []LastActivity{}, fmt.Errorf("error on getting last activities data: %v", err)
 	}
@@ -138,10 +135,6 @@ func (h *Hubstaff) CurrentActivity() ([]LastActivity, error) {
 			continue
 		}
 		lastActivity := time.Now().Unix() - t.Unix()
-		if lastActivity > InactiveActivityDuration {
-			activities.List[i] = LastActivity{}
-			continue
-		}
 		if lastActivity > CurrentActivityDuration {
 			activities.List[i].ProjectName = "Not at work at the moment"
 			continue
