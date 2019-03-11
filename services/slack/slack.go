@@ -257,6 +257,7 @@ func (s *Slack) UploadFile(channel, contentType string, file *bytes.Buffer) erro
 	return nil
 }
 
+// UserEmailByName retrieve user email by his name
 func (s *Slack) UserEmailByName(username string) (string, error) {
 	for i := 0; ; i++ {
 		urlStr := fmt.Sprintf("%s/users.list?token=%s&page=%v", s.APIURL, s.InToken, i)

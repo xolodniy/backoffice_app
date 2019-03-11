@@ -273,7 +273,7 @@ func (h *Hubstaff) UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd ti
 	return orgs.List[0].Dates, nil
 }
 
-// UserWorkTimeByDate retrieves work time of date reports slice by date
+// UserWorkTimeByDate retrieves work time of user date report slice by date and retrieve user name
 func (h *Hubstaff) UserWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, email string) (DateReport, string, error) {
 	users, err := h.HubstaffUsers()
 	if err != nil {

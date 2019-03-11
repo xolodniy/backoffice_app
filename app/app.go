@@ -641,6 +641,7 @@ func (a *App) ReportSprintStatus(channel string) {
 	a.Slack.SendMessage(msgBody, channel)
 }
 
+// PersonActivityByDate create report about user activity and send messange about it
 func (a *App) PersonActivityByDate(userName, date, channel string) error {
 	email, err := a.Slack.UserEmailByName(strings.TrimPrefix(userName, "@"))
 	if err != nil {
