@@ -35,6 +35,7 @@ var (
 	StatusClosed          = "Closed"
 	StatusTlReview        = "TL Review"
 	StatusPeerReview      = "In peer review"
+	StatusDesignReview    = "in Design review"
 	StatusCloseLastTask   = "Close last task"
 	StatusReadyForDemo    = "Ready for demo"
 	StatusEmptyAssignee   = "empty"
