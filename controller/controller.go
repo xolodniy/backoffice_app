@@ -55,7 +55,7 @@ func (c *Controller) initRoutes() {
 	slack := c.Gin.Group("")
 	slack.Use(c.checkSignature)
 	slack.POST("/api/v1/slack/sprintreport", c.sprintReport)
-	slack.POST("/api/v1/slack/last_activity", c.slackLastActivityHandler)
+	slack.POST("/api/v1/slack/current_activity", c.slackCurrentActivityHandler)
 }
 
 func (c *Controller) checkSignature(ctx *gin.Context) {

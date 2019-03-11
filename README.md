@@ -144,8 +144,12 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
     intoken: 123456     -the user token for slack's user api
     outtoken: 123456    -the bot token for slack's bot api
  
-#### Cron manager parameters 
-    "00 00 07 * * *"    — cron prefence for adding tasks
+#### Cron manager reports parameters 
+
+1. schedule: "00 00 07 * * *"    — cron prefence for adding tasks
+2. channel: "#back-office-app"     - slack channel id for sending reports by cron 
+
+#### Cron manager settings 
    
     Field name   | Mandatory? | Allowed values  | Allowed special characters
     ----------   | ---------- | --------------  | --------------------------
@@ -166,15 +170,36 @@ You may use one of several pre-defined schedules in place of a cron expression.
     @daily (or @midnight)  | Run once a day, midnight                   | 0 0 0 * * *
     @hourly                | Run once an hour, beginning of hour        | 0 0 * * * *
 
-#### Config.yml variables for cron 
-    dailyworkersworkedtime: "00 00 07 * * *"    — preference to send daily worked time of worker
-    weeklyworkersworkedtime: "00 00 07 * * 1"   — preference to send weekly worked time of worker
-    reportclosedsubtasks: "00 00 07 * * *"      — preference to send report about all closed subtask of issue
-    reportaftersecondreview: "00 00 07 * * *"   — preference to send report about issues after second round review
-    employeesexceededtasks: "00 00 07 * * *"    — preference to send report about employers that have exceeded tasks
-    reportslackspaceending: "00 00 07 * * *"    — start everyday at 7:00 to send report if free space on slack < 0.5GB
-    reportgitmigrations: "@hourly"              — preference to send report about new git migrations
-    reportsprintstatus: "00 00 07 * * MON"      - preference to send report about open sprint status
+#### Config.yml variables for reports 
+
+      dailyworkersworkedtime:           — preference to send daily worked time of worker
+        schedule: "00 00 07 * * *"  
+        channel: "#back-office-app"
+      weeklyworkersworkedtime:          — preference to send weekly worked time of worker
+        schedule: "00 00 07 * * 1" 
+        channel: "#back-office-app"
+      reportclosedsubtasks:             — preference to send report about all closed subtask of issue
+        schedule: "00 00 07 * * *" 
+        channel: "#back-office-app"
+      reportaftersecondreview:          — preference to send report about issues after second round review
+        schedule: "00 00 07 * * *" 
+        channel: "#back-office-app"
+      employeesexceededtasks:           — preference to send report about employers that have exceeded tasks
+        schedule: "00 00 07 * * *" 
+        channel: "#back-office-app"
+      employeesexceededestimatetime:    — preference to send report about employers that have exceeded time of tasks
+        schedule: "00 00 07 * * *"
+        channel: "#back-office-app"
+      reportslackspaceending:           — start everyday at 7:00 to send report if free space on slack < 0.5GB
+        schedule: "00 00 07 * * *"
+        channel: "#back-office-app"
+      reportgitmigrations:              — preference to send report about new git migrations
+        schedule: "@hourly"
+        channel: "#migrations"
+      reportsprintstatus:               - preference to send report about open sprint status
+        schedule: "00 00 05 * * MON"
+        channel: "#general"
+    
 #### Config.yml variables for slack users id
     projectmanager: U9FDU5W4D   - this is variable of user id to mention him in messages, or send mmessages to him.
     

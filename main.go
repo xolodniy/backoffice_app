@@ -48,67 +48,22 @@ func main() {
 			application := app.New(cfg)
 
 			go controller.New(*cfg).Start()
+			log.Println("Requests listener started.")
 
 			go application.FillCache()
 
-			log.Println("Requests listener started.")
-
 			wg := sync.WaitGroup{}
-			tm := taskmanager.New(&wg)
-
-			err = tm.AddTask(cfg.Cron.DailyWorkersWorkedTime, func() {
-				application.MakeWorkersWorkedReportYesterday("auto")
-			})
-			if err != nil {
-				panic(err)
-			}
-
-			err = tm.AddTask(cfg.Cron.WeeklyWorkersWorkedTime, func() {
-				application.MakeWorkersWorkedReportLastWeek("auto")
-			})
-			if err != nil {
-				panic(err)
-			}
-			err = tm.AddTask(cfg.Cron.EmployeesExceededEstimateTime, application.ReportEmployeesWithExceededEstimateTime)
-			if err != nil {
-				panic(err)
-			}
-
-			err = tm.AddTask(cfg.Cron.EmployeesExceededTasks, application.ReportEmployeesHaveExceededTasks)
-			if err != nil {
-				panic(err)
-			}
-
-			err = tm.AddTask(cfg.Cron.ReportClosedSubtasks, application.ReportIsuuesWithClosedSubtasks)
-			if err != nil {
-				panic(err)
-			}
-
-			err = tm.AddTask(cfg.Cron.ReportAfterSecondReview, application.ReportIsuuesAfterSecondReview)
-			if err != nil {
-				panic(err)
-			}
-
-			err = tm.AddTask(cfg.Cron.ReportSlackSpaceEnding, application.ReportSlackEndingFreeSpace)
-			if err != nil {
-				panic(err)
-			}
-
-			err = tm.AddTask(cfg.Cron.ReportGitMigrations, application.ReportGitMigrations)
-			if err != nil {
-				panic(err)
-			}
-
-			err = tm.AddTask(cfg.Cron.ReportSprintStatus, application.ReportSprintStatus)
-			if err != nil {
-				panic(err)
-			}
-
-			tm.Start()
-
-			log.Println("Task scheduler started.")
+			tm := initCronTasks(wg, cfg, *application)
 
 			gracefulClosing(tm.Stop, &wg)
+		}
+
+		cliApp.Flags = []cli.Flag{
+			cli.StringFlag{
+				Name:  "channel, c",
+				Value: "",
+				Usage: "Channel for sending report, for example: -channel=#backoffice_app ",
+			},
 		}
 
 		cliApp.Commands = []cli.Command{
@@ -136,73 +91,127 @@ func main() {
 			{
 				Name:  "get-jira-exceedions-now",
 				Usage: "Gets jira exceedions right now",
+				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
 					application := app.New(cfg)
-					application.ReportEmployeesHaveExceededTasks()
+					application.ReportEmployeesHaveExceededTasks(channel)
 				},
 			},
 			{
 				Name:  "get-jira-issues-with-closed-subtasks-now",
 				Usage: "Gets jira issues with closed subtasks right now",
+				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
 					application := app.New(cfg)
-					application.ReportIsuuesWithClosedSubtasks()
+					application.ReportIsuuesWithClosedSubtasks(channel)
 				},
 			},
 			{
 				Name:  "report-exceeded-estimate-now",
 				Usage: "Reports exceeded estimate right now",
+				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
 					application := app.New(cfg)
-					application.ReportEmployeesWithExceededEstimateTime()
+					application.ReportEmployeesWithExceededEstimateTime(channel)
 				},
 			},
 			{
 				Name:  "get-jira-issues-after-second-review-round",
 				Usage: "Gets jira issues after second review round right now",
+				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
 					application := app.New(cfg)
-					application.ReportIsuuesWithClosedSubtasks()
+					application.ReportIsuuesAfterSecondReview(channel)
 				},
 			},
 			{
 				Name:  "get-git-new-migrations",
 				Usage: "Gets git new migrations right now",
+				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
 					application := app.New(cfg)
-					application.ReportGitMigrations()
+					application.ReportGitMigrations(channel)
 				},
 			},
 			{
 				Name:  "get-slack-report-if-free-space-enging",
 				Usage: "Gets report, if slack free space is empty",
+				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
 					application := app.New(cfg)
-					application.ReportSlackEndingFreeSpace()
+					application.ReportSlackEndingFreeSpace(channel)
 				},
 			},
 			{
 				Name:  "get-slack-report-open-sprint-status",
 				Usage: "Gets report about open sprint status",
+				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
 					application := app.New(cfg)
-					application.ReportSprintStatus()
+					application.ReportSprintStatus(channel)
 				},
 			},
 			{
 				Name:  "make-weekly-report-now",
 				Usage: "Sends weekly report to slack channel",
+				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
 					application := app.New(cfg)
-					application.MakeWorkersWorkedReportLastWeek("manual")
+					application.MakeWorkersWorkedReportLastWeek("manual", channel)
 				},
 			},
 			{
 				Name:  "make-daily-report-now",
 				Usage: "Sends daily report to slack channel",
+				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
 					application := app.New(cfg)
-					application.MakeWorkersWorkedReportYesterday("manual")
+					application.MakeWorkersWorkedReportYesterday("manual", channel)
 				},
 			},
 			{
@@ -221,9 +230,15 @@ func main() {
 			{
 				Name:  "send-last-activity-report-now",
 				Usage: "Send last activity report right now",
+				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
 					application := app.New(cfg)
-					application.ReportLastActivity()
+					application.ReportCurrentActivity(channel)
 				},
 			},
 		}
@@ -233,6 +248,78 @@ func main() {
 		}
 	}
 
+}
+
+func initCronTasks(wg sync.WaitGroup, cfg *config.Main, application app.App) *taskmanager.TaskManager {
+	tm := taskmanager.New(&wg)
+
+	err := tm.AddTask(cfg.Reports.DailyWorkersWorkedTime.Schedule, func() {
+		application.MakeWorkersWorkedReportYesterday("auto", cfg.Reports.DailyWorkersWorkedTime.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.WeeklyWorkersWorkedTime.Schedule, func() {
+		application.MakeWorkersWorkedReportLastWeek("auto", cfg.Reports.WeeklyWorkersWorkedTime.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.EmployeesExceededEstimateTime.Schedule, func() {
+		application.ReportEmployeesWithExceededEstimateTime(cfg.Reports.EmployeesExceededEstimateTime.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.EmployeesExceededTasks.Schedule, func() {
+		application.ReportEmployeesHaveExceededTasks(cfg.Reports.EmployeesExceededTasks.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.ReportClosedSubtasks.Schedule, func() {
+		application.ReportIsuuesWithClosedSubtasks(cfg.Reports.ReportClosedSubtasks.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.ReportAfterSecondReview.Schedule, func() {
+		application.ReportIsuuesAfterSecondReview(cfg.Reports.ReportAfterSecondReview.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.ReportSlackSpaceEnding.Schedule, func() {
+		application.ReportSlackEndingFreeSpace(cfg.Reports.ReportSlackSpaceEnding.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.ReportGitMigrations.Schedule, func() {
+		application.ReportGitMigrations(cfg.Reports.ReportGitMigrations.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.ReportSprintStatus.Schedule, func() {
+		application.ReportSprintStatus(cfg.Reports.ReportSprintStatus.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	tm.Start()
+	log.Println("Task scheduler started.")
+
+	return tm
 }
 
 func gracefulClosing(cancel context.CancelFunc, servicesWg *sync.WaitGroup) {
