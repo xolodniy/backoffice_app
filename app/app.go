@@ -640,3 +640,37 @@ func (a *App) ReportSprintStatus(channel string) {
 	}
 	a.Slack.SendMessage(msgBody, channel)
 }
+
+func (a *App) PersonActivityByDate(userName, date, channel string) error {
+	email, err := a.Slack.UserEmailByName(strings.TrimPrefix(userName, "@"))
+	if err != nil {
+		return err
+	}
+	layout := "2006-01-02"
+	t, err := time.Parse(layout, date)
+	if err != nil {
+		return err
+	}
+	userReport, userName, err := a.Hubstaff.UserWorkTimeByDate(t, t, email)
+	if err != nil {
+		return err
+	}
+	if userName == "" {
+		return fmt.Errorf("Error! This user is not exist!")
+	}
+	var report string
+	for _, worker := range userReport.Users {
+		report += fmt.Sprintf("%s\n\n*%s (%s total)*\n", date, worker.Name, worker.TimeWorked)
+		for _, project := range worker.Projects {
+			report += fmt.Sprintf("\n%s - %s", project.TimeWorked, project.Name)
+			for _, note := range project.Notes {
+				report += fmt.Sprintf("\n - %s", note.Description)
+			}
+		}
+	}
+	if report == "" {
+		report += fmt.Sprintf("%s\n\n*%s*\n\nHas not worked", date, userName)
+	}
+	a.Slack.SendMessage(report, channel)
+	return nil
+}
