@@ -27,6 +27,7 @@ type Main struct {
 		ReportSlackSpaceEnding        Report
 		ReportGitMigrations           Report
 		ReportSprintStatus            Report
+		ReportClarificationIssues     Report
 	}
 }
 
