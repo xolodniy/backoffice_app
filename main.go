@@ -244,15 +244,9 @@ func main() {
 			{
 				Name:  "send-clarification-report-now",
 				Usage: "Send clarification issues report right now",
-				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
-					channel := c.String("channel")
-					if channel == "" {
-						logrus.Println("Empty channel flag!")
-						return
-					}
 					application := app.New(cfg)
-					application.ReportClarificationIssues(channel)
+					application.ReportClarificationIssues()
 				},
 			},
 		}
@@ -331,7 +325,7 @@ func initCronTasks(wg sync.WaitGroup, cfg *config.Main, application app.App) *ta
 	}
 
 	err = tm.AddTask(cfg.Reports.ReportClarificationIssues.Schedule, func() {
-		application.ReportSprintStatus(cfg.Reports.ReportClarificationIssues.Channel)
+		application.ReportClarificationIssues()
 	})
 	if err != nil {
 		panic(err)
