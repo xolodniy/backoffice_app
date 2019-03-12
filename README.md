@@ -149,11 +149,6 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
 1. schedule: "00 00 07 * * *"    — cron prefence for adding tasks
 2. channel: "#back-office-app"     - slack channel id for sending reports by cron 
 
-####Channels
-
-Channels can be as slack userid, #channel, @username and as variable.
-
-    "toAssignees" - variable to send report to assignees of report
 
 #### Cron manager settings 
    
@@ -206,6 +201,9 @@ You may use one of several pre-defined schedules in place of a cron expression.
       reportsprintstatus:               - preference to send report about open sprint status
         schedule: "00 00 05 * * MON"
         channel: "#general"
+    reportclarificationissues:          - preference to send report about clarification issues to users, that assigned, and it hasn't channel
+        schedule: "00 00 07 * * *"
+        channel: 
 
 ### API Description
 
