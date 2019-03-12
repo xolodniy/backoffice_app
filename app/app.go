@@ -647,11 +647,7 @@ func (a *App) ReportSprintStatus(channel string) {
 func (a *App) ReportClarificationIssues(channel string) {
 	issues, err := a.Jira.ClarificationIssuesOfOpenSprints()
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about exceeded tasks of employees from jira")
-		return
-	}
-	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no employees with exceeded subtasks", channel)
+		logrus.WithError(err).Error("can't take information about issues with clarification status from jira")
 		return
 	}
 	var assignees = make(map[string][]jira.Issue)
@@ -680,10 +676,14 @@ func (a *App) ReportClarificationIssues(channel string) {
 			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+msgBody, assigneeId)
 		}
 	default:
-		report := "Issues with clarification status:\n"
+		var report string
 		for assigneeId, msgBody := range assigneesMessages {
 			report += "\n\n" + msgBody + "cc <@" + assigneeId + ">"
 		}
+		if report == "" {
+			report += "\nThere are no issues with clarification status"
+		}
+		report = "Issues with clarification status:\n" + report
 		a.Slack.SendMessage(report, channel)
 	}
 }
