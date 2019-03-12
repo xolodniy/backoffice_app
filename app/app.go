@@ -133,8 +133,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 	msgBody := a.Slack.ProjectManager + "\nIssues have all closed subtasks:\n"
 	for _, issue := range issues {
 		if issue.Fields.Status.Name != jira.StatusReadyForDemo {
-			msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+			msgBody += issue.String()
 		}
 		if issue.Fields.Status.Name != jira.StatusCloseLastTask {
 			err := a.Jira.IssueSetStatusCloseLastTask(issue.Key)
@@ -255,8 +254,7 @@ func (a *App) ReportIsuuesAfterSecondReview(channel string) {
 	}
 	msgBody := "Issues after second review round:\n"
 	for _, issue := range issues {
-		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+		msgBody += issue.String()
 	}
 	a.Slack.SendMessage(msgBody, channel)
 }
@@ -630,8 +628,7 @@ func (a *App) ReportSprintStatus(channel string) {
 				if issue.Fields.Parent != nil {
 					message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s> / ", issue.Fields.Parent.Key)
 				}
-				message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+				message += issue.String()
 			}
 		}
 		if message != "" {
@@ -644,7 +641,7 @@ func (a *App) ReportSprintStatus(channel string) {
 }
 
 // ReportClarificationIssues create report about issues with clarification status
-func (a *App) ReportClarificationIssues(channel string) {
+func (a *App) ReportClarificationIssues() {
 	issues, err := a.Jira.ClarificationIssuesOfOpenSprints()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about issues with clarification status from jira")
@@ -658,8 +655,7 @@ func (a *App) ReportClarificationIssues(channel string) {
 	for _, issues := range assignees {
 		var message string
 		for _, issue := range issues {
-			message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+			message += issue.String()
 		}
 		if message != "" {
 			userId, err := a.Slack.UserIdByEmail(issues[0].Fields.Assignee.EmailAddress)
@@ -670,20 +666,7 @@ func (a *App) ReportClarificationIssues(channel string) {
 			assigneesMessages[userId] = message
 		}
 	}
-	switch channel {
-	case ChannelAssignees:
-		for assigneeId, msgBody := range assigneesMessages {
-			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+msgBody, assigneeId)
-		}
-	default:
-		var report string
-		for assigneeId, msgBody := range assigneesMessages {
-			report += "\n\n" + msgBody + "cc <@" + assigneeId + ">"
-		}
-		if report == "" {
-			report += "\nThere are no issues with clarification status"
-		}
-		report = "Issues with clarification status:\n" + report
-		a.Slack.SendMessage(report, channel)
+	for assigneeId, msgBody := range assigneesMessages {
+		a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+msgBody, assigneeId)
 	}
 }
