@@ -2,6 +2,7 @@ package jira
 
 import (
 	"fmt"
+	"strings"
 
 	"backoffice_app/config"
 
@@ -255,7 +256,7 @@ func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
 	return issues, nil
 }
 
-// IssueSetPMReviewStatus set PM transition for issue
+// IssueSetStatusCloseLastTask set PM transition for issue
 func (j *Jira) IssueSetStatusCloseLastTask(issueKey string) error {
 	transitions, resp, err := j.Issue.GetTransitions(issueKey)
 	if err != nil {
@@ -273,4 +274,44 @@ func (j *Jira) IssueSetStatusCloseLastTask(issueKey string) error {
 		}
 	}
 	return nil
+}
+
+// IssuesOnReview searches Issues with status on review
+func (j *Jira) IssuesOnReview() ([]Issue, error) {
+	request := fmt.Sprintf(`assignee != %s AND status NOT IN ("%s")`, StatusEmptyAssignee, StatusClosed)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't take jira not closed issues: %s", err)
+	}
+	changeLog := &struct {
+		MaxResults int                     `json:"maxResults"`
+		StartAt    int                     `json:"startAt"`
+		Total      int                     `json:"total"`
+		IsLast     bool                    `json:"isLast"`
+		Histories  []jira.ChangelogHistory `json:"values"`
+	}{}
+	var issuesOnReview []Issue
+	for _, issue := range issues {
+		if strings.Contains(strings.ToLower(issue.Fields.Status.Name), "review") {
+			index := 0
+			for {
+				url := fmt.Sprintf("/rest/api/2/issue/%s/changelog?maxResults=100&startAt=%v", issue.Key, index)
+				req, err := j.NewRequest("GET", url, nil)
+				_, err = j.Do(req, changeLog)
+				if err != nil {
+					return nil, fmt.Errorf("can't take jira changelog of issue: %s", err)
+				}
+				if err != nil {
+					panic(err)
+				}
+				issue.Changelog = &jira.Changelog{Histories: changeLog.Histories}
+				index += 99
+				issuesOnReview = append(issuesOnReview, issue)
+				if changeLog.IsLast {
+					break
+				}
+			}
+		}
+	}
+	return issuesOnReview, nil
 }
