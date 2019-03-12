@@ -274,3 +274,13 @@ func (j *Jira) IssueSetStatusCloseLastTask(issueKey string) error {
 	}
 	return nil
 }
+
+// ClarificationIssuesOfOpenSprints searches Issues in open sprtints with clarification status
+func (j *Jira) ClarificationIssuesOfOpenSprints() ([]Issue, error) {
+	request := fmt.Sprintf(`assignee != %s AND status IN ("%s")`, StatusEmptyAssignee, StatusInClarification)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't take jira issues with type not in (story, bug) of open sprints: %s", err)
+	}
+	return issues, nil
+}
