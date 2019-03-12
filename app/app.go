@@ -55,6 +55,8 @@ func New(conf *config.Main) *App {
 	}
 }
 
+var ChannelAssignees = "toAssignees"
+
 // MakeWorkersWorkedReportLastWeek preparing a last week report and send it to Slack
 func (a *App) MakeWorkersWorkedReportLastWeek(mode, channel string) {
 	a.ReportUsersWorkedTimeByMember(
@@ -639,4 +641,49 @@ func (a *App) ReportSprintStatus(channel string) {
 		msgBody += fmt.Sprintf(" " + developer + " - all tasks closed.\n")
 	}
 	a.Slack.SendMessage(msgBody, channel)
+}
+
+// ReportClarificationIssues create report about issues with clarification status
+func (a *App) ReportClarificationIssues(channel string) {
+	issues, err := a.Jira.ClarificationIssuesOfOpenSprints()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about exceeded tasks of employees from jira")
+		return
+	}
+	if len(issues) == 0 {
+		a.Slack.SendMessage("There are no employees with exceeded subtasks", channel)
+		return
+	}
+	var assignees = make(map[string][]jira.Issue)
+	for _, issue := range issues {
+		assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
+	}
+	var assigneesMessages = make(map[string]string)
+	for _, issues := range assignees {
+		var message string
+		for _, issue := range issues {
+			message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+		}
+		if message != "" {
+			userId, err := a.Slack.UserIdByEmail(issues[0].Fields.Assignee.EmailAddress)
+			if err != nil {
+				logrus.WithError(err).Error("can't take user id by email from slack")
+				continue
+			}
+			assigneesMessages[userId] = message
+		}
+	}
+	switch channel {
+	case ChannelAssignees:
+		for assigneeId, msgBody := range assigneesMessages {
+			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+msgBody, assigneeId)
+		}
+	default:
+		report := "Issues with clarification status:\n"
+		for assigneeId, msgBody := range assigneesMessages {
+			report += "\n\n" + msgBody + "cc <@" + assigneeId + ">"
+		}
+		a.Slack.SendMessage(report, channel)
+	}
 }
