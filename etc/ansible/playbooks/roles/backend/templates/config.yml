@@ -62,7 +62,6 @@ slack:
     - 'Rodion Golovushkin'
     - 'Ivan Tomilov'
     - 'Former user'
-    - 'No developer'
 
 hubstaff:
   apiurl: https://api.hubstaff.com

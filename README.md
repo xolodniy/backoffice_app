@@ -149,7 +149,6 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
 1. schedule: "00 00 07 * * *"    — cron prefence for adding tasks
 2. channel: "#back-office-app"     - slack channel id for sending reports by cron 
 
-
 #### Cron manager settings 
    
     Field name   | Mandatory? | Allowed values  | Allowed special characters
@@ -170,7 +169,6 @@ You may use one of several pre-defined schedules in place of a cron expression.
     @weekly                | Run once a week, midnight between Sat/Sun  | 0 0 0 * * 0
     @daily (or @midnight)  | Run once a day, midnight                   | 0 0 0 * * *
     @hourly                | Run once an hour, beginning of hour        | 0 0 * * * *
-    
 
 #### Config.yml variables for reports 
 
@@ -201,9 +199,17 @@ You may use one of several pre-defined schedules in place of a cron expression.
       reportsprintstatus:               - preference to send report about open sprint status
         schedule: "00 00 05 * * MON"
         channel: "#general"
-    reportclarificationissues:          - preference to send report about clarification issues to users, that assigned, and it hasn't channel
+      reportclarificationissues:        - preference to send report about clarification issues to users, that assigned, and it hasn't channel
         schedule: "00 00 07 * * *"
         channel: 
+    
+#### Config.yml variables for slack users id
+    projectmanager: U9FDU5W4D   - this is variable of user id to mention him in messages, or send mmessages to him.
+    
+User id you can find in slack: 
+1. Click on the users name and choose "Show Profile".
+2. Open the "..." menu.
+3. Click button "Copy Member-ID ..."
 
 ### API Description
 
