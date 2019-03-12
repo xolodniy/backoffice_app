@@ -55,6 +55,11 @@ func New(conf *config.Main) *App {
 	}
 }
 
+var (
+	ChannelAssignees       = "toAssignees"
+	durationDay      int64 = 86400
+)
+
 // MakeWorkersWorkedReportLastWeek preparing a last week report and send it to Slack
 func (a *App) MakeWorkersWorkedReportLastWeek(mode, channel string) {
 	a.ReportUsersWorkedTimeByMember(
@@ -646,4 +651,57 @@ func (a *App) ReportSprintStatus(channel string) {
 	}
 	msgBody += messageNoDeveloper + "\n" + messageAllTaskClosed
 	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.ProjectManager, channel)
+}
+
+// ReportClarificationIssues create report about issues with clarification status
+func (a *App) ReportLongTimeReviewIssues(channel string) {
+	issues, err := a.Jira.IssuesOnReview()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about not closed issues from jira")
+		return
+	}
+	var assignees = make(map[string][]jira.Issue)
+	for _, issue := range issues {
+		timeWasCreated := issue.Changelog.Histories[len(issue.Changelog.Histories)-1].Created
+		layout := "2006-01-02T15:04:05.999-0700"
+		t, err := time.Parse(layout, timeWasCreated)
+		// if time empty or other format we continue to remove many log messages
+		if err != nil {
+			continue
+		}
+		if (time.Now().Unix() - t.Unix()) > durationDay {
+			assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
+		}
+	}
+	var assigneesMessages = make(map[string]string)
+	for _, issues := range assignees {
+		var message string
+		for _, issue := range issues {
+			message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+		}
+		if message != "" {
+			userId, err := a.Slack.UserIdByEmail(issues[0].Fields.Assignee.EmailAddress)
+			if err != nil {
+				logrus.WithError(err).Error("can't take user id by email from slack")
+				continue
+			}
+			assigneesMessages[userId] = message
+		}
+	}
+	switch channel {
+	case ChannelAssignees:
+		for assigneeId, msgBody := range assigneesMessages {
+			a.Slack.SendMessage("Issues on review more than 24 hours assigned to you:\n\n"+msgBody, assigneeId)
+		}
+	default:
+		var report string
+		for assigneeId, msgBody := range assigneesMessages {
+			report += "\n\n" + msgBody + "cc <@" + assigneeId + ">"
+		}
+		if report == "" {
+			report = "\nThere are no issues on review more than 24 hours"
+		}
+		a.Slack.SendMessage("Issues with review status more than 24 hours:\n"+report, channel)
+	}
 }
