@@ -287,7 +287,7 @@ func (h *Hubstaff) UserWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd tim
 		}
 	}
 	if userName == "" {
-		return DateReport{}, fmt.Errorf("user was not found by email: %v", email)
+		return DateReport{}, fmt.Errorf("user was not found in Hubstaff by email: %v", email)
 	}
 	dateReports, err := h.UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd)
 	if err != nil {

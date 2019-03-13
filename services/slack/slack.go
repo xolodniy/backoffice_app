@@ -293,5 +293,5 @@ func (s *Slack) UserInfoByName(username string) (Member, error) {
 			break
 		}
 	}
-	return Member{}, fmt.Errorf("User was not found ")
+	return Member{}, fmt.Errorf("User was not found in Slask ")
 }
