@@ -11,7 +11,6 @@ import (
 	"backoffice_app/config"
 	"backoffice_app/types"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 )
 
@@ -86,85 +85,6 @@ func New(config *config.Slack) Slack {
 	}
 }
 
-func (s *Slack) do(req *http.Request) ([]byte, error) {
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-
-	return body, nil
-}
-
-func (s *Slack) post(endpoint string, jsonData []byte) ([]byte, error) {
-	req, err := http.NewRequest("POST", s.APIURL+"/"+endpoint, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.OutToken))
-	responseBody, err := s.do(req)
-	if err != nil {
-		return nil, err
-	}
-	var checkError struct {
-		Ok      bool   `json:"ok"`
-		Error   string `json:"error"`
-		Warning string `json:"warning"`
-	}
-	if err := json.Unmarshal(responseBody, &checkError); err != nil {
-		return nil, err
-	}
-	if !checkError.Ok {
-		return nil, fmt.Errorf(checkError.Error)
-	}
-	return responseBody, nil
-}
-
-func (s *Slack) get(endpoint string) ([]map[string]interface{}, error) {
-	var responseMap []map[string]interface{}
-	var response = struct {
-		Ok      bool   `json:"ok"`
-		Error   string `json:"error"`
-		Warning string `json:"warning"`
-		Paging  struct {
-			Count int `json:"count"`
-			Total int `json:"total"`
-			Page  int `json:"page"`
-			Pages int `json:"pages"`
-		} `json:"paging"`
-	}{}
-	for i := 0; ; i++ {
-		req, err := http.NewRequest("GET", fmt.Sprintf("%s/%s?token=%s&page=%v", s.APIURL, endpoint, s.InToken, i), nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.OutToken))
-		respBody, err := s.do(req)
-		if err != nil {
-			return nil, err
-		}
-		if err := json.Unmarshal(respBody, &response); err != nil {
-			return nil, err
-		}
-		if !response.Ok {
-			return nil, fmt.Errorf(response.Error)
-		}
-		var result map[string]interface{}
-		err = json.Unmarshal(respBody, &result)
-		if err != nil {
-			return nil, err
-		}
-		responseMap = append(responseMap, result)
-		if response.Paging.Pages <= i {
-			break
-		}
-	}
-	return responseMap, nil
-}
-
 // SendMessage is main message sending method
 func (s *Slack) SendMessage(text, channel string) {
 	var message = &types.PostChannelMessage{
@@ -182,29 +102,82 @@ func (s *Slack) SendMessage(text, channel string) {
 			"channelBotName": s.BotName,
 		}).Error("can't decode to json")
 	}
-	respBody, err := s.post("chat.postMessage", jsonMessage)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"response": respBody}).Error("can't send message")
+	var responseBody struct {
+		Ok      bool   `json:"ok"`
+		Error   string `json:"error"`
+		Warning string `json:"warning"`
 	}
+
+	respBody, err := s.jsonRequest("chat.postMessage", jsonMessage)
+	if err := json.Unmarshal(respBody, &responseBody); err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"msgBody":        text,
+			"channelID":      channel,
+			"channelBotName": s.BotName,
+		}).Error("can't encode from json")
+	}
+	if !responseBody.Ok {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"msgBody":        text,
+			"channelID":      channel,
+			"channelBotName": s.BotName,
+		}).Error(responseBody.Error)
+	}
+}
+
+// jsonRequest func for sending json request for slack
+func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
+	req, err := http.NewRequest("POST", s.APIURL+"/"+endpoint, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.OutToken))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
 }
 
 // Files returns all files info from slack
 func (s *Slack) Files() ([]Files, error) {
-	response, err := s.get("files.list")
-	if err != nil {
-		return nil, err
-	}
-	filesResp := struct {
-		Files []Files `json:"members"`
-	}{}
 	var files []Files
-	for _, resp := range response {
-		err := mapstructure.Decode(resp, &filesResp)
+	for i := 0; ; i++ {
+		urlStr := fmt.Sprintf("%s/files.list?token=%s&page=%v", s.APIURL, s.InToken, i)
+
+		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
 			return nil, err
 		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		filesResp := FilesResponse{}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(body, &filesResp); err != nil {
+			return nil, err
+		}
+		if !filesResp.Ok {
+			return nil, fmt.Errorf(filesResp.Error)
+		}
 		for _, file := range filesResp.Files {
 			files = append(files, file)
+		}
+		if filesResp.Paging.Pages <= i {
+			break
 		}
 	}
 	return files, nil
@@ -233,11 +206,20 @@ func (s *Slack) DeleteFile(id string) error {
 		return err
 	}
 
-	respBody, err := s.post("files.delete", b)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"response": respBody}).Error("can't delete file")
+	respBody, err := s.jsonRequest("files.delete", b)
+	var responseBody struct {
+		Ok      bool   `json:"ok"`
+		Error   string `json:"error"`
+		Warning string `json:"warning"`
 	}
-	return nil
+	if err := json.Unmarshal(respBody, &responseBody); err != nil {
+		return err
+	}
+	if !responseBody.Ok {
+		return fmt.Errorf(responseBody.Error)
+	}
+
+	return err
 }
 
 // UploadFile uploads file to slack channel
@@ -279,25 +261,40 @@ func (s *Slack) UploadFile(channel, contentType string, file *bytes.Buffer) erro
 	return nil
 }
 
-// UserEmailByName retrieves user email by his name
+// UserIdByEmail retrieves user id by email
 func (s *Slack) UserIdByEmail(email string) (string, error) {
-	response, err := s.get("users.list")
-	if err != nil {
-		return "", err
-	}
-	usersResp := struct {
-		Members []Member `json:"members"`
-	}{}
-	for _, resp := range response {
-		err := mapstructure.Decode(resp, &usersResp)
+	for i := 0; ; i++ {
+		urlStr := fmt.Sprintf("%s/users.list?token=%s&page=%v", s.APIURL, s.InToken, i)
+
+		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
 			return "", err
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		usersResp := UsersResponse{}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return "", err
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return "", err
+		}
+		if err := json.Unmarshal(body, &usersResp); err != nil {
+			return "", err
+		}
+		if !usersResp.Ok {
+			return "", fmt.Errorf(usersResp.Error)
 		}
 		for _, member := range usersResp.Members {
 			if member.Profile.Email == email {
 				return member.Id, nil
 			}
 		}
+		if usersResp.Paging.Pages <= i {
+			break
+		}
 	}
-	return "", fmt.Errorf("User is not found by this email! ")
+	return "", fmt.Errorf("User was not found ")
 }
