@@ -142,11 +142,9 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 		}
 		switch {
 		case issue.Fields.Status.Name == jira.StatusDesignReview:
-			designMessage += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+			designMessage += issue.String()
 		case issue.Fields.Status.Name != jira.StatusReadyForDemo:
-			msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+			msgBody += issue.String()
 		}
 	}
 	msgBody = msgBody + "cc " + a.Slack.ProjectManager + "\n\n" + designMessage + "cc " + a.Slack.ArtDirector
