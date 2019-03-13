@@ -138,7 +138,10 @@ func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	return body, nil
 }
@@ -173,7 +176,7 @@ func (s *Slack) Files() ([]Files, error) {
 		for _, file := range filesResp.Files {
 			files = append(files, file)
 		}
-		if filesResp.Paging.Pages == i {
+		if filesResp.Paging.Pages <= i {
 			break
 		}
 	}
@@ -258,7 +261,7 @@ func (s *Slack) UploadFile(channel, contentType string, file *bytes.Buffer) erro
 	return nil
 }
 
-// UserEmailByName retrieve user email by his name
+// UserIdByEmail retrieves user id by email
 func (s *Slack) UserIdByEmail(email string) (string, error) {
 	for i := 0; ; i++ {
 		urlStr := fmt.Sprintf("%s/users.list?token=%s&page=%v", s.APIURL, s.InToken, i)
@@ -289,9 +292,9 @@ func (s *Slack) UserIdByEmail(email string) (string, error) {
 				return member.Id, nil
 			}
 		}
-		if usersResp.Paging.Pages == i {
+		if usersResp.Paging.Pages <= i {
 			break
 		}
 	}
-	return "", nil
+	return "", fmt.Errorf("User was not found ")
 }

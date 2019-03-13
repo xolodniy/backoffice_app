@@ -199,6 +199,8 @@ You may use one of several pre-defined schedules in place of a cron expression.
       reportsprintstatus:               - preference to send report about open sprint status
         schedule: "00 00 05 * * MON"
         channel: "#general"
+      reportclarificationissues:        - preference to send report about clarification issues to users, that assigned, and it hasn't channel
+        schedule: "00 00 07 * * *"
       reportlongtimereviewissues:       - preference to send report about long time review of issues to users, that assigned, and it hasn't channel
         schedule: "00 00 07 * * *"
     

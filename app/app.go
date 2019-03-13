@@ -55,10 +55,7 @@ func New(conf *config.Main) *App {
 	}
 }
 
-var (
-	ChannelAssignees       = "toAssignees"
-	durationDay      int64 = 86400
-)
+var  durationDay      int64 = 86400
 
 // MakeWorkersWorkedReportLastWeek preparing a last week report and send it to Slack
 func (a *App) MakeWorkersWorkedReportLastWeek(mode, channel string) {
@@ -136,8 +133,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 	msgBody := a.Slack.ProjectManager + "\nIssues have all closed subtasks:\n"
 	for _, issue := range issues {
 		if issue.Fields.Status.Name != jira.StatusReadyForDemo {
-			msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+			msgBody += issue.String()
 		}
 		if issue.Fields.Status.Name != jira.StatusCloseLastTask {
 			err := a.Jira.IssueSetStatusCloseLastTask(issue.Key)
@@ -257,8 +253,7 @@ func (a *App) ReportIsuuesAfterSecondReview(channel string) {
 	}
 	msgBody := "Issues after second review round:\n"
 	for _, issue := range issues {
-		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+		msgBody += issue.String()
 	}
 	a.Slack.SendMessage(msgBody, channel)
 }
@@ -636,8 +631,7 @@ func (a *App) ReportSprintStatus(channel string) {
 				if issue.Fields.Parent != nil {
 					message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s> / ", issue.Fields.Parent.Key)
 				}
-				message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+				message += issue.String()
 			}
 		}
 		switch {
@@ -654,6 +648,34 @@ func (a *App) ReportSprintStatus(channel string) {
 }
 
 // ReportClarificationIssues create report about issues with clarification status
+func (a *App) ReportClarificationIssues() {
+	issues, err := a.Jira.ClarificationIssuesOfOpenSprints()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about issues with clarification status from jira")
+		return
+	}
+	var assignees = make(map[string][]jira.Issue)
+	for _, issue := range issues {
+		assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
+	}
+	for _, issues := range assignees {
+		var message string
+		for _, issue := range issues {
+			message += issue.String()
+		}
+		if message != "" {
+			userId, err := a.Slack.UserIdByEmail(issues[0].Fields.Assignee.EmailAddress)
+			if err != nil {
+				logrus.WithError(err).Error("can't take user id by email from slack")
+				continue
+			}
+			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+message, userId)
+		}
+	}
+
+}
+
+// ReportLongTimeReviewIssues create report about issues with long review status
 func (a *App) ReportLongTimeReviewIssues() {
 	issues, err := a.Jira.IssuesOnReview()
 	if err != nil {
