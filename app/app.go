@@ -128,7 +128,8 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 		a.Slack.SendMessage("There are no issues with all closed subtasks", channel)
 		return
 	}
-	msgBody := a.Slack.ProjectManager + "\nIssues have all closed subtasks:\n"
+	msgBody := "\n*Issues have all closed subtasks:*\n\n"
+	var designMessage string
 	for _, issue := range issues {
 		if issue.Fields.Status.Name != jira.StatusReadyForDemo {
 			msgBody += issue.String()
@@ -136,10 +137,17 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 		if issue.Fields.Status.Name != jira.StatusCloseLastTask {
 			err := a.Jira.IssueSetStatusCloseLastTask(issue.Key)
 			if err != nil {
-				logrus.WithError(err).Error("can't set PM review status for issue")
+				logrus.WithError(err).Errorf("can't set close last task transition for issue %s", issue.Key)
 			}
 		}
+		switch {
+		case issue.Fields.Status.Name == jira.StatusDesignReview:
+			designMessage += issue.String()
+		case issue.Fields.Status.Name != jira.StatusReadyForDemo:
+			msgBody += issue.String()
+		}
 	}
+	msgBody = msgBody + "cc " + a.Slack.ProjectManager + "\n\n" + designMessage + "cc " + a.Slack.ArtDirector
 	a.Slack.SendMessage(msgBody, channel)
 }
 
