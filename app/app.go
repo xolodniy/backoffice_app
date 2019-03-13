@@ -55,8 +55,6 @@ func New(conf *config.Main) *App {
 	}
 }
 
-var ChannelAssignees = "toAssignees"
-
 // MakeWorkersWorkedReportLastWeek preparing a last week report and send it to Slack
 func (a *App) MakeWorkersWorkedReportLastWeek(mode, channel string) {
 	a.ReportUsersWorkedTimeByMember(
@@ -658,7 +656,6 @@ func (a *App) ReportClarificationIssues() {
 	for _, issue := range issues {
 		assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
 	}
-	var assigneesMessages = make(map[string]string)
 	for _, issues := range assignees {
 		var message string
 		for _, issue := range issues {
@@ -670,10 +667,8 @@ func (a *App) ReportClarificationIssues() {
 				logrus.WithError(err).Error("can't take user id by email from slack")
 				continue
 			}
-			assigneesMessages[userId] = message
+			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+message, userId)
 		}
 	}
-	for assigneeId, msgBody := range assigneesMessages {
-		a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+msgBody, assigneeId)
-	}
+
 }
