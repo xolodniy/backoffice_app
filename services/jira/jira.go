@@ -261,7 +261,7 @@ func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
 	return issues, nil
 }
 
-// IssueSetPMReviewStatus set PM transition for issue
+// IssueSetStatusCloseLastTask set status close transition for issue
 func (j *Jira) IssueSetStatusCloseLastTask(issueKey string) error {
 	transitions, resp, err := j.Issue.GetTransitions(issueKey)
 	if err != nil {
