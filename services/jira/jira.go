@@ -321,11 +321,11 @@ func (j *Jira) IssuesOnReview() ([]Issue, error) {
 					return nil, fmt.Errorf("can't take jira changelog of issue: %s", err)
 				}
 				issue.Changelog = &jira.Changelog{Histories: changeLog.Values}
-				index += 99
 				issuesOnReview = append(issuesOnReview, issue)
 				if changeLog.IsLast {
 					break
 				}
+				index += 100
 			}
 		}
 	}
