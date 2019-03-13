@@ -199,6 +199,8 @@ You may use one of several pre-defined schedules in place of a cron expression.
       reportsprintstatus:               - preference to send report about open sprint status
         schedule: "00 00 05 * * MON"
         channel: "#general"
+      reportclarificationissues:        - preference to send report about clarification issues to users, that assigned, and it hasn't channel
+        schedule: "00 00 07 * * *"
     
 #### Config.yml variables for slack users id
     projectmanager: U9FDU5W4D   - this is variable of user id to mention him in messages, or send mmessages to him.
