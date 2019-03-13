@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -35,6 +36,30 @@ func (c *Controller) sprintReport(ctx *gin.Context) {
 	}
 	go func() {
 		err := c.App.ReportSprintsIsuues(request.Text, request.UserId)
+		if err != nil {
+			c.App.Slack.SendMessage(err.Error(), request.UserId)
+		}
+	}()
+	ctx.JSON(http.StatusOK, "ok, wait for report")
+}
+
+func (c *Controller) customReport(ctx *gin.Context) {
+	request := struct {
+		Text   string `form:"text" binding:"required"`
+		UserId string `form:"user_id" binding:"required"`
+	}{}
+	err := ctx.ShouldBindWith(&request, binding.FormPost)
+	if err != nil {
+		ctx.String(http.StatusOK, "Failed! Project key is empty! Please, type /customreport @Name 1970-01-01")
+		return
+	}
+	textSlice := strings.Split(request.Text, " ")
+	if len(textSlice) != 2 {
+		ctx.String(http.StatusOK, "Failed! Format error! Please, type /customreport @Name 1970-01-01")
+		return
+	}
+	go func() {
+		err := c.App.PersonActivityByDate(textSlice[0], textSlice[1], request.UserId)
 		if err != nil {
 			c.App.Slack.SendMessage(err.Error(), request.UserId)
 		}

@@ -56,6 +56,7 @@ func (c *Controller) initRoutes() {
 	slack.Use(c.checkSignature)
 	slack.POST("/api/v1/slack/sprintreport", c.sprintReport)
 	slack.POST("/api/v1/slack/current_activity", c.slackCurrentActivityHandler)
+	slack.POST("/api/v1/slack/customreport", c.customReport)
 }
 
 func (c *Controller) checkSignature(ctx *gin.Context) {

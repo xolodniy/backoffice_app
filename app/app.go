@@ -675,6 +675,38 @@ func (a *App) ReportClarificationIssues() {
 
 }
 
+// PersonActivityByDate create report about user activity and send messange about it
+func (a *App) PersonActivityByDate(userName, date, channel string) error {
+	userInfo, err := a.Slack.UserInfoByName(strings.TrimPrefix(userName, "@"))
+	if err != nil {
+		return err
+	}
+	layout := "2006-01-02"
+	t, err := time.Parse(layout, date)
+	if err != nil {
+		return err
+	}
+	userReport, err := a.Hubstaff.UserWorkTimeByDate(t, t, userInfo.Profile.Email)
+	if err != nil {
+		return err
+	}
+	var report string
+	for _, worker := range userReport.Users {
+		report += fmt.Sprintf("%s\n\n*%s (%s total)*\n", date, worker.Name, worker.TimeWorked)
+		for _, project := range worker.Projects {
+			report += fmt.Sprintf("\n%s - %s", project.TimeWorked, project.Name)
+			for _, note := range project.Notes {
+				report += fmt.Sprintf("\n - %s", note.Description)
+			}
+		}
+	}
+	if report == "" {
+		report += fmt.Sprintf("%s\n\n*%s*\n\nHas not worked", date, "<@"+userInfo.Id+">")
+	}
+	a.Slack.SendMessage(report, channel)
+	return nil
+}
+
 // ReportLongTimeReviewIssues create report about issues with long review status
 func (a *App) ReportLongTimeReviewIssues() {
 	issues, err := a.Jira.IssuesOnReview()

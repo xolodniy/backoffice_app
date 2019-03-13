@@ -298,3 +298,41 @@ func (s *Slack) UserIdByEmail(email string) (string, error) {
 	}
 	return "", fmt.Errorf("User was not found ")
 }
+
+// UserInfoByName retrieve user email by his name
+func (s *Slack) UserInfoByName(username string) (Member, error) {
+	for i := 0; ; i++ {
+		urlStr := fmt.Sprintf("%s/users.list?token=%s&page=%v", s.APIURL, s.InToken, i)
+
+		req, err := http.NewRequest("GET", urlStr, nil)
+		if err != nil {
+			return Member{}, err
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		usersResp := UsersResponse{}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return Member{}, err
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return Member{}, err
+		}
+		if err := json.Unmarshal(body, &usersResp); err != nil {
+			return Member{}, err
+		}
+		if !usersResp.Ok {
+			return Member{}, fmt.Errorf(usersResp.Error)
+		}
+		for _, member := range usersResp.Members {
+			if member.Name == username {
+				return member, nil
+			}
+		}
+		if usersResp.Paging.Pages == i {
+			break
+		}
+	}
+	return Member{}, fmt.Errorf("User was not found in Slask ")
+}
