@@ -288,7 +288,7 @@ func (j *Jira) IssuesOnReview() ([]Issue, error) {
 		StartAt    int                     `json:"startAt"`
 		Total      int                     `json:"total"`
 		IsLast     bool                    `json:"isLast"`
-		Histories  []jira.ChangelogHistory `json:"values"`
+		Values     []jira.ChangelogHistory `json:"values"`
 	}{}
 	var issuesOnReview []Issue
 	for _, issue := range issues {
@@ -297,14 +297,14 @@ func (j *Jira) IssuesOnReview() ([]Issue, error) {
 			for {
 				url := fmt.Sprintf("/rest/api/2/issue/%s/changelog?maxResults=100&startAt=%v", issue.Key, index)
 				req, err := j.NewRequest("GET", url, nil)
+				if err != nil {
+					return nil, fmt.Errorf("can't create request of changelog enpoint: %s", err)
+				}
 				_, err = j.Do(req, changeLog)
 				if err != nil {
 					return nil, fmt.Errorf("can't take jira changelog of issue: %s", err)
 				}
-				if err != nil {
-					panic(err)
-				}
-				issue.Changelog = &jira.Changelog{Histories: changeLog.Histories}
+				issue.Changelog = &jira.Changelog{Histories: changeLog.Values}
 				index += 99
 				issuesOnReview = append(issuesOnReview, issue)
 				if changeLog.IsLast {
