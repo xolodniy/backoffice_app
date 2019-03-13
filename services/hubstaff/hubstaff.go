@@ -274,10 +274,10 @@ func (h *Hubstaff) UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd ti
 }
 
 // UserWorkTimeByDate retrieves work time of user date report slice by date and retrieve user name
-func (h *Hubstaff) UserWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, email string) (DateReport, string, error) {
+func (h *Hubstaff) UserWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, email string) (DateReport, error) {
 	users, err := h.HubstaffUsers()
 	if err != nil {
-		return DateReport{}, "", fmt.Errorf("error on getting workers from hubstaff: %v", err)
+		return DateReport{}, fmt.Errorf("error on getting workers from hubstaff: %v", err)
 	}
 	var userName string
 	for _, user := range users {
@@ -286,9 +286,12 @@ func (h *Hubstaff) UserWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd tim
 			break
 		}
 	}
+	if userName == "" {
+		return DateReport{}, fmt.Errorf("user was not found by email: %v", email)
+	}
 	dateReports, err := h.UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd)
 	if err != nil {
-		return DateReport{}, "", fmt.Errorf("error on getting workers worked time: %v", err)
+		return DateReport{}, fmt.Errorf("error on getting workers worked time: %v", err)
 	}
 	var userWorkReport DateReport
 	for _, dateReport := range dateReports {
@@ -298,5 +301,5 @@ func (h *Hubstaff) UserWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd tim
 			}
 		}
 	}
-	return userWorkReport, userName, nil
+	return userWorkReport, nil
 }
