@@ -45,7 +45,7 @@ var (
 	StatusInClarification = "In clarification"
 )
 
-func (i *Issue) String() string {
+func (i Issue) String() string {
 	message := fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 		i.Key, i.Fields.Summary, i.Fields.Status.Name)
 	return message
