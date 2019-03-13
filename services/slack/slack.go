@@ -63,6 +63,7 @@ type Files struct {
 
 // Member is user object contains information about a member https://api.slack.com/types/user
 type Member struct {
+	Id      string `json:"id"`
 	Name    string `json:"name"`
 	Profile struct {
 		Email string `json:"email"`
@@ -257,40 +258,40 @@ func (s *Slack) UploadFile(channel, contentType string, file *bytes.Buffer) erro
 	return nil
 }
 
-// UserEmailByName retrieve user email by his name
-func (s *Slack) UserEmailByName(username string) (string, error) {
+// UserInfoByName retrieve user email by his name
+func (s *Slack) UserInfoByName(username string) (Member, error) {
 	for i := 0; ; i++ {
 		urlStr := fmt.Sprintf("%s/users.list?token=%s&page=%v", s.APIURL, s.InToken, i)
 
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
-			return "", err
+			return Member{}, err
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		usersResp := UsersResponse{}
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			return "", err
+			return Member{}, err
 		}
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return "", err
+			return Member{}, err
 		}
 		if err := json.Unmarshal(body, &usersResp); err != nil {
-			return "", err
+			return Member{}, err
 		}
 		if !usersResp.Ok {
-			return "", fmt.Errorf(usersResp.Error)
+			return Member{}, fmt.Errorf(usersResp.Error)
 		}
 		for _, member := range usersResp.Members {
 			if member.Name == username {
-				return member.Profile.Email, nil
+				return member, nil
 			}
 		}
 		if usersResp.Paging.Pages == i {
 			break
 		}
 	}
-	return "", nil
+	return Member{}, fmt.Errorf("User was not found ")
 }
