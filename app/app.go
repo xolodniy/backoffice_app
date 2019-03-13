@@ -654,7 +654,7 @@ func (a *App) ReportSprintStatus(channel string) {
 }
 
 // ReportClarificationIssues create report about issues with clarification status
-func (a *App) ReportLongTimeReviewIssues(channel string) {
+func (a *App) ReportLongTimeReviewIssues() {
 	issues, err := a.Jira.IssuesOnReview()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about not closed issues from jira")
@@ -673,7 +673,6 @@ func (a *App) ReportLongTimeReviewIssues(channel string) {
 			assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
 		}
 	}
-	var assigneesMessages = make(map[string]string)
 	for _, issues := range assignees {
 		var message string
 		for _, issue := range issues {
@@ -686,22 +685,7 @@ func (a *App) ReportLongTimeReviewIssues(channel string) {
 				logrus.WithError(err).Error("can't take user id by email from slack")
 				continue
 			}
-			assigneesMessages[userId] = message
+			a.Slack.SendMessage("Issues on review more than 24 hours assigned to you:\n\n"+message, userId)
 		}
-	}
-	switch channel {
-	case ChannelAssignees:
-		for assigneeId, msgBody := range assigneesMessages {
-			a.Slack.SendMessage("Issues on review more than 24 hours assigned to you:\n\n"+msgBody, assigneeId)
-		}
-	default:
-		var report string
-		for assigneeId, msgBody := range assigneesMessages {
-			report += "\n\n" + msgBody + "cc <@" + assigneeId + ">"
-		}
-		if report == "" {
-			report = "\nThere are no issues on review more than 24 hours"
-		}
-		a.Slack.SendMessage("Issues with review status more than 24 hours:\n"+report, channel)
 	}
 }
