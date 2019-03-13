@@ -55,7 +55,7 @@ func New(conf *config.Main) *App {
 	}
 }
 
-var durationDay int64 = 86400
+var durationDaySeconds int64 = 86400
 
 // MakeWorkersWorkedReportLastWeek preparing a last week report and send it to Slack
 func (a *App) MakeWorkersWorkedReportLastWeek(mode, channel string) {
@@ -691,15 +691,14 @@ func (a *App) ReportLongTimeReviewIssues() {
 		if err != nil {
 			continue
 		}
-		if (time.Now().Unix() - t.Unix()) > durationDay {
+		if (time.Now().Unix() - t.Unix()) > durationDaySeconds {
 			assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
 		}
 	}
 	for _, issues := range assignees {
 		var message string
 		for _, issue := range issues {
-			message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+			message += issue.String()
 		}
 		if message != "" {
 			userId, err := a.Slack.UserIdByEmail(issues[0].Fields.Assignee.EmailAddress)
