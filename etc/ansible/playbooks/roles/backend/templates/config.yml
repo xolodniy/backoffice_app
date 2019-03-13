@@ -30,6 +30,8 @@ reports:
   reportsprintstatus:
     schedule: "00 00 05 * * MON"
     channel: "#general"
+  reportclarificationissues:
+    schedule: "00 00 07 * * *"
 
 jira:
   apiurl: https://theflow.atlassian.net
@@ -59,7 +61,6 @@ slack:
     - 'Rodion Golovushkin'
     - 'Ivan Tomilov'
     - 'Former user'
-    - 'No developer'
 
 hubstaff:
   apiurl: https://api.hubstaff.com

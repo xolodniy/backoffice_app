@@ -138,7 +138,10 @@ func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	return body, nil
 }
@@ -173,7 +176,7 @@ func (s *Slack) Files() ([]Files, error) {
 		for _, file := range filesResp.Files {
 			files = append(files, file)
 		}
-		if filesResp.Paging.Pages == i {
+		if filesResp.Paging.Pages <= i {
 			break
 		}
 	}
@@ -256,6 +259,44 @@ func (s *Slack) UploadFile(channel, contentType string, file *bytes.Buffer) erro
 	}
 
 	return nil
+}
+
+// UserIdByEmail retrieves user id by email
+func (s *Slack) UserIdByEmail(email string) (string, error) {
+	for i := 0; ; i++ {
+		urlStr := fmt.Sprintf("%s/users.list?token=%s&page=%v", s.APIURL, s.InToken, i)
+
+		req, err := http.NewRequest("GET", urlStr, nil)
+		if err != nil {
+			return "", err
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		usersResp := UsersResponse{}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return "", err
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return "", err
+		}
+		if err := json.Unmarshal(body, &usersResp); err != nil {
+			return "", err
+		}
+		if !usersResp.Ok {
+			return "", fmt.Errorf(usersResp.Error)
+		}
+		for _, member := range usersResp.Members {
+			if member.Profile.Email == email {
+				return member.Id, nil
+			}
+		}
+		if usersResp.Paging.Pages <= i {
+			break
+		}
+	}
+	return "", fmt.Errorf("User was not found ")
 }
 
 // UserInfoByName retrieve user email by his name

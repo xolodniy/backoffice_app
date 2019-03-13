@@ -241,6 +241,14 @@ func main() {
 					application.ReportCurrentActivity(channel)
 				},
 			},
+			{
+				Name:  "send-clarification-report-now",
+				Usage: "Send clarification issues report right now",
+				Action: func(c *cli.Context) {
+					application := app.New(cfg)
+					application.ReportClarificationIssues()
+				},
+			},
 		}
 
 		if err := cliApp.Run(os.Args); err != nil {
@@ -311,6 +319,13 @@ func initCronTasks(wg sync.WaitGroup, cfg *config.Main, application app.App) *ta
 
 	err = tm.AddTask(cfg.Reports.ReportSprintStatus.Schedule, func() {
 		application.ReportSprintStatus(cfg.Reports.ReportSprintStatus.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.ReportClarificationIssues.Schedule, func() {
+		application.ReportClarificationIssues()
 	})
 	if err != nil {
 		panic(err)
