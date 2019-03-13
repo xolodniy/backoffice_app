@@ -128,7 +128,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 		a.Slack.SendMessage("There are no issues with all closed subtasks", channel)
 		return
 	}
-	msgBody := "\nIssues have all closed subtasks:\n\n"
+	msgBody := "\n*Issues have all closed subtasks:*\n\n"
 	var designMessage string
 	for _, issue := range issues {
 		if issue.Fields.Status.Name != jira.StatusCloseLastTask {
@@ -137,12 +137,11 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 				logrus.WithError(err).Errorf("can't set close last task transition for issue %s", issue.Key)
 			}
 		}
-		if issue.Fields.Status.Name != jira.StatusReadyForDemo {
-			if issue.Fields.Status.Name == jira.StatusDesignReview {
-				designMessage += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
-				continue
-			}
+		switch {
+		case issue.Fields.Status.Name == jira.StatusDesignReview:
+			designMessage += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+		case issue.Fields.Status.Name != jira.StatusReadyForDemo:
 			msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
 		}
