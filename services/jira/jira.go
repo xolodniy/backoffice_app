@@ -46,6 +46,12 @@ var (
 	StatusInClarification = "In clarification"
 )
 
+func (i Issue) String() string {
+	message := fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+		i.Key, i.Fields.Summary, i.Fields.Status.Name)
+	return message
+}
+
 // issues searches issues in all sprints which opened now and returning list with issues in this sprints list
 func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 	var issues []Issue
@@ -256,7 +262,7 @@ func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
 	return issues, nil
 }
 
-// IssueSetPMReviewStatus set PM transition for issue
+// IssueSetStatusCloseLastTask set status close transition for issue
 func (j *Jira) IssueSetStatusCloseLastTask(issueKey string) error {
 	transitions, resp, err := j.Issue.GetTransitions(issueKey)
 	if err != nil {
@@ -274,4 +280,14 @@ func (j *Jira) IssueSetStatusCloseLastTask(issueKey string) error {
 		}
 	}
 	return nil
+}
+
+// ClarificationIssuesOfOpenSprints searches Issues in open sprtints with clarification status
+func (j *Jira) ClarificationIssuesOfOpenSprints() ([]Issue, error) {
+	request := fmt.Sprintf(`assignee != %s AND status IN ("%s")`, StatusEmptyAssignee, StatusInClarification)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't take jira issues with type not in (story, bug) of open sprints: %s", err)
+	}
+	return issues, nil
 }

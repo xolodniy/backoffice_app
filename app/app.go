@@ -131,6 +131,9 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 	msgBody := "\n*Issues have all closed subtasks:*\n\n"
 	var designMessage string
 	for _, issue := range issues {
+		if issue.Fields.Status.Name != jira.StatusReadyForDemo {
+			msgBody += issue.String()
+		}
 		if issue.Fields.Status.Name != jira.StatusCloseLastTask {
 			err := a.Jira.IssueSetStatusCloseLastTask(issue.Key)
 			if err != nil {
@@ -228,12 +231,11 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 	for developer, issues := range developers {
 		var message string
 		for _, issue := range issues {
-			var worklogString string
 			if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds {
-				worklogString = fmt.Sprintf(" time spent is %s instead %s", issue.Fields.TimeTracking.TimeSpent, issue.Fields.TimeTracking.OriginalEstimate)
+				worklogString := fmt.Sprintf(" time spent is %s instead %s", issue.Fields.TimeTracking.TimeSpent, issue.Fields.TimeTracking.OriginalEstimate)
+				message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_%[4]s\n",
+					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, worklogString)
 			}
-			message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_%[4]s\n",
-				issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, worklogString)
 		}
 		switch {
 		case developer == "No developer" && message != "":
@@ -259,8 +261,7 @@ func (a *App) ReportIsuuesAfterSecondReview(channel string) {
 	}
 	msgBody := "Issues after second review round:\n"
 	for _, issue := range issues {
-		msgBody += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-			issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+		msgBody += issue.String()
 	}
 	a.Slack.SendMessage(msgBody, channel)
 }
@@ -600,19 +601,19 @@ func (a *App) ReportSprintStatus(channel string) {
 		logrus.WithError(err).Error("can't take information about issues of open sprint from jira")
 		return
 	}
-	msgBody := a.Slack.ProjectManager + "\n*Sprint status:*\n"
+	msgBody := "*Sprint status*\n"
 	if len(issues) == 0 {
 		a.Slack.SendMessage(msgBody+"Open issues was not found. All issues of open sprint was closed.", channel)
 		return
 	}
 	var developers = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		developer := "No developer"
-		// Convert to marshal map to find developer displayName of issue field customfield_10026
-		developerMap, err := issue.Fields.Unknowns.MarshalMap("customfield_10026")
+		developer := ""
+		// Convert to marshal map to find developer displayName of issue developer field
+		developerMap, err := issue.Fields.Unknowns.MarshalMap(jira.FieldDeveloperMap)
 		if err != nil {
-			logrus.WithError(err).WithField("developerMap", fmt.Sprintf("%+v", developerMap)).
-				Error("can't make customfield_10026 map marshaling")
+			//can't make customfield_10026 map marshaling because field developer is empty
+			developer = "No developer"
 		}
 		if developerMap != nil {
 			displayName, ok := developerMap["displayName"].(string)
@@ -627,6 +628,10 @@ func (a *App) ReportSprintStatus(channel string) {
 	for _, dev := range a.Slack.IgnoreList {
 		delete(developers, dev)
 	}
+	var (
+		messageAllTaskClosed string
+		messageNoDeveloper   string
+	)
 	for developer, issues := range developers {
 		var message string
 		for _, issue := range issues {
@@ -634,15 +639,46 @@ func (a *App) ReportSprintStatus(channel string) {
 				if issue.Fields.Parent != nil {
 					message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s> / ", issue.Fields.Parent.Key)
 				}
-				message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
-					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name)
+				message += issue.String()
 			}
 		}
-		if message != "" {
-			msgBody += fmt.Sprintf(developer + " - has open tasks:\n" + message)
-			continue
+		switch {
+		case developer == "No developer" && message != "":
+			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
+		case message == "" && developer != "No developer":
+			messageAllTaskClosed += fmt.Sprintf(developer + " - all tasks closed.\n")
+		case message != "":
+			msgBody += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
 		}
-		msgBody += fmt.Sprintf(" " + developer + " - all tasks closed.\n")
 	}
-	a.Slack.SendMessage(msgBody, channel)
+	msgBody += messageNoDeveloper + "\n" + messageAllTaskClosed
+	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.ProjectManager, channel)
+}
+
+// ReportClarificationIssues create report about issues with clarification status
+func (a *App) ReportClarificationIssues() {
+	issues, err := a.Jira.ClarificationIssuesOfOpenSprints()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about issues with clarification status from jira")
+		return
+	}
+	var assignees = make(map[string][]jira.Issue)
+	for _, issue := range issues {
+		assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
+	}
+	for _, issues := range assignees {
+		var message string
+		for _, issue := range issues {
+			message += issue.String()
+		}
+		if message != "" {
+			userId, err := a.Slack.UserIdByEmail(issues[0].Fields.Assignee.EmailAddress)
+			if err != nil {
+				logrus.WithError(err).Error("can't take user id by email from slack")
+				continue
+			}
+			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+message, userId)
+		}
+	}
+
 }
