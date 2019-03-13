@@ -32,7 +32,6 @@ reports:
     channel: "#general"
   reportlongtimereviewissues:
     schedule: "00 00 07 * * *"
-    channel: "toAssignees"
 
 jira:
   apiurl: https://theflow.atlassian.net

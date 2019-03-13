@@ -244,15 +244,9 @@ func main() {
 			{
 				Name:  "send-long-review-time-report-now",
 				Usage: "Send long review time report right now",
-				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
-					channel := c.String("channel")
-					if channel == "" {
-						logrus.Println("Empty channel flag!")
-						return
-					}
 					application := app.New(cfg)
-					application.ReportLongTimeReviewIssues(channel)
+					application.ReportLongTimeReviewIssues()
 				},
 			},
 		}
@@ -331,7 +325,7 @@ func initCronTasks(wg sync.WaitGroup, cfg *config.Main, application app.App) *ta
 	}
 
 	err = tm.AddTask(cfg.Reports.ReportLongTimeReviewIssues.Schedule, func() {
-		application.ReportLongTimeReviewIssues(cfg.Reports.ReportLongTimeReviewIssues.Channel)
+		application.ReportLongTimeReviewIssues()
 	})
 	if err != nil {
 		panic(err)
