@@ -55,7 +55,7 @@ func New(conf *config.Main) *App {
 	}
 }
 
-var  durationDay      int64 = 86400
+var durationDay int64 = 86400
 
 // MakeWorkersWorkedReportLastWeek preparing a last week report and send it to Slack
 func (a *App) MakeWorkersWorkedReportLastWeek(mode, channel string) {
