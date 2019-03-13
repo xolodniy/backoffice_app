@@ -32,7 +32,6 @@ reports:
     channel: "#general"
   reportclarificationissues:
     schedule: "00 00 07 * * *"
-    channel:
 
 jira:
   apiurl: https://theflow.atlassian.net
