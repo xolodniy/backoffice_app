@@ -295,7 +295,7 @@ func (j *Jira) ClarificationIssuesOfOpenSprints() ([]Issue, error) {
 	return issues, nil
 }
 
-// IssuesOnReview searches Issues with status on review
+// IssuesOnReview searches all issues with review statuses and retrieves it with changelog history
 func (j *Jira) IssuesOnReview() ([]Issue, error) {
 	request := fmt.Sprintf(`assignee != %s AND status IN ("%s","%s","%s","%s","%s","%s")`,
 		StatusEmptyAssignee, StatusPeerReview, StatusTlReview, StatusDesignReview, StatusPMReview, StatusCTOReview, StatusFEReview)
