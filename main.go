@@ -1,6 +1,7 @@
 package main
 
 import (
+	"backoffice_app/services/jira"
 	"context"
 	"fmt"
 	"log"
@@ -141,7 +142,35 @@ func main() {
 						return
 					}
 					application := app.New(cfg)
-					application.ReportIsuuesAfterSecondReview(channel)
+					application.ReportIssuesAfterSecondReview(channel, ``)
+				},
+			},
+			{
+				Name:  "get-jira-backend-issues-after-second-review-round",
+				Usage: "Gets jira backend issues after second review round right now",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
+					application := app.New(cfg)
+					application.ReportIssuesAfterSecondReview(channel, fmt.Sprintf(`"%s","%s"`, jira.TypeBETask, jira.TypeBESubTask))
+				},
+			},
+			{
+				Name:  "get-jira-frontend-issues-after-second-review-round",
+				Usage: "Gets jira frontend issues after second review round right now",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
+					application := app.New(cfg)
+					application.ReportIssuesAfterSecondReview(channel, fmt.Sprintf(`"%s","%s"`, jira.TypeFETask, jira.TypeFESubTask))
 				},
 			},
 			{
@@ -297,7 +326,23 @@ func initCronTasks(wg sync.WaitGroup, cfg *config.Main, application app.App) *ta
 	}
 
 	err = tm.AddTask(cfg.Reports.ReportAfterSecondReview.Schedule, func() {
-		application.ReportIsuuesAfterSecondReview(cfg.Reports.ReportAfterSecondReview.Channel)
+		application.ReportIssuesAfterSecondReview(cfg.Reports.ReportAfterSecondReview.Channel, ``)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.ReportBackendAfterSecondReview.Schedule, func() {
+		application.ReportIssuesAfterSecondReview(cfg.Reports.ReportBackendAfterSecondReview.Channel,
+			fmt.Sprintf(`"%s","%s"`, jira.TypeBETask, jira.TypeBESubTask))
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.ReportFrontendAfterSecondReview.Schedule, func() {
+		application.ReportIssuesAfterSecondReview(cfg.Reports.ReportFrontendAfterSecondReview.Channel,
+			fmt.Sprintf(`"%s","%s"`, jira.TypeFETask, jira.TypeFESubTask))
 	})
 	if err != nil {
 		panic(err)
