@@ -21,7 +21,9 @@ type Main struct {
 		DailyWorkersWorkedTime        Report
 		WeeklyWorkersWorkedTime       Report
 		ReportClosedSubtasks          Report
-		ReportAfterSecondReview       Report
+		ReportAfterSecondReviewAll    Report
+		ReportAfterSecondReviewBE     Report
+		ReportAfterSecondReviewFE     Report
 		EmployeesExceededTasks        Report
 		EmployeesExceededEstimateTime Report
 		ReportSlackSpaceEnding        Report

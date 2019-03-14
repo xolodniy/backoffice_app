@@ -246,18 +246,18 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 	a.Slack.SendMessage(msgBody, channel)
 }
 
-// ReportIsuuesAfterSecondReview create report about issues after second review round
-func (a *App) ReportIsuuesAfterSecondReview(channel string) {
-	issues, err := a.Jira.IssuesAfterSecondReview()
+// ReportIssuesAfterSecondReview create report about issues after second review round
+func (a *App) ReportIssuesAfterSecondReview(channel string, issueTypes ...string) {
+	issues, err := a.Jira.IssuesAfterSecondReview(issueTypes)
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about issues after second review from jira")
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues after second review round", channel)
+		a.Slack.SendMessage("*Issues after second review round:*\n\nThere are no issues after second review round", channel)
 		return
 	}
-	msgBody := "Issues after second review round:\n"
+	msgBody := "*Issues after second review round:*\n\n"
 	for _, issue := range issues {
 		msgBody += issue.String()
 	}

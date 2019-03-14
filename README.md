@@ -180,10 +180,16 @@ You may use one of several pre-defined schedules in place of a cron expression.
         channel: "#back-office-app"
       reportclosedsubtasks:             — preference to send report about all closed subtask of issue
         schedule: "00 00 07 * * *" 
-        channel: "#back-office-app"
-      reportaftersecondreview:          — preference to send report about issues after second round review
-        schedule: "00 00 07 * * *" 
-        channel: "#back-office-app"
+        channel: "#back-office-app"   
+      reportaftersecondreviewall:       — preference to send report about issues after second round review
+        schedule: "00 00 06 * * *"
+        channel: "U891K2Z2P"
+      reportaftersecondreviewbe:        — preference to send report about backend issues after second round review
+        schedule: "00 00 06 * * *"
+        channel: "U97DJLL11"
+      reportaftersecondreviewfe:        — preference to send report about frontend issues after second round review
+        schedule: "00 00 06 * * *"
+        channel: "U88K5BQAD"
       employeesexceededtasks:           — preference to send report about employers that have exceeded tasks
         schedule: "00 00 07 * * *" 
         channel: "#back-office-app"
