@@ -148,7 +148,7 @@ func (j *Jira) IssuesAfterSecondReview(typeNames []string) ([]Issue, error) {
 		StatusClosed, StatusTlReview, StatusPeerReview, StatusDesignReview, StatusPMReview, StatusCTOReview, StatusFEReview)
 	if len(typeNames) != 0 {
 		// format of jql statuses `("FE Task")` or `("FE Sub-Task","FE Task")`
-		request += fmt.Sprintf(`AND type IN ("` + strings.Join(typeNames, `","`) + `")`)
+		request += ` AND type IN ("` + strings.Join(typeNames, `","`) + `")`
 	}
 	issues, err := j.issues(request)
 	if err != nil {
