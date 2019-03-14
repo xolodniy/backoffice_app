@@ -35,7 +35,7 @@ var (
 	StatusClosed          = "Closed"
 	StatusTlReview        = "TL Review"
 	StatusPeerReview      = "In peer review"
-	StatusDesignReview    = "In Design review"
+	StatusDesignReview    = "in Design review"
 	StatusCTOReview       = "In CTO review"
 	StatusFEReview        = "In FE review"
 	StatusPMReview        = "In PM Review"
