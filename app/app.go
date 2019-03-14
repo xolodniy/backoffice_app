@@ -247,9 +247,9 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 }
 
 // ReportIssuesAfterSecondReview create report about issues after second review round
-func (a *App) ReportIssuesAfterSecondReview(channel, typeNames string) {
+func (a *App) ReportIssuesAfterSecondReview(channel string, issueTypes ...string) {
 	// typeNames format is `"FE Sub-Task","FE Task"` or `"FE Task"`
-	issues, err := a.Jira.IssuesAfterSecondReview(typeNames)
+	issues, err := a.Jira.IssuesAfterSecondReview(issueTypes)
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about issues after second review from jira")
 		return
