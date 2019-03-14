@@ -201,7 +201,7 @@ You may use one of several pre-defined schedules in place of a cron expression.
         channel: "#general"
       reportclarificationissues:        - preference to send report about clarification issues to users, that assigned, and it hasn't channel
         schedule: "00 00 07 * * *"
-      reportlongtimereviewissues:       - preference to send report about long time review of issues to users, that assigned, and it hasn't channel
+      report24hoursreviewissues:       - preference to send report about long time review of issues to users, that assigned, and it hasn't channel
         schedule: "00 00 07 * * *"
     
 #### Config.yml variables for slack users id

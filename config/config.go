@@ -28,7 +28,7 @@ type Main struct {
 		ReportGitMigrations           Report
 		ReportSprintStatus            Report
 		ReportClarificationIssues     Report
-		ReportLongTimeReviewIssues    Report
+		Report24HoursReviewIssues     Report
 	}
 }
 

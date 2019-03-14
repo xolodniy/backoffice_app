@@ -339,7 +339,7 @@ func initCronTasks(wg sync.WaitGroup, cfg *config.Main, application app.App) *ta
 		panic(err)
 	}
 
-	err = tm.AddTask(cfg.Reports.ReportLongTimeReviewIssues.Schedule, func() {
+	err = tm.AddTask(cfg.Reports.Report24HoursReviewIssues.Schedule, func() {
 		application.ReportLongTimeReviewIssues()
 	})
 	if err != nil {
