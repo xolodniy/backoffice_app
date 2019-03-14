@@ -13,7 +13,7 @@ reports:
     schedule: "00 00 07 * * *"
     channel: "#back-office-app"
   reportaftersecondreview:
-    schedule: "00 00 07 * * *"
+    schedule: "00 00 06 * * *"
     channel: "U891K2Z2P"
   reportbackendaftersecondreview:
     schedule: "00 00 06 * * *"

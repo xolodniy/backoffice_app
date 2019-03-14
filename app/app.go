@@ -255,10 +255,10 @@ func (a *App) ReportIssuesAfterSecondReview(channel, typeNames string) {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues after second review round", channel)
+		a.Slack.SendMessage("*Issues after second review round:*\n\nThere are no issues after second review round", channel)
 		return
 	}
-	msgBody := "Issues after second review round:\n"
+	msgBody := "*Issues after second review round:*\n\n"
 	for _, issue := range issues {
 		msgBody += issue.String()
 	}
