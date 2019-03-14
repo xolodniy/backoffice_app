@@ -2,6 +2,7 @@ package jira
 
 import (
 	"fmt"
+	"strings"
 
 	"backoffice_app/config"
 
@@ -142,12 +143,12 @@ func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
 }
 
 // IssuesAfterSecondReview retrieves issues that have 2 or more reviews
-func (j *Jira) IssuesAfterSecondReview(typeNames string) ([]Issue, error) {
+func (j *Jira) IssuesAfterSecondReview(typeNames []string) ([]Issue, error) {
 	// typeNames format is `"FE Sub-Task","FE Task"` or `"FE Task"`
 	request := fmt.Sprintf(`status NOT IN ("%s") AND (status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s")`,
 		StatusClosed, StatusTlReview, StatusPeerReview, StatusDesignReview, StatusPMReview, StatusCTOReview, StatusFEReview)
-	if typeNames != `` {
-		request += fmt.Sprintf(`AND type IN (%s)`, typeNames)
+	if len(typeNames) != 0 {
+		request += fmt.Sprintf(`AND type IN ("` + strings.Join(typeNames, `","`) + `")`)
 	}
 	issues, err := j.issues(request)
 	if err != nil {
@@ -177,22 +178,18 @@ func (j *Jira) IssuesAfterSecondReview(typeNames string) ([]Issue, error) {
 		)
 		for _, histories := range issue.Changelog.Histories {
 			for _, item := range histories.Items {
-				if item.ToString == StatusPeerReview {
+				switch item.ToString {
+				case StatusPeerReview:
 					countPeer++
-				}
-				if item.ToString == StatusTlReview {
+				case StatusTlReview:
 					countTl++
-				}
-				if item.ToString == StatusDesignReview {
+				case StatusDesignReview:
 					countDesign++
-				}
-				if item.ToString == StatusPMReview {
+				case StatusPMReview:
 					countPM++
-				}
-				if item.ToString == StatusCTOReview {
+				case StatusCTOReview:
 					countCTO++
-				}
-				if item.ToString == StatusFEReview {
+				case StatusFEReview:
 					countFE++
 				}
 			}
