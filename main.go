@@ -53,7 +53,7 @@ func main() {
 			go application.FillCache()
 
 			wg := sync.WaitGroup{}
-			tm := initCronTasks(wg, cfg, *application)
+			tm := initCronTasks(&wg, cfg, application)
 
 			gracefulClosing(tm.Stop, &wg)
 		}
@@ -258,8 +258,8 @@ func main() {
 
 }
 
-func initCronTasks(wg sync.WaitGroup, cfg *config.Main, application app.App) *taskmanager.TaskManager {
-	tm := taskmanager.New(&wg)
+func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *taskmanager.TaskManager {
+	tm := taskmanager.New(wg)
 
 	err := tm.AddTask(cfg.Reports.DailyWorkersWorkedTime.Schedule, func() {
 		application.MakeWorkersWorkedReportYesterday("auto", cfg.Reports.DailyWorkersWorkedTime.Channel)
