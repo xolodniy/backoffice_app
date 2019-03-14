@@ -144,10 +144,10 @@ func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
 
 // IssuesAfterSecondReview retrieves issues that have 2 or more reviews
 func (j *Jira) IssuesAfterSecondReview(typeNames []string) ([]Issue, error) {
-	// typeNames format is `"FE Sub-Task","FE Task"` or `"FE Task"`
 	request := fmt.Sprintf(`status NOT IN ("%s") AND (status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s")`,
 		StatusClosed, StatusTlReview, StatusPeerReview, StatusDesignReview, StatusPMReview, StatusCTOReview, StatusFEReview)
 	if len(typeNames) != 0 {
+		// format of jql statuses `("FE Task")` or `("FE Sub-Task","FE Task")`
 		request += fmt.Sprintf(`AND type IN ("` + strings.Join(typeNames, `","`) + `")`)
 	}
 	issues, err := j.issues(request)
