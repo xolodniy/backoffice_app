@@ -12,13 +12,13 @@ reports:
   reportclosedsubtasks:
     schedule: "00 00 07 * * *"
     channel: "#back-office-app"
-  reportaftersecondreview:
+  reportaftersecondreviewall:
     schedule: "00 00 06 * * *"
     channel: "U891K2Z2P"
-  reportbackendaftersecondreview:
+  reportaftersecondreviewbe:
     schedule: "00 00 06 * * *"
     channel: "U97DJLL11"
-  reportfrontendaftersecondreview:
+  reportaftersecondreviewfe:
     schedule: "00 00 06 * * *"
     channel: "U88K5BQAD"
   employeesexceededtasks:
