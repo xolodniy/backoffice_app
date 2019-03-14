@@ -36,14 +36,21 @@ var (
 	StatusTlReview        = "TL Review"
 	StatusPeerReview      = "In peer review"
 	StatusDesignReview    = "in Design review"
+	StatusCTOReview       = "In CTO review"
+	StatusFEReview        = "In FE review"
+	StatusPMReview        = "In PM Review"
 	StatusCloseLastTask   = "Close last task"
 	StatusReadyForDemo    = "Ready for demo"
 	StatusEmptyAssignee   = "empty"
+	StatusInClarification = "In clarification"
 	FieldEpicName         = "customfield_10005"
 	FieldEpicKey          = "customfield_10008"
 	FieldSprintInfo       = "customfield_10010"
 	FieldDeveloperMap     = "customfield_10026"
-	StatusInClarification = "In clarification"
+	TypeBESubTask         = "BE Sub-Task"
+	TypeBETask            = "BE Task"
+	TypeFESubTask         = "FE Sub-Task"
+	TypeFETask            = "FE Task"
 )
 
 func (i Issue) String() string {
@@ -135,8 +142,13 @@ func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
 }
 
 // IssuesAfterSecondReview retrieves issues that have 2 or more reviews
-func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
-	request := fmt.Sprintf(`status NOT IN ("%s") AND (status was "%s" OR status was "%s")`, StatusClosed, StatusTlReview, StatusPeerReview)
+func (j *Jira) IssuesAfterSecondReview(typeNames string) ([]Issue, error) {
+	// typeNames format is `"FE Sub-Task","FE Task"` or `"FE Task"`
+	request := fmt.Sprintf(`status NOT IN ("%s") AND (status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s")`,
+		StatusClosed, StatusTlReview, StatusPeerReview, StatusDesignReview, StatusPMReview, StatusCTOReview, StatusFEReview)
+	if typeNames != `` {
+		request += fmt.Sprintf(`AND type IN (%s)`, typeNames)
+	}
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, err
@@ -155,8 +167,14 @@ func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
 			continue
 		}
 
-		countPeer := 0
-		countTl := 0
+		var (
+			countPeer   = 0
+			countTl     = 0
+			countDesign = 0
+			countPM     = 0
+			countCTO    = 0
+			countFE     = 0
+		)
 		for _, histories := range issue.Changelog.Histories {
 			for _, item := range histories.Items {
 				if item.ToString == StatusPeerReview {
@@ -165,9 +183,21 @@ func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
 				if item.ToString == StatusTlReview {
 					countTl++
 				}
+				if item.ToString == StatusDesignReview {
+					countDesign++
+				}
+				if item.ToString == StatusPMReview {
+					countPM++
+				}
+				if item.ToString == StatusCTOReview {
+					countCTO++
+				}
+				if item.ToString == StatusFEReview {
+					countFE++
+				}
 			}
 		}
-		if countPeer > 1 || countTl > 1 {
+		if countPeer > 1 || countTl > 1 || countDesign > 1 || countPM > 1 || countCTO > 1 || countFE > 1 {
 			issuesAfterReview = append(issuesAfterReview, i)
 		}
 	}
