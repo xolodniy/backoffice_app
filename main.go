@@ -1,7 +1,6 @@
 package main
 
 import (
-	"backoffice_app/services/jira"
 	"context"
 	"fmt"
 	"log"
@@ -14,6 +13,7 @@ import (
 	"backoffice_app/config"
 	"backoffice_app/controller"
 	"backoffice_app/libs/taskmanager"
+	"backoffice_app/services/jira"
 
 	"github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/jinzhu/now"
