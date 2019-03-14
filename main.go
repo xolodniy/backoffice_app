@@ -249,6 +249,14 @@ func main() {
 					application.ReportClarificationIssues()
 				},
 			},
+			{
+				Name:  "send-long-review-time-report-now",
+				Usage: "Send long review time report right now",
+				Action: func(c *cli.Context) {
+					application := app.New(cfg)
+					application.Report24HoursReviewIssues()
+				},
+			},
 		}
 
 		if err := cliApp.Run(os.Args); err != nil {
@@ -326,6 +334,13 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 
 	err = tm.AddTask(cfg.Reports.ReportClarificationIssues.Schedule, func() {
 		application.ReportClarificationIssues()
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.Report24HoursReviewIssues.Schedule, func() {
+		application.Report24HoursReviewIssues()
 	})
 	if err != nil {
 		panic(err)

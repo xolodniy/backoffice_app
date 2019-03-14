@@ -712,3 +712,38 @@ func (a *App) PersonActivityByDate(userName, date, channel string) error {
 	a.Slack.SendMessage(report, channel)
 	return nil
 }
+
+// Report24HoursReviewIssues create report about issues with long review status
+func (a *App) Report24HoursReviewIssues() {
+	issues, err := a.Jira.IssuesOnReview()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about not closed issues from jira")
+		return
+	}
+	var assignees = make(map[string][]jira.Issue)
+	for _, issue := range issues {
+		timeWasCreated := issue.Changelog.Histories[len(issue.Changelog.Histories)-1].Created
+		t, err := time.Parse("2006-01-02T15:04:05.999-0700", timeWasCreated)
+		// if time empty or other format we continue to remove many log messages
+		if err != nil {
+			continue
+		}
+		if (time.Now().Unix() - t.Unix()) > 3600*24 {
+			assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
+		}
+	}
+	for _, issues := range assignees {
+		var message string
+		for _, issue := range issues {
+			message += issue.String()
+		}
+		if message != "" {
+			userId, err := a.Slack.UserIdByEmail(issues[0].Fields.Assignee.EmailAddress)
+			if err != nil {
+				logrus.WithError(err).Error("can't take user id by email from slack")
+				continue
+			}
+			a.Slack.SendMessage("Issues on review more than 24 hours assigned to you:\n\n"+message, userId)
+		}
+	}
+}

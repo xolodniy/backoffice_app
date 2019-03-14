@@ -36,6 +36,9 @@ var (
 	StatusTlReview        = "TL Review"
 	StatusPeerReview      = "In peer review"
 	StatusDesignReview    = "in Design review"
+	StatusCTOReview       = "In CTO review"
+	StatusFEReview        = "In FE review"
+	StatusPMReview        = "In PM Review"
 	StatusCloseLastTask   = "Close last task"
 	StatusReadyForDemo    = "Ready for demo"
 	StatusEmptyAssignee   = "empty"
@@ -290,4 +293,43 @@ func (j *Jira) ClarificationIssuesOfOpenSprints() ([]Issue, error) {
 		return nil, fmt.Errorf("can't take jira issues with type not in (story, bug) of open sprints: %s", err)
 	}
 	return issues, nil
+}
+
+// IssuesOnReview searches all issues with review statuses and retrieves it with changelog history
+func (j *Jira) IssuesOnReview() ([]Issue, error) {
+	request := fmt.Sprintf(`assignee != %s AND status IN ("%s","%s","%s","%s","%s","%s")`,
+		StatusEmptyAssignee, StatusPeerReview, StatusTlReview, StatusDesignReview, StatusPMReview, StatusCTOReview, StatusFEReview)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't take jira not closed issues: %s", err)
+	}
+	changeLog := &struct {
+		MaxResults int                     `json:"maxResults"`
+		StartAt    int                     `json:"startAt"`
+		Total      int                     `json:"total"`
+		IsLast     bool                    `json:"isLast"`
+		Values     []jira.ChangelogHistory `json:"values"`
+	}{}
+	var issuesOnReview []Issue
+	for _, issue := range issues {
+		index := 0
+		for {
+			url := fmt.Sprintf("/rest/api/2/issue/%s/changelog?maxResults=100&startAt=%v", issue.Key, index)
+			req, err := j.NewRequest("GET", url, nil)
+			if err != nil {
+				return nil, fmt.Errorf("can't create request of changelog enpoint: %s", err)
+			}
+			_, err = j.Do(req, changeLog)
+			if err != nil {
+				return nil, fmt.Errorf("can't take jira changelog of issue: %s", err)
+			}
+			issue.Changelog = &jira.Changelog{Histories: changeLog.Values}
+			issuesOnReview = append(issuesOnReview, issue)
+			if changeLog.IsLast {
+				break
+			}
+			index += 100
+		}
+	}
+	return issuesOnReview, nil
 }
