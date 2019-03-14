@@ -20,6 +20,7 @@ type Slack struct {
 	OutToken       string
 	BotName        string
 	ProjectManager string
+	ArtDirector    string
 	APIURL         string
 	TotalVolume    float64
 	RestVolume     float64
@@ -77,6 +78,7 @@ func New(config *config.Slack) Slack {
 		OutToken:       config.OutToken,
 		BotName:        config.BotName,
 		ProjectManager: "<@" + config.ProjectManager + ">",
+		ArtDirector:    "<@" + config.ArtDirector + ">",
 		APIURL:         config.APIURL,
 		TotalVolume:    config.TotalVolume,
 		Secret:         config.Secret,

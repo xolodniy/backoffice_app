@@ -57,6 +57,7 @@ type Slack struct {
 	OutToken       string
 	BotName        string
 	ProjectManager string
+	ArtDirector    string
 	APIURL         string
 	TotalVolume    float64
 	RestVolume     float64

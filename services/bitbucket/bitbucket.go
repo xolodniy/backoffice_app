@@ -135,7 +135,7 @@ func (b *Bitbucket) PullRequestCommits(repoSlug, prID string) ([]Commit, error) 
 	return prCommits.Values, nil
 }
 
-// CommitsDiff returns files diff of commits by repository slug and commit hash
+// CommitsDiffStats returns files diff of commits by repository slug and commit hash
 func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) {
 	type diffStats struct {
 		Next   string     `json:"next"`
@@ -174,7 +174,7 @@ func (b *Bitbucket) SrcFile(repoSlug, spec, path string) (string, error) {
 	return file, nil
 }
 
-// MigrationCommitsOfOpenedPRs returns commits with migration diff
+// CommitsOfOpenedPRs returns commits with migration diff
 func (b *Bitbucket) CommitsOfOpenedPRs() ([]Commit, error) {
 	repositories, err := b.RepositoriesList()
 	if err != nil {
@@ -199,6 +199,10 @@ func (b *Bitbucket) CommitsOfOpenedPRs() ([]Commit, error) {
 			return nil, err
 		}
 		for _, commit := range commits {
+			// without merge commits
+			if len(commit.Parents) > 1 {
+				continue
+			}
 			allCommits = append(allCommits, commit)
 		}
 	}
