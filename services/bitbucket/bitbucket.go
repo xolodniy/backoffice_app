@@ -1,11 +1,12 @@
 package bitbucket
 
 import (
-	"backoffice_app/config"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+
+	"backoffice_app/config"
 )
 
 // Bitbucket main struct of jira client
