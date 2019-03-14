@@ -18,16 +18,18 @@ type Main struct {
 	Slack
 	Bitbucket
 	Reports struct {
-		DailyWorkersWorkedTime        Report
-		WeeklyWorkersWorkedTime       Report
-		ReportClosedSubtasks          Report
-		ReportAfterSecondReview       Report
-		EmployeesExceededTasks        Report
-		EmployeesExceededEstimateTime Report
-		ReportSlackSpaceEnding        Report
-		ReportGitMigrations           Report
-		ReportSprintStatus            Report
-		ReportClarificationIssues     Report
+		DailyWorkersWorkedTime          Report
+		WeeklyWorkersWorkedTime         Report
+		ReportClosedSubtasks            Report
+		ReportAfterSecondReview         Report
+		ReportBackendAfterSecondReview  Report
+		ReportFrontendAfterSecondReview Report
+		EmployeesExceededTasks          Report
+		EmployeesExceededEstimateTime   Report
+		ReportSlackSpaceEnding          Report
+		ReportGitMigrations             Report
+		ReportSprintStatus              Report
+		ReportClarificationIssues       Report
 	}
 }
 
