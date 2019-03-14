@@ -33,7 +33,7 @@ reports:
   reportclarificationissues:
     schedule: "00 00 07 * * *"
   reportlongtimereviewissues:
-    schedule: "00 00 07 * * *"
+    schedule: "00 00 06 * * *"
 
 jira:
   apiurl: https://theflow.atlassian.net
