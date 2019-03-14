@@ -55,8 +55,6 @@ func New(conf *config.Main) *App {
 	}
 }
 
-var durationDaySeconds int64 = 86400
-
 // MakeWorkersWorkedReportLastWeek preparing a last week report and send it to Slack
 func (a *App) MakeWorkersWorkedReportLastWeek(mode, channel string) {
 	a.ReportUsersWorkedTimeByMember(
@@ -717,13 +715,12 @@ func (a *App) ReportLongTimeReviewIssues() {
 	var assignees = make(map[string][]jira.Issue)
 	for _, issue := range issues {
 		timeWasCreated := issue.Changelog.Histories[len(issue.Changelog.Histories)-1].Created
-		layout := "2006-01-02T15:04:05.999-0700"
-		t, err := time.Parse(layout, timeWasCreated)
+		t, err := time.Parse("2006-01-02T15:04:05.999-0700", timeWasCreated)
 		// if time empty or other format we continue to remove many log messages
 		if err != nil {
 			continue
 		}
-		if (time.Now().Unix() - t.Unix()) > durationDaySeconds {
+		if (time.Now().Unix() - t.Unix()) > 3600*24 {
 			assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
 		}
 	}
