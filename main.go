@@ -254,7 +254,7 @@ func main() {
 				Usage: "Send long review time report right now",
 				Action: func(c *cli.Context) {
 					application := app.New(cfg)
-					application.ReportLongTimeReviewIssues()
+					application.Report24HoursReviewIssues()
 				},
 			},
 		}
@@ -340,7 +340,7 @@ func initCronTasks(wg sync.WaitGroup, cfg *config.Main, application app.App) *ta
 	}
 
 	err = tm.AddTask(cfg.Reports.Report24HoursReviewIssues.Schedule, func() {
-		application.ReportLongTimeReviewIssues()
+		application.Report24HoursReviewIssues()
 	})
 	if err != nil {
 		panic(err)

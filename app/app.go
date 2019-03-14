@@ -713,8 +713,8 @@ func (a *App) PersonActivityByDate(userName, date, channel string) error {
 	return nil
 }
 
-// ReportLongTimeReviewIssues create report about issues with long review status
-func (a *App) ReportLongTimeReviewIssues() {
+// Report24HoursReviewIssues create report about issues with long review status
+func (a *App) Report24HoursReviewIssues() {
 	issues, err := a.Jira.IssuesOnReview()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about not closed issues from jira")
