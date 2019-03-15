@@ -131,9 +131,6 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 	msgBody := "\n*Issues have all closed subtasks:*\n\n"
 	var designMessage string
 	for _, issue := range issues {
-		if issue.Fields.Status.Name != jira.StatusReadyForDemo {
-			msgBody += issue.String()
-		}
 		if issue.Fields.Status.Name != jira.StatusCloseLastTask {
 			err := a.Jira.IssueSetStatusCloseLastTask(issue.Key)
 			if err != nil {
