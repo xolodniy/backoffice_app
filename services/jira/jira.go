@@ -281,7 +281,7 @@ func (j *Jira) EpicName(issueKey string) (string, error) {
 
 // IssuesOfOpenSprints searches Issues in all sprints which opened now and returning list with issues in this sprints list
 func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
-	request := fmt.Sprintf(`assignee != %s AND type not in (story, bug) AND Sprint IN openSprints()`, StatusEmptyAssignee)
+	request := fmt.Sprintf(`type not in (story, bug) AND Sprint IN openSprints()`)
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, fmt.Errorf("can't take jira issues with type not in (story, bug) of open sprints: %s", err)
