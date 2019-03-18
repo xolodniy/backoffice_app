@@ -108,6 +108,19 @@ func (a *App) ReportUsersWorkedTimeByDate(prefix, channel string, dateOfWorkdays
 			message += fmt.Sprintf("\n\n\n*%s (%s total)*\n", worker.Name, worker.TimeWorked)
 			for _, project := range worker.Projects {
 				message += fmt.Sprintf("\n%s - %s", project.TimeWorked, project.Name)
+				var pos int
+				for _, note := range project.Notes {
+					for _, anotherNote := range project.Notes[pos+1:] {
+						if strings.ToLower(note.Description) == strings.ToLower(anotherNote.Description) {
+							project.Notes = append(project.Notes[:pos], project.Notes[pos+1:]...)
+							if pos > 0 {
+								pos = pos - 1
+							}
+							continue
+						}
+						pos = pos + 1
+					}
+				}
 				for _, note := range project.Notes {
 					message += fmt.Sprintf("\n - %s", note.Description)
 				}
