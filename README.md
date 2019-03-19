@@ -207,8 +207,11 @@ You may use one of several pre-defined schedules in place of a cron expression.
         channel: "#general"
       reportclarificationissues:        - preference to send report about clarification issues to users, that assigned, and it hasn't channel
         schedule: "00 00 07 * * *"
-      report24hoursreviewissues:       - preference to send report about long time review of issues to users, that assigned, and it hasn't channel
+      report24hoursreviewissues:        - preference to send report about long time review of issues to users, that assigned, and it hasn't channel
         schedule: "00 00 07 * * *"
+      reportgitansiblechanges:          — preference to send report about new git ansible changes
+        schedule: "@hourly"
+        channel: "U8A004WK0"
     
 #### Config.yml variables for slack users id
     projectmanager: U9FDU5W4D   - this is variable of user id to mention him in messages, or send mmessages to him.

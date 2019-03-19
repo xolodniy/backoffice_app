@@ -15,7 +15,7 @@ import (
 	"backoffice_app/libs/taskmanager"
 	"backoffice_app/services/jira"
 
-	"github.com/banzaicloud/logrus-runtime-formatter"
+	runtime "github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -185,6 +185,20 @@ func main() {
 					}
 					application := app.New(cfg)
 					application.ReportGitMigrations(channel)
+				},
+			},
+			{
+				Name:  "get-git-new-ansible-changes",
+				Usage: "Gets git new ansible changes right now",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
+					application := app.New(cfg)
+					application.ReportGitAnsibleChanges(channel)
 				},
 			},
 			{
@@ -384,6 +398,13 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 
 	err = tm.AddTask(cfg.Reports.Report24HoursReviewIssues.Schedule, func() {
 		application.Report24HoursReviewIssues()
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.ReportGitAnsibleChanges.Schedule, func() {
+		application.ReportGitAnsibleChanges(cfg.Reports.ReportGitAnsibleChanges.Channel)
 	})
 	if err != nil {
 		panic(err)

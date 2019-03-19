@@ -31,6 +31,7 @@ type Main struct {
 		ReportSprintStatus            Report
 		ReportClarificationIssues     Report
 		Report24HoursReviewIssues     Report
+		ReportGitAnsibleChanges       Report
 	}
 }
 

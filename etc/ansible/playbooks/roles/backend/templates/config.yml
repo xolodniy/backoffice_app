@@ -40,6 +40,9 @@ reports:
     schedule: "00 00 07 * * *"
   report24hoursreviewissues:
     schedule: "00 00 06 * * *"
+  reportgitansiblechanges:
+    schedule: "@hourly"
+    channel: "U8A004WK0"
 
 jira:
   apiurl: https://theflow.atlassian.net
