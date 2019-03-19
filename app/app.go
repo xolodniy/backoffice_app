@@ -108,13 +108,31 @@ func (a *App) ReportUsersWorkedTimeByDate(prefix, channel string, dateOfWorkdays
 			message += fmt.Sprintf("\n\n\n*%s (%s total)*\n", worker.Name, worker.TimeWorked)
 			for _, project := range worker.Projects {
 				message += fmt.Sprintf("\n%s - %s", project.TimeWorked, project.Name)
+				var projectNotes []string
 				for _, note := range project.Notes {
-					message += fmt.Sprintf("\n - %s", note.Description)
+					projectNotes = append(projectNotes, note.Description)
+				}
+				sortedNotes := removeDoubles(projectNotes)
+				for _, note := range sortedNotes {
+					message += fmt.Sprintf("\n - %s", note)
 				}
 			}
 		}
 	}
 	a.Slack.SendMessage(message, channel)
+}
+
+// removeDoubles removes the same strings in slice
+func removeDoubles(arr []string) []string {
+	for i := len(arr) - 1; i > 0; i-- {
+		for j := i - 1; j >= 0; j-- {
+			if strings.ToLower(arr[i]) == strings.ToLower(arr[j]) {
+				arr = append(arr[:j], arr[j+1:]...)
+				i = len(arr) - 1
+			}
+		}
+	}
+	return arr
 }
 
 // ReportIsuuesWithClosedSubtasks create report about issues with closed subtasks
