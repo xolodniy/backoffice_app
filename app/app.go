@@ -108,26 +108,31 @@ func (a *App) ReportUsersWorkedTimeByDate(prefix, channel string, dateOfWorkdays
 			message += fmt.Sprintf("\n\n\n*%s (%s total)*\n", worker.Name, worker.TimeWorked)
 			for _, project := range worker.Projects {
 				message += fmt.Sprintf("\n%s - %s", project.TimeWorked, project.Name)
-				var pos int
+				var projectNotes []string
 				for _, note := range project.Notes {
-					for _, anotherNote := range project.Notes[pos+1:] {
-						if strings.ToLower(note.Description) == strings.ToLower(anotherNote.Description) {
-							project.Notes = append(project.Notes[:pos], project.Notes[pos+1:]...)
-							if pos > 0 {
-								pos = pos - 1
-							}
-							continue
-						}
-						pos = pos + 1
-					}
+					projectNotes = append(projectNotes, note.Description)
 				}
-				for _, note := range project.Notes {
-					message += fmt.Sprintf("\n - %s", note.Description)
+				sortedNotes := removeDoubles(projectNotes)
+				for _, note := range sortedNotes {
+					message += fmt.Sprintf("\n - %s", note)
 				}
 			}
 		}
 	}
 	a.Slack.SendMessage(message, channel)
+}
+
+// removeDoubles removes the same strings in slice
+func removeDoubles(stringSlice []string) []string {
+	for i := len(stringSlice) - 1; i > 0; i-- {
+		for j := i - 1; j >= 0; j-- {
+			if strings.ToLower(stringSlice[i]) == strings.ToLower(stringSlice[j]) {
+				stringSlice = append(stringSlice[:j], stringSlice[j+1:]...)
+				i = len(stringSlice) - 1
+			}
+		}
+	}
+	return stringSlice
 }
 
 // ReportIsuuesWithClosedSubtasks create report about issues with closed subtasks
