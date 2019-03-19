@@ -123,16 +123,16 @@ func (a *App) ReportUsersWorkedTimeByDate(prefix, channel string, dateOfWorkdays
 }
 
 // removeDoubles removes the same strings in slice
-func removeDoubles(stringSlice []string) []string {
-	for i := len(stringSlice) - 1; i > 0; i-- {
+func removeDoubles(arr []string) []string {
+	for i := len(arr) - 1; i > 0; i-- {
 		for j := i - 1; j >= 0; j-- {
-			if strings.ToLower(stringSlice[i]) == strings.ToLower(stringSlice[j]) {
-				stringSlice = append(stringSlice[:j], stringSlice[j+1:]...)
-				i = len(stringSlice) - 1
+			if strings.ToLower(arr[i]) == strings.ToLower(arr[j]) {
+				arr = append(arr[:j], arr[j+1:]...)
+				i = len(arr) - 1
 			}
 		}
 	}
-	return stringSlice
+	return arr
 }
 
 // ReportIsuuesWithClosedSubtasks create report about issues with closed subtasks
