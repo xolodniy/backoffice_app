@@ -41,6 +41,7 @@ type App struct {
 	Bitbucket    bitbucket.Bitbucket
 	Config       config.Main
 	CommitsCache map[string]CommitsCache
+	AnsibleCache map[string]CommitsCache
 }
 
 // New is main App constructor
@@ -52,6 +53,7 @@ func New(conf *config.Main) *App {
 		Bitbucket:    bitbucket.New(&conf.Bitbucket),
 		Config:       *conf,
 		CommitsCache: make(map[string]CommitsCache),
+		AnsibleCache: make(map[string]CommitsCache),
 	}
 }
 
@@ -289,7 +291,7 @@ func (a *App) ReportGitMigrations(channel string) {
 	}
 }
 
-// FillCache fill cache commits for searching new migrations
+// FillCache fill commits caches for searching new migrations and new changes of ansible
 func (a *App) FillCache() {
 	commits, err := a.Bitbucket.CommitsOfOpenedPRs()
 	if err != nil {
@@ -302,6 +304,13 @@ func (a *App) FillCache() {
 		return
 	}
 	a.CommitsCache = mapSQLCommits
+
+	mapAnsibleCommits, err := a.AnsibleCommitsCache(commits)
+	if err != nil {
+		logrus.WithError(err).Error("can't take diff information from bitbucket")
+		return
+	}
+	a.AnsibleCache = mapAnsibleCommits
 }
 
 // MigrationMessages returns slice of all miigration files
@@ -743,4 +752,51 @@ func (a *App) Report24HoursReviewIssues() {
 			a.Slack.SendMessage("Issues on review more than 24 hours assigned to you:\n\n"+message, userId)
 		}
 	}
+}
+
+// ReportGitAnsibleChanges create report about new etc/ansible changes
+func (a *App) ReportGitAnsibleChanges(channel string) {
+	commits, err := a.Bitbucket.CommitsOfOpenedPRs()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
+		return
+	}
+
+	newAnsibleCache, err := a.AnsibleCommitsCache(commits)
+	if err != nil {
+		logrus.WithError(err).Error("can't take diff information from bitbucket")
+		return
+	}
+	var files []string
+	for hash, cache := range newAnsibleCache {
+		if _, ok := a.AnsibleCache[hash]; !ok {
+			file, err := a.Bitbucket.DiffFile(cache.Repository, hash, cache.Path)
+			if err != nil {
+				logrus.WithError(err).Error("can't take information about file from bitbucket")
+				return
+			}
+			files = append(files, cache.Message+"\n```"+file+"```\n")
+		}
+	}
+	a.AnsibleCache = newAnsibleCache
+	for _, message := range files {
+		a.Slack.SendMessage(message, channel)
+	}
+}
+
+// AnsibleCommitsCache returns commits cache with etc/ansible changes
+func (a *App) AnsibleCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCache, error) {
+	newMapAnsibleCommits := make(map[string]CommitsCache)
+	for _, commit := range commits {
+		diffStats, err := a.Bitbucket.CommitsDiffStats(commit.Repository.Name, commit.Hash)
+		if err != nil {
+			return nil, err
+		}
+		for _, diffStat := range diffStats {
+			if strings.Contains(diffStat.New.Path, "etc/ansible") {
+				newMapAnsibleCommits[commit.Hash] = CommitsCache{Repository: commit.Repository.Name, Path: diffStat.New.Path, Message: commit.Message}
+			}
+		}
+	}
+	return newMapAnsibleCommits, nil
 }
