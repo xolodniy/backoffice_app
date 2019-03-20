@@ -5,10 +5,10 @@ maxweekworkinghours: 30.0
 reports:
   dailyworkersworkedtime:
     schedule: "00 00 07 * * *"
-    channel: "#daily-reports"
+    channel: "#work-reports"
   weeklyworkersworkedtime:
     schedule: "00 15 07 * * 1"
-    channel: "#daily-reports"
+    channel: "#work-reports"
   reportclosedsubtasks:
     schedule: "00 00 07 * * *"
     channel: "#back-office-app"
