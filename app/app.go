@@ -464,7 +464,12 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 	textIssuesReport += a.textMessageAboutIssuesStatus("Issues from future sprint", issuesFromFutureSprint)
 	a.Slack.SendMessage(textIssuesReport, channel)
 
-	sprintInterface, ok := issuesWithClosedSubtasks[0].Fields.Unknowns[jira.FieldSprintInfo].([]interface{})
+	issuesBugStoryOfOpenSprint, err := a.Jira.IssuesStoryBugOfOpenSprints(project)
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about issues of open sprint from jira")
+		return err
+	}
+	sprintInterface, ok := issuesBugStoryOfOpenSprint[0].Fields.Unknowns[jira.FieldSprintInfo].([]interface{})
 	if !ok {
 		logrus.WithError(err).Error("can't parse interface from map")
 		return fmt.Errorf("can't parse to interface: %v", issuesWithClosedSubtasks[0].Fields.Unknowns[jira.FieldSprintInfo])
@@ -474,15 +479,15 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 		logrus.WithError(err).Error("can't find sprint of closed subtasks")
 		return err
 	}
-	err = a.CreateIssuesCsvReport(issuesWithClosedSubtasks, fmt.Sprintf("Spring %v Closing", sprintSequence-1), channel, true)
+	err = a.CreateIssuesCsvReport(issuesBugStoryOfOpenSprint, fmt.Sprintf("Sprint %v Closing", sprintSequence-1), channel, true)
 	if err != nil {
-		logrus.WithError(err).Error("can't create report of issues with closed subtasks from jira")
+		logrus.WithError(err).Error("can't create report of issues of open sprint from jira")
 		return err
 	}
 	for _, issue := range issuesFromFutureSprint {
 		issuesForNextSprint = append(issuesForNextSprint, issue)
 	}
-	err = a.CreateIssuesCsvReport(issuesForNextSprint, fmt.Sprintf("Spring %v Open", sprintSequence), channel, false)
+	err = a.CreateIssuesCsvReport(issuesForNextSprint, fmt.Sprintf("Sprint %v Open", sprintSequence), channel, false)
 	if err != nil {
 		logrus.WithError(err).Error("can't create report of issues stands for next sprint from jira")
 		return err
