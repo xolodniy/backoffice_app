@@ -218,7 +218,8 @@ func (j *Jira) IssuesClosedFromOpenSprint(project string) ([]Issue, error) {
 
 // IssuesClosedSubtasksFromOpenSprint retrieves issues with closed subtasks (bugs and stories)
 func (j *Jira) IssuesClosedSubtasksFromOpenSprint(project string) ([]Issue, error) {
-	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	request := fmt.Sprintf(`status NOT IN ("%s") AND project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`,
+		StatusClosed, project)
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, err
@@ -238,7 +239,8 @@ Loop:
 
 // IssuesForNextSprint retrieves issues that stands for next sprint (bugs and stories)
 func (j *Jira) IssuesForNextSprint(project string) ([]Issue, error) {
-	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	request := fmt.Sprintf(`status NOT IN ("%s") AND project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`,
+		StatusClosed, project)
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, err
@@ -263,6 +265,16 @@ func (j *Jira) IssuesFromFutureSprint(project string) ([]Issue, error) {
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, err
+	}
+	return issues, nil
+}
+
+// IssuesOfOpenSprints searches Issues in all sprints which opened now and returning list with issues in this sprints list (bugs and stories)
+func (j *Jira) IssuesStoryBugOfOpenSprints(project string) ([]Issue, error) {
+	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND Sprint IN openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't take jira issues with type in (story, bug) of open sprints: %s", err)
 	}
 	return issues, nil
 }
