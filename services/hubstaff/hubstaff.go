@@ -136,7 +136,6 @@ func (h *Hubstaff) CurrentActivity() ([]LastActivity, error) {
 		}
 		lastActivity := time.Now().Unix() - t.Unix()
 		if lastActivity > CurrentActivityDuration {
-			activities.List[i].ProjectName = "Not at work at the moment"
 			continue
 		}
 
