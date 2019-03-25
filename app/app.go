@@ -425,6 +425,9 @@ func (a *App) stringFromCurrentActivitiesList(activitiesList []hubstaff.LastActi
 			}
 		}
 	}
+	if usersAtWork == "" {
+		usersAtWork = "All users are not at work at the moment"
+	}
 	return usersAtWork
 }
 
