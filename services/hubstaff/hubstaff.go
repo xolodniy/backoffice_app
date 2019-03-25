@@ -247,8 +247,8 @@ func (h *Hubstaff) UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd 
 func (h *Hubstaff) UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) ([]DateReport, error) {
 	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
 	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
-	apiURL := fmt.Sprintf("/v1/custom/by_date/team/?start_date=%s&end_date=%s&organizations=%d&show_notes=%t",
-		dateStart, dateEnd, h.OrgID, true)
+	apiURL := fmt.Sprintf("/v1/custom/by_date/team/?start_date=%s&end_date=%s&organizations=%d&show_notes=%t&show_tasks=%t",
+		dateStart, dateEnd, h.OrgID, true, true)
 
 	orgsRaw, err := h.do(apiURL)
 	if err != nil {
