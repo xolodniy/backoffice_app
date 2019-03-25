@@ -663,6 +663,9 @@ func (a *App) ReportSprintStatus(channel string) {
 		var message string
 		for _, issue := range issues {
 			if issue.Fields.Status.Name != jira.StatusClosed && issue.Fields.Status.Name != jira.StatusInClarification {
+				if developer == "No developer" && issue.Fields.Assignee == nil {
+					continue
+				}
 				if issue.Fields.Parent != nil {
 					message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s> / ", issue.Fields.Parent.Key)
 				}
