@@ -415,15 +415,8 @@ func (a *App) ReportCurrentActivity(channel string) {
 
 // stringFromCurrentActivitiesList convert slice of last activities in string message report
 func (a *App) stringFromCurrentActivitiesList(activitiesList []hubstaff.LastActivity) string {
-	var (
-		usersAtWork    string
-		usersNotAtWork string
-	)
+	var usersAtWork string
 	for _, activity := range activitiesList {
-		if activity.ProjectName == "Not at work at the moment" {
-			usersNotAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
-			continue
-		}
 		if activity.ProjectName != "" {
 			usersAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
 			if activity.TaskJiraKey != "" {
@@ -432,7 +425,7 @@ func (a *App) stringFromCurrentActivitiesList(activitiesList []hubstaff.LastActi
 			}
 		}
 	}
-	return usersAtWork + usersNotAtWork
+	return usersAtWork
 }
 
 // ReportSprintsIsuues create report about Completed issues, Completed but not verified, Issues left for the next, Issues in next sprint
