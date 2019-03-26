@@ -13,13 +13,13 @@ reports:
     schedule: "00 00 07 * * *"
     channel: "#back-office-app"
   reportaftersecondreviewall:
-    schedule: "00 00 06 * * *"
+    schedule: "@yearly"
     channel: "U891K2Z2P"
   reportaftersecondreviewbe:
-    schedule: "00 00 06 * * *"
+    schedule: "@yearly"
     channel: "U97DJLL11"
   reportaftersecondreviewfe:
-    schedule: "00 00 06 * * *"
+    schedule: "@yearly"
     channel: "U88K5BQAD"
   employeesexceededtasks:
     schedule: "00 00 07 * * *"
@@ -60,8 +60,11 @@ bitbucket:
 slack:
   apiurl: https://slack.com/api
   botname: Back Office Bot
+  directorofcompany: U891K2Z2P
   projectmanager: U9FDU5W4D
   artdirector: U89802W2Z
+  teamleaderbe: U97DJLL11
+  teamleaderfe: U88K5BQAD
   intoken: xoxp-281270780213-532563372454-545645521588-6e70abc49c386bb1ad94465d19866188
   outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
   totalVolume: 5.0
