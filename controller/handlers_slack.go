@@ -50,12 +50,12 @@ func (c *Controller) customReport(ctx *gin.Context) {
 	}{}
 	err := ctx.ShouldBindWith(&request, binding.FormPost)
 	if err != nil {
-		ctx.String(http.StatusOK, "Failed! Project key is empty! Please, type /customreport @Name 1970-01-01")
+		ctx.String(http.StatusOK, "Failed! Project key is empty! Please, type /custom_report @Name 1970-01-01")
 		return
 	}
 	textSlice := strings.Split(request.Text, " ")
 	if len(textSlice) != 2 {
-		ctx.String(http.StatusOK, "Failed! Format error! Please, type /customreport @Name 1970-01-01")
+		ctx.String(http.StatusOK, "Failed! Format error! Please, type /custom_report @Name 1970-01-01")
 		return
 	}
 	go func() {

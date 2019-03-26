@@ -32,6 +32,43 @@ func New(config *config.Hubstaff) Hubstaff {
 
 var CurrentActivityDuration int64 = 1000
 
+func (d DateReport) String() string {
+	//separatedDate print
+	message := fmt.Sprintf("\n\n\n*%s*", d.Date)
+	for _, worker := range d.Users {
+		//employee name print
+		message += fmt.Sprintf("\n\n\n*%s (%s total)*\n", worker.Name, worker.TimeWorked)
+		for _, project := range worker.Projects {
+			message += fmt.Sprintf("\n%s - %s", project.TimeWorked, project.Name)
+			for _, task := range project.Tasks {
+				message += fmt.Sprintf("\n - %s - %s (%s)", task.RemoteAlternateId, task.Summary, task.TimeWorked)
+			}
+			var projectNotes []string
+			for _, note := range project.Notes {
+				projectNotes = append(projectNotes, note.Description)
+			}
+			sortedNotes := removeDoubles(projectNotes)
+			for _, note := range sortedNotes {
+				message += fmt.Sprintf("\n ✎ %s", note)
+			}
+		}
+	}
+	return message
+}
+
+// removeDoubles removes the same strings in slice
+func removeDoubles(arr []string) []string {
+	for i := len(arr) - 1; i > 0; i-- {
+		for j := i - 1; j >= 0; j-- {
+			if strings.ToLower(arr[i]) == strings.ToLower(arr[j]) {
+				arr = append(arr[:j], arr[j+1:]...)
+				i = len(arr) - 1
+			}
+		}
+	}
+	return arr
+}
+
 // ObtainAuthToken retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
 func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
@@ -246,8 +283,8 @@ func (h *Hubstaff) UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd 
 func (h *Hubstaff) UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) ([]DateReport, error) {
 	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
 	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
-	apiURL := fmt.Sprintf("/v1/custom/by_date/team/?start_date=%s&end_date=%s&organizations=%d&show_notes=%t",
-		dateStart, dateEnd, h.OrgID, true)
+	apiURL := fmt.Sprintf("/v1/custom/by_date/team/?start_date=%s&end_date=%s&organizations=%d&show_notes=%t&show_tasks=%t",
+		dateStart, dateEnd, h.OrgID, true, true)
 
 	orgsRaw, err := h.do(apiURL)
 	if err != nil {
