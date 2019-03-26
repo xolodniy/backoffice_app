@@ -834,22 +834,45 @@ func (a *App) MessageIssueAfterSecondReview(issue jira.Issue) {
 	}
 	reviewCount, err := a.Jira.RejectedIssueTLReviewCount(issue)
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about issues after second review from jira")
+		logrus.WithError(err).Error("can't take information about review count after tl review from jira")
 		return
 	}
 	if reviewCount < 2 {
 		return
 	}
+	var developerEmail string
+	// Convert to marshal map to find developer displayName of issue developer field
+	developerMap, err := issue.Fields.Unknowns.MarshalMap(jira.FieldDeveloperMap)
+	if err != nil {
+		//can't make customfield_10026 map marshaling because field developer is empty
+		developerEmail = ""
+	}
+	if developerMap != nil {
+		displayEmail, ok := developerMap["emailAddress"].(string)
+		if !ok {
+			logrus.WithField("emailAddress", fmt.Sprintf("%+v", developerMap["emailAddress"])).
+				Error("can't assert to string map emailAddress field")
+		}
+		developerEmail = displayEmail
+	}
 	msgBody := fmt.Sprintf("The issue %s has been rejected after %v reviews\n\n", issue.Key, reviewCount)
-	userId, err := a.Slack.UserIdByEmail(issue.Fields.Assignee.EmailAddress)
+	userId, err := a.Slack.UserIdByEmail(developerEmail)
 	if err != nil {
 		logrus.WithError(err).Error("can't take user id by email from slack")
 	}
+	switch userId {
+	case "":
+		userId = "No developer"
+	default:
+		userId = "<@" + userId + ">"
+	}
 	switch issue.Fields.Type.Name {
 	case jira.TypeBESubTask, jira.TypeBETask:
-		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", "<@"+userId+">", a.Slack.TeamLeaderBE, a.Slack.DirectorOfCompany)
+		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", userId, a.Slack.TeamLeaderBE, a.Slack.DirectorOfCompany)
 	case jira.TypeFESubTask, jira.TypeFETask:
-		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", "<@"+userId+">", a.Slack.TeamLeaderFE, a.Slack.DirectorOfCompany)
+		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", userId, a.Slack.TeamLeaderFE, a.Slack.DirectorOfCompany)
+	default:
+		return
 	}
 	a.Slack.SendMessage(msgBody, "#general")
 }
