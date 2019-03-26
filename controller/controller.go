@@ -52,6 +52,10 @@ func (c *Controller) initRoutes() {
 	c.Gin.GET("/healthcheck", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
 	})
+
+	jira := c.Gin.Group("")
+	jira.POST("/api/v1/jira/webhooks/issue/updated", c.issueUpdated)
+
 	slack := c.Gin.Group("")
 	slack.Use(c.checkSignature)
 	slack.POST("/api/v1/slack/sprintreport", c.sprintReport)
