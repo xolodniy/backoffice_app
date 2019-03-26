@@ -45,8 +45,9 @@ type DateReport struct {
 			Name       string      `json:"name"`
 			TimeWorked WorkingTime `json:"duration"`
 			Tasks      []struct {
-				Summary           string `json:"summary"`
-				RemoteAlternateId string `json:"remote_alternate_id"`
+				Summary           string      `json:"summary"`
+				RemoteAlternateId string      `json:"remote_alternate_id"`
+				TimeWorked        WorkingTime `json:"duration"`
 			} `json:"tasks"`
 			Notes []struct {
 				Description string `json:"description"`
