@@ -111,7 +111,7 @@ func (a *App) ReportUsersWorkedTimeByDate(prefix, channel string, dateOfWorkdays
 			for _, project := range worker.Projects {
 				message += fmt.Sprintf("\n%s - %s", project.TimeWorked, project.Name)
 				for _, task := range project.Tasks {
-					message += fmt.Sprintf("\n - %s - %s", task.RemoteAlternateId, task.Summary)
+					message += fmt.Sprintf("\n - %s - %s (%s)", task.RemoteAlternateId, task.Summary, task.TimeWorked)
 				}
 				var projectNotes []string
 				for _, note := range project.Notes {
@@ -119,7 +119,7 @@ func (a *App) ReportUsersWorkedTimeByDate(prefix, channel string, dateOfWorkdays
 				}
 				sortedNotes := removeDoubles(projectNotes)
 				for _, note := range sortedNotes {
-					message += fmt.Sprintf("\n - %s", note)
+					message += fmt.Sprintf("\n ✎ %s", note)
 				}
 			}
 		}
@@ -733,8 +733,16 @@ func (a *App) PersonActivityByDate(userName, date, channel string) error {
 		report += fmt.Sprintf("%s\n\n*%s (%s total)*\n", date, worker.Name, worker.TimeWorked)
 		for _, project := range worker.Projects {
 			report += fmt.Sprintf("\n%s - %s", project.TimeWorked, project.Name)
+			for _, task := range project.Tasks {
+				report += fmt.Sprintf("\n - %s - %s (%s)", task.RemoteAlternateId, task.Summary, task.TimeWorked)
+			}
+			var projectNotes []string
 			for _, note := range project.Notes {
-				report += fmt.Sprintf("\n - %s", note.Description)
+				projectNotes = append(projectNotes, note.Description)
+			}
+			sortedNotes := removeDoubles(projectNotes)
+			for _, note := range sortedNotes {
+				report += fmt.Sprintf("\n ✎ %s", note)
 			}
 		}
 	}
