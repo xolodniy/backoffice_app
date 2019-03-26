@@ -826,3 +826,30 @@ func (a *App) AnsibleCommitsCache(commits []bitbucket.Commit) (map[string]Commit
 	}
 	return newMapAnsibleCommits, nil
 }
+
+// MessageIssueAfterSecondReview send message about issue after second review round
+func (a *App) MessageIssueAfterSecondReview(issue jira.Issue) {
+	if issue.Fields.Assignee == nil {
+		return
+	}
+	reviewCount, err := a.Jira.RejectedIssueTLReviewCount(issue)
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about issues after second review from jira")
+		return
+	}
+	if reviewCount < 2 {
+		return
+	}
+	msgBody := fmt.Sprintf("The issue %s has been rejected after %v reviews\n\n", issue.Key, reviewCount)
+	userId, err := a.Slack.UserIdByEmail(issue.Fields.Assignee.EmailAddress)
+	if err != nil {
+		logrus.WithError(err).Error("can't take user id by email from slack")
+	}
+	switch issue.Fields.Type.Name {
+	case jira.TypeBESubTask, jira.TypeBETask:
+		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", "<@"+userId+">", a.Slack.TeamLeaderBE, a.Slack.DirectorOfCompany)
+	case jira.TypeFESubTask, jira.TypeFETask:
+		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", "<@"+userId+">", a.Slack.TeamLeaderFE, a.Slack.DirectorOfCompany)
+	}
+	a.Slack.SendMessage(msgBody, "#general")
+}
