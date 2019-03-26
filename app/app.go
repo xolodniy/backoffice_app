@@ -827,8 +827,8 @@ func (a *App) AnsibleCommitsCache(commits []bitbucket.Commit) (map[string]Commit
 	return newMapAnsibleCommits, nil
 }
 
-// MessageIssueAfterSecondReview send message about issue after second review round
-func (a *App) MessageIssueAfterSecondReview(issue jira.Issue) {
+// MessageIssueAfterSecondReview send message about issue after second tl review round
+func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	if issue.Fields.Assignee == nil {
 		return
 	}
@@ -841,7 +841,7 @@ func (a *App) MessageIssueAfterSecondReview(issue jira.Issue) {
 		return
 	}
 	var developerEmail string
-	// Convert to marshal map to find developer displayName of issue developer field
+	// Convert to marshal map to find developer emailAddress of issue developer field
 	developerMap, err := issue.Fields.Unknowns.MarshalMap(jira.FieldDeveloperMap)
 	if err != nil {
 		//can't make customfield_10026 map marshaling because field developer is empty
@@ -856,6 +856,7 @@ func (a *App) MessageIssueAfterSecondReview(issue jira.Issue) {
 		developerEmail = displayEmail
 	}
 	msgBody := fmt.Sprintf("The issue %s has been rejected after %v reviews\n\n", issue.Key, reviewCount)
+
 	userId, err := a.Slack.UserIdByEmail(developerEmail)
 	if err != nil {
 		logrus.WithError(err).Error("can't take user id by email from slack")
@@ -866,6 +867,7 @@ func (a *App) MessageIssueAfterSecondReview(issue jira.Issue) {
 	default:
 		userId = "<@" + userId + ">"
 	}
+
 	switch issue.Fields.Type.Name {
 	case jira.TypeBESubTask, jira.TypeBETask:
 		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", userId, a.Slack.TeamLeaderBE, a.Slack.DirectorOfCompany)

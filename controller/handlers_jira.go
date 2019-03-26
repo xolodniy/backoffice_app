@@ -17,6 +17,6 @@ func (c *Controller) issueUpdated(ctx *gin.Context) {
 		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
-	go c.App.MessageIssueAfterSecondReview(webHookBody.Issue)
+	go c.App.MessageIssueAfterSecondTLReview(webHookBody.Issue)
 	ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
 }
