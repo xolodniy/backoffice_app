@@ -103,38 +103,9 @@ func (a *App) ReportUsersWorkedTimeByDate(prefix, channel string, dateOfWorkdays
 		if separatedDate.TimeWorked == 0 {
 			continue
 		}
-		//separatedDate print
-		message += fmt.Sprintf("\n\n\n*%s*", separatedDate.Date)
-		for _, worker := range separatedDate.Users {
-			//employee name print
-			message += fmt.Sprintf("\n\n\n*%s (%s total)*\n", worker.Name, worker.TimeWorked)
-			for _, project := range worker.Projects {
-				message += fmt.Sprintf("\n%s - %s", project.TimeWorked, project.Name)
-				var projectNotes []string
-				for _, note := range project.Notes {
-					projectNotes = append(projectNotes, note.Description)
-				}
-				sortedNotes := removeDoubles(projectNotes)
-				for _, note := range sortedNotes {
-					message += fmt.Sprintf("\n - %s", note)
-				}
-			}
-		}
+		message += separatedDate.String()
 	}
 	a.Slack.SendMessage(message, channel)
-}
-
-// removeDoubles removes the same strings in slice
-func removeDoubles(arr []string) []string {
-	for i := len(arr) - 1; i > 0; i-- {
-		for j := i - 1; j >= 0; j-- {
-			if strings.ToLower(arr[i]) == strings.ToLower(arr[j]) {
-				arr = append(arr[:j], arr[j+1:]...)
-				i = len(arr) - 1
-			}
-		}
-	}
-	return arr
 }
 
 // ReportIsuuesWithClosedSubtasks create report about issues with closed subtasks
@@ -415,15 +386,8 @@ func (a *App) ReportCurrentActivity(channel string) {
 
 // stringFromCurrentActivitiesList convert slice of last activities in string message report
 func (a *App) stringFromCurrentActivitiesList(activitiesList []hubstaff.LastActivity) string {
-	var (
-		usersAtWork    string
-		usersNotAtWork string
-	)
+	var usersAtWork string
 	for _, activity := range activitiesList {
-		if activity.ProjectName == "Not at work at the moment" {
-			usersNotAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
-			continue
-		}
 		if activity.ProjectName != "" {
 			usersAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
 			if activity.TaskJiraKey != "" {
@@ -432,7 +396,10 @@ func (a *App) stringFromCurrentActivitiesList(activitiesList []hubstaff.LastActi
 			}
 		}
 	}
-	return usersAtWork + usersNotAtWork
+	if usersAtWork == "" {
+		usersAtWork = "All users are not at work at the moment"
+	}
+	return usersAtWork
 }
 
 // ReportSprintsIsuues create report about Completed issues, Completed but not verified, Issues left for the next, Issues in next sprint
@@ -728,16 +695,7 @@ func (a *App) PersonActivityByDate(userName, date, channel string) error {
 	if err != nil {
 		return err
 	}
-	var report string
-	for _, worker := range userReport.Users {
-		report += fmt.Sprintf("%s\n\n*%s (%s total)*\n", date, worker.Name, worker.TimeWorked)
-		for _, project := range worker.Projects {
-			report += fmt.Sprintf("\n%s - %s", project.TimeWorked, project.Name)
-			for _, note := range project.Notes {
-				report += fmt.Sprintf("\n - %s", note.Description)
-			}
-		}
-	}
+	report := userReport.String()
 	if report == "" {
 		report += fmt.Sprintf("%s\n\n*%s*\n\nHas not worked", date, "<@"+userInfo.Id+">")
 	}
