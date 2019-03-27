@@ -16,19 +16,23 @@ import (
 
 // Slack is main Slack client app implementation
 type Slack struct {
-	InToken           string
-	OutToken          string
-	BotName           string
+	InToken     string
+	OutToken    string
+	BotName     string
+	APIURL      string
+	TotalVolume float64
+	RestVolume  float64
+	Secret      string
+	IgnoreList  []string
+	Employees   Employees
+}
+
+type Employees struct {
 	DirectorOfCompany string
 	ProjectManager    string
 	ArtDirector       string
 	TeamLeaderBE      string
 	TeamLeaderFE      string
-	APIURL            string
-	TotalVolume       float64
-	RestVolume        float64
-	Secret            string
-	IgnoreList        []string
 }
 
 // FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
@@ -77,19 +81,21 @@ type Member struct {
 // New creates new slack
 func New(config *config.Slack) Slack {
 	return Slack{
-		InToken:           config.InToken,
-		OutToken:          config.OutToken,
-		BotName:           config.BotName,
-		DirectorOfCompany: "<@" + config.DirectorOfCompany + ">",
-		ProjectManager:    "<@" + config.ProjectManager + ">",
-		ArtDirector:       "<@" + config.ArtDirector + ">",
-		TeamLeaderBE:      "<@" + config.TeamLeaderBE + ">",
-		TeamLeaderFE:      "<@" + config.TeamLeaderFE + ">",
-		APIURL:            config.APIURL,
-		TotalVolume:       config.TotalVolume,
-		Secret:            config.Secret,
-		RestVolume:        config.RestVolume,
-		IgnoreList:        config.IgnoreList,
+		InToken:     config.InToken,
+		OutToken:    config.OutToken,
+		BotName:     config.BotName,
+		APIURL:      config.APIURL,
+		TotalVolume: config.TotalVolume,
+		Secret:      config.Secret,
+		RestVolume:  config.RestVolume,
+		IgnoreList:  config.IgnoreList,
+		Employees: Employees{
+			DirectorOfCompany: "<@" + config.Employees.DirectorOfCompany + ">",
+			ProjectManager:    "<@" + config.Employees.ProjectManager + ">",
+			ArtDirector:       "<@" + config.Employees.ArtDirector + ">",
+			TeamLeaderBE:      "<@" + config.Employees.TeamLeaderBE + ">",
+			TeamLeaderFE:      "<@" + config.Employees.TeamLeaderFE + ">",
+		},
 	}
 }
 
