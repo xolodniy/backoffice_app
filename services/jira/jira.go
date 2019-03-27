@@ -53,12 +53,34 @@ var (
 	TypeBETask            = "BE Task"
 	TypeFESubTask         = "FE Sub-Task"
 	TypeFETask            = "FE Task"
+	KeyDeveloperName      = "displayName"
+	KeyDeveloperEmail     = "emailAddress"
 )
 
 func (i Issue) String() string {
 	message := fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 		i.Key, i.Fields.Summary, i.Fields.Status.Name)
 	return message
+}
+
+// DeveloperMap retrieves information about developer variable by key
+func (i Issue) DeveloperMap(key string) string {
+	var developerKeyInfo string
+	// Convert to marshal map to find developer emailAddress of issue developer field
+	developerMap, err := i.Fields.Unknowns.MarshalMap(FieldDeveloperMap)
+	if err != nil {
+		//can't make customfield_10026 map marshaling because field developer is empty
+		return ""
+	}
+	if developerMap != nil {
+		displayKeyInfo, ok := developerMap[key].(string)
+		if !ok {
+			logrus.WithField(key, fmt.Sprintf("%+v", developerMap[key])).
+				Error("can't assert to string map emailAddress field")
+		}
+		developerKeyInfo = displayKeyInfo
+	}
+	return developerKeyInfo
 }
 
 // issues searches issues in all sprints which opened now and returning list with issues in this sprints list
@@ -378,6 +400,7 @@ func (j *Jira) getIssueChangelog(issue Issue) (Issue, error) {
 		Values     []jira.ChangelogHistory `json:"values"`
 	}{}
 	index := 0
+	issue.Changelog = &jira.Changelog{}
 	for {
 		url := fmt.Sprintf("/rest/api/2/issue/%s/changelog?maxResults=100&startAt=%v", issue.Key, index)
 		req, err := j.NewRequest("GET", url, nil)
@@ -388,7 +411,9 @@ func (j *Jira) getIssueChangelog(issue Issue) (Issue, error) {
 		if err != nil {
 			return Issue{}, fmt.Errorf("can't take jira changelog of issue: %s", err)
 		}
-		issue.Changelog = &jira.Changelog{Histories: changeLog.Values}
+		for _, history := range changeLog.Values {
+			issue.Changelog.Histories = append(issue.Changelog.Histories, history)
+		}
 		if changeLog.IsLast {
 			break
 		}
