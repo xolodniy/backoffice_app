@@ -53,8 +53,8 @@ var (
 	TypeBETask            = "BE Task"
 	TypeFESubTask         = "FE Sub-Task"
 	TypeFETask            = "FE Task"
-	KeyDeveloperName      = "displayName"
-	KeyDeveloperEmail     = "emailAddress"
+	TagDeveloperName      = "displayName"
+	TagDeveloperEmail     = "emailAddress"
 )
 
 func (i Issue) String() string {

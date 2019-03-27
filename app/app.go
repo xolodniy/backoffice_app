@@ -193,7 +193,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 	msgBody := "Employees have exceeded tasks:\n"
 	var developers = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		developer := issue.DeveloperMap(jira.KeyDeveloperName)
+		developer := issue.DeveloperMap(jira.TagDeveloperName)
 		if developer == "" {
 			developer = "No developer"
 		}
@@ -591,7 +591,7 @@ func (a *App) ReportSprintStatus(channel string) {
 	}
 	var developers = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		developer := issue.DeveloperMap(jira.KeyDeveloperName)
+		developer := issue.DeveloperMap(jira.TagDeveloperName)
 		if developer == "" {
 			developer = "No developer"
 		}
@@ -776,7 +776,7 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	if reviewCount < 2 {
 		return
 	}
-	developerEmail := issue.DeveloperMap(jira.KeyDeveloperEmail)
+	developerEmail := issue.DeveloperMap(jira.TagDeveloperEmail)
 	var userId string
 	switch developerEmail {
 	case "":
