@@ -214,7 +214,13 @@ You may use one of several pre-defined schedules in place of a cron expression.
         channel: "U8A004WK0"
     
 #### Config.yml variables for slack users id
-    projectmanager: U9FDU5W4D   - this is variable of user id to mention him in messages, or send mmessages to him.
+
+      employees:                        - this is employees variables of users ids to mention them in messages, or send mmessages to them.
+        directorofcompany: U891K2Z2P    - this is variable of director of company
+        projectmanager: U9FDU5W4D       - this is variable of project manager
+        artdirector: U89802W2Z          - this is variable of art director
+        teamleaderbe: U97DJLL11         - this this is variable of team leader of backend
+        teamleaderfe: U88K5BQAD         - this is variable of team leader of frontend
     
 User id you can find in slack: 
 1. Click on the users name and choose "Show Profile".
