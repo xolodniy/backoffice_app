@@ -67,7 +67,8 @@ type Member struct {
 	Id      string `json:"id"`
 	Name    string `json:"name"`
 	Profile struct {
-		Email string `json:"email"`
+		RealName string `json:"real_name"`
+		Email    string `json:"email"`
 	} `json:"profile"`
 }
 
@@ -88,12 +89,13 @@ func New(config *config.Slack) Slack {
 }
 
 // SendMessage is main message sending method
-func (s *Slack) SendMessage(text, channel string) {
+func (s *Slack) SendMessage(text, channel, ts string) {
 	var message = &types.PostChannelMessage{
-		Token:   s.OutToken,
-		Channel: channel,
-		AsUser:  true,
-		Text:    text,
+		Token:    s.OutToken,
+		Channel:  channel,
+		AsUser:   true,
+		Text:     text,
+		ThreadTs: ts,
 	}
 
 	jsonMessage, err := json.Marshal(message)
@@ -263,39 +265,52 @@ func (s *Slack) UploadFile(channel, contentType string, file *bytes.Buffer) erro
 	return nil
 }
 
-// UserIdByEmail retrieves user id by email
-func (s *Slack) UserIdByEmail(email string) (string, error) {
+// usersSlice retrieves slice of all slack members
+func (s *Slack) usersSlice() ([]Member, error) {
+	var allUsers []Member
 	for i := 0; ; i++ {
 		urlStr := fmt.Sprintf("%s/users.list?token=%s&page=%v", s.APIURL, s.InToken, i)
 
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
-			return "", err
+			return []Member{}, err
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		usersResp := UsersResponse{}
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			return "", err
+			return []Member{}, err
 		}
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return "", err
+			return []Member{}, err
 		}
 		if err := json.Unmarshal(body, &usersResp); err != nil {
-			return "", err
+			return []Member{}, err
 		}
 		if !usersResp.Ok {
-			return "", fmt.Errorf(usersResp.Error)
+			return []Member{}, fmt.Errorf(usersResp.Error)
 		}
 		for _, member := range usersResp.Members {
-			if member.Profile.Email == email {
-				return member.Id, nil
-			}
+			allUsers = append(allUsers, member)
 		}
 		if usersResp.Paging.Pages <= i {
 			break
+		}
+	}
+	return allUsers, nil
+}
+
+// UserIdByEmail retrieves user id by email
+func (s *Slack) UserIdByEmail(email string) (string, error) {
+	allMembers, err := s.usersSlice()
+	if err != nil {
+		return "", err
+	}
+	for _, member := range allMembers {
+		if member.Profile.Email == email {
+			return member.Id, nil
 		}
 	}
 	return "", fmt.Errorf("User was not found ")
@@ -303,38 +318,28 @@ func (s *Slack) UserIdByEmail(email string) (string, error) {
 
 // UserInfoByName retrieve user email by his name
 func (s *Slack) UserInfoByName(username string) (Member, error) {
-	for i := 0; ; i++ {
-		urlStr := fmt.Sprintf("%s/users.list?token=%s&page=%v", s.APIURL, s.InToken, i)
-
-		req, err := http.NewRequest("GET", urlStr, nil)
-		if err != nil {
-			return Member{}, err
-		}
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		usersResp := UsersResponse{}
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return Member{}, err
-		}
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return Member{}, err
-		}
-		if err := json.Unmarshal(body, &usersResp); err != nil {
-			return Member{}, err
-		}
-		if !usersResp.Ok {
-			return Member{}, fmt.Errorf(usersResp.Error)
-		}
-		for _, member := range usersResp.Members {
-			if member.Name == username {
-				return member, nil
-			}
-		}
-		if usersResp.Paging.Pages == i {
-			break
+	allMembers, err := s.usersSlice()
+	if err != nil {
+		return Member{}, err
+	}
+	for _, member := range allMembers {
+		if member.Name == username {
+			return member, nil
 		}
 	}
 	return Member{}, fmt.Errorf("User was not found in Slask ")
+}
+
+// UserNameById retrieve user name by his id
+func (s *Slack) UserNameById(userId string) (string, error) {
+	allMembers, err := s.usersSlice()
+	if err != nil {
+		return "", err
+	}
+	for _, member := range allMembers {
+		if member.Id == userId {
+			return member.Profile.RealName, nil
+		}
+	}
+	return "", fmt.Errorf("User was not found in Slask ")
 }
