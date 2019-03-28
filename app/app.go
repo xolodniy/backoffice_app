@@ -42,6 +42,7 @@ type App struct {
 	Config       config.Main
 	CommitsCache map[string]CommitsCache
 	AnsibleCache map[string]CommitsCache
+	AfkTimer     map[string]time.Duration
 }
 
 // New is main App constructor
@@ -54,6 +55,7 @@ func New(conf *config.Main) *App {
 		Config:       *conf,
 		CommitsCache: make(map[string]CommitsCache),
 		AnsibleCache: make(map[string]CommitsCache),
+		AfkTimer:     make(map[string]time.Duration),
 	}
 }
 
@@ -88,7 +90,7 @@ func (a *App) ReportUsersWorkedTimeByMember(prefix, channel string, dateOfWorkda
 	for _, user := range usersReports {
 		message += fmt.Sprintf("\n%s %s", user.TimeWorked, user.Name)
 	}
-	a.Slack.SendMessage(message, channel)
+	a.Slack.SendMessage(message, channel, "")
 }
 
 // ReportUsersWorkedTimeByDate gather detailed workers work time made through period between dates and send it to Slack channel
@@ -105,7 +107,7 @@ func (a *App) ReportUsersWorkedTimeByDate(prefix, channel string, dateOfWorkdays
 		}
 		message += separatedDate.String()
 	}
-	a.Slack.SendMessage(message, channel)
+	a.Slack.SendMessage(message, channel, "")
 }
 
 // ReportIsuuesWithClosedSubtasks create report about issues with closed subtasks
@@ -116,7 +118,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues with all closed subtasks", channel)
+		a.Slack.SendMessage("There are no issues with all closed subtasks", channel, "")
 		return
 	}
 	msgBody := "\n*Issues have all closed subtasks:*\n\n"
@@ -136,7 +138,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 		}
 	}
 	msgBody = msgBody + "cc " + a.Slack.ProjectManager + "\n\n" + designMessage + "cc " + a.Slack.ArtDirector
-	a.Slack.SendMessage(msgBody, channel)
+	a.Slack.SendMessage(msgBody, channel, "")
 }
 
 // ReportEmployeesWithExceededEstimateTime create report about employees with ETA overhead
@@ -152,7 +154,7 @@ func (a *App) ReportEmployeesWithExceededEstimateTime(channel string) {
 		jiraRemainingEtaMap[issue.Fields.Assignee.EmailAddress] += issue.Fields.TimeTracking.RemainingEstimateSeconds
 	}
 	if len(jiraRemainingEtaMap) == 0 {
-		a.Slack.SendMessage("There are no issues with remaining ETA.", channel)
+		a.Slack.SendMessage("There are no issues with remaining ETA.", channel, "")
 		return
 	}
 	usersReports, err := a.Hubstaff.UsersWorkTimeByMember(now.BeginningOfWeek(), now.EndOfWeek())
@@ -175,7 +177,7 @@ func (a *App) ReportEmployeesWithExceededEstimateTime(channel string) {
 	if message == "" {
 		message = "No one developer has exceeded estimate time"
 	}
-	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message), channel)
+	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message), channel, "")
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
@@ -186,7 +188,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no employees with exceeded subtasks", channel)
+		a.Slack.SendMessage("There are no employees with exceeded subtasks", channel, "")
 		return
 	}
 
@@ -231,7 +233,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 		}
 	}
 	msgBody += messageNoDeveloper
-	a.Slack.SendMessage(msgBody, channel)
+	a.Slack.SendMessage(msgBody, channel, "")
 }
 
 // ReportIssuesAfterSecondReview create report about issues after second review round
@@ -242,14 +244,14 @@ func (a *App) ReportIssuesAfterSecondReview(channel string, issueTypes ...string
 		return
 	}
 	if len(issues) == 0 {
-		a.Slack.SendMessage("*Issues after second review round:*\n\nThere are no issues after second review round", channel)
+		a.Slack.SendMessage("*Issues after second review round:*\n\nThere are no issues after second review round", channel, "")
 		return
 	}
 	msgBody := "*Issues after second review round:*\n\n"
 	for _, issue := range issues {
 		msgBody += issue.String()
 	}
-	a.Slack.SendMessage(msgBody, channel)
+	a.Slack.SendMessage(msgBody, channel, "")
 }
 
 // ReportSlackEndingFreeSpace create report about employees that have exceeded tasks
@@ -263,7 +265,7 @@ func (a *App) ReportSlackEndingFreeSpace(channel string) {
 		return
 	}
 	msgBody := fmt.Sprintf("Free space on slack end.\n")
-	a.Slack.SendMessage(msgBody, channel)
+	a.Slack.SendMessage(msgBody, channel, "")
 }
 
 // ReportGitMigrations create report about new git migrations
@@ -275,7 +277,7 @@ func (a *App) ReportGitMigrations(channel string) {
 	}
 	for _, message := range messages {
 		if message != "" {
-			a.Slack.SendMessage(message, channel)
+			a.Slack.SendMessage(message, channel, "")
 		}
 	}
 }
@@ -381,7 +383,7 @@ func (a *App) ReportCurrentActivity(channel string) {
 		return
 	}
 	message := a.stringFromCurrentActivitiesList(activitiesList)
-	a.Slack.SendMessage(message, channel)
+	a.Slack.SendMessage(message, channel, "")
 }
 
 // stringFromCurrentActivitiesList convert slice of last activities in string message report
@@ -429,7 +431,7 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 	textIssuesReport += a.textMessageAboutIssuesStatus("Completed, but not verified", issuesWithClosedSubtasks)
 	textIssuesReport += a.textMessageAboutIssuesStatus("Issues left for the next sprint", issuesForNextSprint)
 	textIssuesReport += a.textMessageAboutIssuesStatus("Issues from future sprint", issuesFromFutureSprint)
-	a.Slack.SendMessage(textIssuesReport, channel)
+	a.Slack.SendMessage(textIssuesReport, channel, "")
 
 	issuesBugStoryOfOpenSprint, err := a.Jira.IssuesStoryBugOfOpenSprints(project)
 	if err != nil {
@@ -479,7 +481,7 @@ func (a *App) textMessageAboutIssuesStatus(messagePrefix string, issues []jira.I
 // CreateIssuesCsvReport create csv file with report about issues
 func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel string, withAdditionalInfo bool) error {
 	if len(issues) == 0 {
-		a.Slack.SendMessage("There are no issues for "+filename+" file", channel)
+		a.Slack.SendMessage("There are no issues for "+filename+" file", channel, "")
 		return nil
 	}
 	file, err := os.Create(filename + ".csv")
@@ -597,7 +599,7 @@ func (a *App) ReportSprintStatus(channel string) {
 	}
 	msgBody := "*Sprint status*\n"
 	if len(issues) == 0 {
-		a.Slack.SendMessage(msgBody+"Open issues was not found. All issues of open sprint was closed.", channel)
+		a.Slack.SendMessage(msgBody+"Open issues was not found. All issues of open sprint was closed.", channel, "")
 		return
 	}
 	var developers = make(map[string][]jira.Issue)
@@ -649,7 +651,7 @@ func (a *App) ReportSprintStatus(channel string) {
 		}
 	}
 	msgBody += messageNoDeveloper + "\n" + messageAllTaskClosed
-	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.ProjectManager, channel)
+	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.ProjectManager, channel, "")
 }
 
 // ReportClarificationIssues create report about issues with clarification status
@@ -674,7 +676,7 @@ func (a *App) ReportClarificationIssues() {
 				logrus.WithError(err).Error("can't take user id by email from slack")
 				continue
 			}
-			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+message, userId)
+			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+message, userId, "")
 		}
 	}
 
@@ -699,7 +701,7 @@ func (a *App) PersonActivityByDate(userName, date, channel string) error {
 	if report == "" {
 		report += fmt.Sprintf("%s\n\n*%s*\n\nHas not worked", date, "<@"+userInfo.Id+">")
 	}
-	a.Slack.SendMessage(report, channel)
+	a.Slack.SendMessage(report, channel, "")
 	return nil
 }
 
@@ -733,7 +735,7 @@ func (a *App) Report24HoursReviewIssues() {
 				logrus.WithError(err).Error("can't take user id by email from slack")
 				continue
 			}
-			a.Slack.SendMessage("Issues on review more than 24 hours assigned to you:\n\n"+message, userId)
+			a.Slack.SendMessage("Issues on review more than 24 hours assigned to you:\n\n"+message, userId, "")
 		}
 	}
 }
@@ -764,7 +766,7 @@ func (a *App) ReportGitAnsibleChanges(channel string) {
 	}
 	a.AnsibleCache = newAnsibleCache
 	for _, message := range files {
-		a.Slack.SendMessage(message, channel)
+		a.Slack.SendMessage(message, channel, "")
 	}
 }
 
@@ -783,4 +785,31 @@ func (a *App) AnsibleCommitsCache(commits []bitbucket.Commit) (map[string]Commit
 		}
 	}
 	return newMapAnsibleCommits, nil
+}
+
+// StartAfkTimer starts timer while user is afk
+func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
+	a.AfkTimer[userId] = userDuration
+	ticker := time.NewTicker(time.Second)
+	go func() {
+		for range ticker.C {
+			a.AfkTimer[userId] = a.AfkTimer[userId] - time.Second
+		}
+	}()
+	time.Sleep(userDuration)
+	ticker.Stop()
+}
+
+// CheckUserAfk check user on AFK status
+func (a *App) CheckUserAfk(message, ts, channel string) {
+	for id, duration := range a.AfkTimer {
+		if strings.Contains(message, id) && duration > 0 {
+			userName, err := a.Slack.UserNameById(id)
+			if err != nil {
+				logrus.WithError(err).Error("can't take information about user name from slask with id: %s", id)
+				userName = "This user"
+			}
+			a.Slack.SendMessage(fmt.Sprintf("%s will return in %.0f minutes", userName, duration.Minutes()), channel, ts)
+		}
+	}
 }
