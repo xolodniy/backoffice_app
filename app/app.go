@@ -806,7 +806,7 @@ func (a *App) CheckUserAfk(message, ts, channel string) {
 		if strings.Contains(message, id) && duration > 0 {
 			userName, err := a.Slack.UserNameById(id)
 			if err != nil {
-				logrus.WithError(err).Error("can't take information about user name from slask with id: %s", id)
+				logrus.WithError(err).Error("can't take information about user name from slask with id: %v", id)
 				userName = "This user"
 			}
 			a.Slack.SendMessage(fmt.Sprintf("%s will return in %.0f minutes", userName, duration.Minutes()), channel, ts)
