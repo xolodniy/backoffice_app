@@ -95,7 +95,7 @@ func (s *Slack) SendMessage(text, channel, ts string) {
 		Channel:  channel,
 		AsUser:   true,
 		Text:     text,
-		ThreadTs: ts,
+		ThreadTs: ts, // parameter that sends message as answer on other message
 	}
 
 	jsonMessage, err := json.Marshal(message)
