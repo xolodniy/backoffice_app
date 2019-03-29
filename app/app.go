@@ -135,7 +135,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 			msgBody += issue.String()
 		}
 	}
-	msgBody = msgBody + "cc " + a.Slack.ProjectManager + "\n\n" + designMessage + "cc " + a.Slack.ArtDirector
+	msgBody = msgBody + "cc " + a.Slack.Employees.ProjectManager + "\n\n" + designMessage + "cc " + a.Slack.Employees.ArtDirector
 	a.Slack.SendMessage(msgBody, channel)
 }
 
@@ -649,7 +649,7 @@ func (a *App) ReportSprintStatus(channel string) {
 		}
 	}
 	msgBody += messageNoDeveloper + "\n" + messageAllTaskClosed
-	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.ProjectManager, channel)
+	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.Employees.ProjectManager, channel)
 }
 
 // ReportClarificationIssues create report about issues with clarification status
@@ -783,4 +783,66 @@ func (a *App) AnsibleCommitsCache(commits []bitbucket.Commit) (map[string]Commit
 		}
 	}
 	return newMapAnsibleCommits, nil
+}
+
+// MakeWorkersWorkedReportYesterday preparing a last day message of less worked users and send it to Slack
+func (a *App) MakeWorkersLessWorkedReportYesterday(channel string) {
+	a.ReportUsersLessWorked(
+		now.BeginningOfDay().AddDate(0, 0, -1),
+		now.EndOfDay().AddDate(0, 0, -1), channel)
+}
+
+// ReportLessWorked send message to channel when users worked less then 6 hours
+func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, channel string) {
+	usersReports, err := a.Hubstaff.UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd)
+	if err != nil {
+		logrus.WithError(err).Error("can't get workers worked time by member from Hubstaff")
+		return
+	}
+	var teams = make(map[string]map[string]string)
+	for _, user := range usersReports {
+		var teamLeader string
+	Loop:
+		for _, project := range user.Dates[0].Projects {
+			for _, task := range project.Tasks {
+				issueType := a.Jira.IssueTypeByKey(task.RemoteId)
+				switch issueType {
+				case jira.TypeFETask, jira.TypeFESubTask:
+					teamLeader = a.Slack.Employees.TeamLeaderFE
+					break Loop
+				case jira.TypeBETask, jira.TypeBESubTask:
+					teamLeader = a.Slack.Employees.TeamLeaderBE
+					break Loop
+				}
+			}
+		}
+		if teamLeader == "" {
+			continue
+		}
+		if int(user.TimeWorked) < 3600*6 {
+			if _, ok := teams[teamLeader]; !ok {
+				teams[teamLeader] = make(map[string]string)
+			}
+			teams[teamLeader][user.Name] = user.Email
+		}
+	}
+
+	for _, developers := range teams {
+		for _, dev := range a.Slack.IgnoreList {
+			delete(developers, dev)
+		}
+	}
+	for teamLeader, developers := range teams {
+		var users string
+		for name, email := range developers {
+			userId, err := a.Slack.UserIdByEmail(email)
+			if err != nil {
+				users += fmt.Sprintf("%s ", name)
+				continue
+			}
+			users += fmt.Sprintf("<@%s> ", userId)
+		}
+		a.Slack.SendMessage(fmt.Sprintf("%sworked less than 6 hours\nfyi %s %s",
+			users, teamLeader, a.Slack.Employees.ProjectManager), channel)
+	}
 }
