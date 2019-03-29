@@ -11,7 +11,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -800,50 +799,43 @@ func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.
 		logrus.WithError(err).Error("can't get workers worked time by member from Hubstaff")
 		return
 	}
-	var teams = make(map[string]map[string]string)
+	var users = make(map[string]string)
 	for _, user := range usersReports {
-		var teamLeader string
-	Loop:
-		for _, project := range user.Dates[0].Projects {
-			for _, task := range project.Tasks {
-				issueType := a.Jira.IssueTypeByKey(task.RemoteId)
-				switch issueType {
-				case jira.TypeFETask, jira.TypeFESubTask:
-					teamLeader = a.Slack.Employees.TeamLeaderFE
-					break Loop
-				case jira.TypeBETask, jira.TypeBESubTask:
-					teamLeader = a.Slack.Employees.TeamLeaderBE
-					break Loop
-				}
-			}
-		}
 		if int(user.TimeWorked) < 3600*6 {
-			if _, ok := teams[teamLeader]; !ok {
-				teams[teamLeader] = make(map[string]string)
-			}
-			teams[teamLeader][user.Name] = user.Email
+			users[user.Name] = user.Email
 		}
 	}
+	var (
+		beTeamList string
+		feTeamList string
+	)
+	for name, email := range users {
+		userId, err := a.Slack.UserIdByEmail(email)
+		if err != nil {
+			logrus.WithError(err).Error("can't get user id by email from slack")
+			userId = name
+		}
 
-	for _, developers := range teams {
-		for _, dev := range a.Slack.IgnoreList {
-			delete(developers, dev)
+		for _, developerName := range a.Slack.Employees.BeTeam {
+			if developerName == name {
+				beTeamList += fmt.Sprintf("<@%s> ", userId)
+				break
+			}
+		}
+
+		for _, developerName := range a.Slack.Employees.FeTeam {
+			if developerName == name {
+				feTeamList += fmt.Sprintf("<@%s> ", userId)
+				break
+			}
 		}
 	}
-	for teamLeader, developers := range teams {
-		var users string
-		if reflect.DeepEqual(developers, map[string]string{}) {
-			continue
-		}
-		for name, email := range developers {
-			userId, err := a.Slack.UserIdByEmail(email)
-			if err != nil {
-				users += fmt.Sprintf("%s ", name)
-				continue
-			}
-			users += fmt.Sprintf("<@%s> ", userId)
-		}
+	if beTeamList != "" {
 		a.Slack.SendMessage(fmt.Sprintf("%sworked less than 6 hours\nfyi %s %s",
-			users, teamLeader, a.Slack.Employees.ProjectManager), channel)
+			beTeamList, a.Slack.Employees.TeamLeaderBE, a.Slack.Employees.ProjectManager), channel)
+	}
+	if feTeamList != "" {
+		a.Slack.SendMessage(fmt.Sprintf("%sworked less than 6 hours\nfyi %s %s",
+			feTeamList, a.Slack.Employees.TeamLeaderFE, a.Slack.Employees.ProjectManager), channel)
 	}
 }
