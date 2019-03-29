@@ -223,7 +223,16 @@ You may use one of several pre-defined schedules in place of a cron expression.
         artdirector: U89802W2Z          - this is variable of art director
         teamleaderbe: U97DJLL11         - this this is variable of team leader of backend
         teamleaderfe: U88K5BQAD         - this is variable of team leader of frontend
-   
+        
+        beteam:                         - slice of backend team 
+          - 'Stepan Morozov'
+          - 'Arthur Danilevsky'
+          - 'Roman Vlasenko'
+          - 'Muzafar Muradov'
+        feteam:                         - slice of frontend team 
+          - 'Andrey Solovyov'
+          - 'Elena Parkacheva'
+          
 User id you can find in slack: 
 1. Click on the users name and choose "Show Profile".
 2. Open the "..." menu.

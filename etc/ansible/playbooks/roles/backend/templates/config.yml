@@ -73,6 +73,14 @@ slack:
     artdirector: U89802W2Z
     teamleaderbe: U97DJLL11
     teamleaderfe: U88K5BQAD
+    beteam:
+      - 'Stepan Morozov'
+      - 'Arthur Danilevsky'
+      - 'Roman Vlasenko'
+      - 'Muzafar Muradov'
+    feteam:
+      - 'Andrey Solovyov'
+      - 'Elena Parkacheva'
   ignorelist:
     - 'Pavel Palenin'
     - 'Oleg Raev'

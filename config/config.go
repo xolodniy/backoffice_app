@@ -72,6 +72,8 @@ type Slack struct {
 		ArtDirector    string
 		TeamLeaderBE   string
 		TeamLeaderFE   string
+		BeTeam         []string
+		FeTeam         []string
 	}
 }
 
