@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -816,9 +817,6 @@ func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.
 				}
 			}
 		}
-		if teamLeader == "" {
-			continue
-		}
 		if int(user.TimeWorked) < 3600*6 {
 			if _, ok := teams[teamLeader]; !ok {
 				teams[teamLeader] = make(map[string]string)
@@ -834,6 +832,9 @@ func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.
 	}
 	for teamLeader, developers := range teams {
 		var users string
+		if reflect.DeepEqual(developers, map[string]string{}) {
+			continue
+		}
 		for name, email := range developers {
 			userId, err := a.Slack.UserIdByEmail(email)
 			if err != nil {
