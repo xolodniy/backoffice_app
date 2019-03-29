@@ -300,6 +300,20 @@ func main() {
 					application.Report24HoursReviewIssues()
 				},
 			},
+			{
+				Name:  "make-report-workers-less-worked-now",
+				Usage: "Sends daily report about user that worked less then 6h to slack channel",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
+					application := app.New(cfg)
+					application.MakeWorkersLessWorkedReportYesterday(channel)
+				},
+			},
 		}
 
 		if err := cliApp.Run(os.Args); err != nil {
@@ -405,6 +419,13 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 
 	err = tm.AddTask(cfg.Reports.ReportGitAnsibleChanges.Schedule, func() {
 		application.ReportGitAnsibleChanges(cfg.Reports.ReportGitAnsibleChanges.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.DailyWorkersLessWorkedMessage.Schedule, func() {
+		application.MakeWorkersLessWorkedReportYesterday(cfg.Reports.DailyWorkersLessWorkedMessage.Channel)
 	})
 	if err != nil {
 		panic(err)
