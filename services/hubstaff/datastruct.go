@@ -32,13 +32,6 @@ type UserReport struct {
 	Name       string      `json:"name"`
 	Email      string      `json:"email"`
 	TimeWorked WorkingTime `json:"duration"`
-	Dates      []struct {
-		Projects []struct {
-			Tasks []struct {
-				RemoteId string `json:"remote_id"`
-			} `json:"tasks"`
-		} `json:"projects"`
-	} `json:"dates"`
 }
 
 // DateReport used to reflect an api response from /by_date endpoint

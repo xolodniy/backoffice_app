@@ -239,8 +239,8 @@ func (h *Hubstaff) getJiraTaskKeyByID(taskID int) (string, string, error) {
 func (h *Hubstaff) UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) ([]UserReport, error) {
 	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
 	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
-	apiURL := fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d&show_tasks=%t",
-		dateStart, dateEnd, h.OrgID, true)
+	apiURL := fmt.Sprintf("/v1/custom/by_member/team/?start_date=%s&end_date=%s&organizations=%d",
+		dateStart, dateEnd, h.OrgID)
 
 	orgsRaw, err := h.do(apiURL)
 	if err != nil {
