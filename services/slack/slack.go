@@ -27,6 +27,7 @@ type Slack struct {
 	Employees   Employees
 }
 
+// Employees is struct of employees in slack
 type Employees struct {
 	ProjectManager string
 	ArtDirector    string

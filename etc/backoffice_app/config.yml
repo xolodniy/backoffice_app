@@ -44,7 +44,7 @@ reports:
     schedule: "@hourly"
     channel: "U8A004WK0"
   dailyworkerslessworkedmessage:
-    schedule: "00 00 07 * * *"
+    schedule: "00 00 07 * * 1-5"
     channel: "#general"
 
 jira:
