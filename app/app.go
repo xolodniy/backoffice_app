@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"backoffice_app/config"
@@ -42,7 +43,13 @@ type App struct {
 	Config       config.Main
 	CommitsCache map[string]CommitsCache
 	AnsibleCache map[string]CommitsCache
-	AfkTimer     map[string]time.Duration
+	AfkTimer     AfkTimer
+}
+
+// AfkTimer struct for cache of user's AFK duration with mutex defend
+type AfkTimer struct {
+	sync.Mutex
+	UserDurationMap map[string]time.Duration
 }
 
 // New is main App constructor
@@ -55,7 +62,7 @@ func New(conf *config.Main) *App {
 		Config:       *conf,
 		CommitsCache: make(map[string]CommitsCache),
 		AnsibleCache: make(map[string]CommitsCache),
-		AfkTimer:     make(map[string]time.Duration),
+		AfkTimer:     AfkTimer{UserDurationMap: make(map[string]time.Duration)},
 	}
 }
 
@@ -789,11 +796,13 @@ func (a *App) AnsibleCommitsCache(commits []bitbucket.Commit) (map[string]Commit
 
 // StartAfkTimer starts timer while user is afk
 func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
-	a.AfkTimer[userId] = userDuration
+	a.AfkTimer.UserDurationMap[userId] = userDuration
 	ticker := time.NewTicker(time.Second)
 	go func() {
 		for range ticker.C {
-			a.AfkTimer[userId] = a.AfkTimer[userId] - time.Second
+			a.AfkTimer.Lock()
+			a.AfkTimer.UserDurationMap[userId] = a.AfkTimer.UserDurationMap[userId] - time.Second
+			a.AfkTimer.Unlock()
 		}
 	}()
 	time.Sleep(userDuration)
@@ -802,7 +811,7 @@ func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
 
 // CheckUserAfk check user on AFK status
 func (a *App) CheckUserAfk(message, threadId, channel string) {
-	for id, duration := range a.AfkTimer {
+	for id, duration := range a.AfkTimer.UserDurationMap {
 		if strings.Contains(message, id) && duration > 0 {
 			userName, err := a.Slack.UserNameById(id)
 			if err != nil {

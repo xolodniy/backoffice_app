@@ -84,7 +84,7 @@ func (c *Controller) afkCommand(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "Failed! Duration format failed! Please, type /afk 1h30m")
 		return
 	}
-	if c.App.AfkTimer[request.UserId] > 0 {
+	if c.App.AfkTimer.UserDurationMap[request.UserId] > 0 {
 		ctx.String(http.StatusOK, "Failed! You are AFK already")
 		return
 	}
