@@ -40,7 +40,7 @@ func (c *Controller) sprintReport(ctx *gin.Context) {
 	go func() {
 		err := c.App.ReportSprintsIsuues(request.Text, request.UserId)
 		if err != nil {
-			c.App.Slack.SendMessage(err.Error(), request.UserId, "")
+			c.App.Slack.SendMessage(err.Error(), request.UserId)
 		}
 	}()
 	ctx.JSON(http.StatusOK, "ok, wait for report")
@@ -64,7 +64,7 @@ func (c *Controller) customReport(ctx *gin.Context) {
 	go func() {
 		err := c.App.PersonActivityByDate(textSlice[0], textSlice[1], request.UserId)
 		if err != nil {
-			c.App.Slack.SendMessage(err.Error(), request.UserId, "")
+			c.App.Slack.SendMessage(err.Error(), request.UserId)
 		}
 	}()
 	ctx.JSON(http.StatusOK, "ok, wait for report")

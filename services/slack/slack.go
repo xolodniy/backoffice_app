@@ -89,13 +89,12 @@ func New(config *config.Slack) Slack {
 }
 
 // SendMessage is main message sending method
-func (s *Slack) SendMessage(text, channel, ts string) {
+func (s *Slack) SendMessage(text, channel string) {
 	var message = &types.PostChannelMessage{
-		Token:    s.OutToken,
-		Channel:  channel,
-		AsUser:   true,
-		Text:     text,
-		ThreadTs: ts, // parameter that sends message as answer on other message
+		Token:   s.OutToken,
+		Channel: channel,
+		AsUser:  true,
+		Text:    text,
 	}
 
 	jsonMessage, err := json.Marshal(message)
@@ -106,26 +105,44 @@ func (s *Slack) SendMessage(text, channel, ts string) {
 			"channelBotName": s.BotName,
 		}).Error("can't decode to json")
 	}
-	var responseBody struct {
-		Ok      bool   `json:"ok"`
-		Error   string `json:"error"`
-		Warning string `json:"warning"`
+	respBody, err := s.jsonRequest("chat.postMessage", jsonMessage)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"msgBody":        text,
+			"channelID":      channel,
+			"channelBotName": s.BotName,
+			"responseBody":   respBody,
+		}).Error("can't send message")
+	}
+}
+
+// SendToThread sends message to thread as answer
+func (s *Slack) SendToThread(text, channel, threadId string) {
+	var message = &types.PostChannelMessage{
+		Token:    s.OutToken,
+		Channel:  channel,
+		AsUser:   true,
+		Text:     text,
+		ThreadTs: threadId, // parameter that sends message as answer on other message
 	}
 
-	respBody, err := s.jsonRequest("chat.postMessage", jsonMessage)
-	if err := json.Unmarshal(respBody, &responseBody); err != nil {
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"msgBody":        text,
 			"channelID":      channel,
 			"channelBotName": s.BotName,
-		}).Error("can't encode from json")
+			"ThreadTs":       threadId,
+		}).Error("can't decode to json")
 	}
-	if !responseBody.Ok {
+	respBody, err := s.jsonRequest("chat.postMessage", jsonMessage)
+	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"msgBody":        text,
 			"channelID":      channel,
 			"channelBotName": s.BotName,
-		}).Error(responseBody.Error)
+			"responseBody":   respBody,
+		}).Error("can't send message")
 	}
 }
 
@@ -145,6 +162,18 @@ func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
+	}
+	var responseBody struct {
+		Ok      bool   `json:"ok"`
+		Error   string `json:"error"`
+		Warning string `json:"warning"`
+	}
+
+	if err := json.Unmarshal(body, &responseBody); err != nil {
+		logrus.WithError(err).Error("can't encode from json")
+	}
+	if !responseBody.Ok {
+		logrus.WithError(err).Error(responseBody.Error)
 	}
 
 	return body, nil
@@ -211,16 +240,11 @@ func (s *Slack) DeleteFile(id string) error {
 	}
 
 	respBody, err := s.jsonRequest("files.delete", b)
-	var responseBody struct {
-		Ok      bool   `json:"ok"`
-		Error   string `json:"error"`
-		Warning string `json:"warning"`
-	}
-	if err := json.Unmarshal(respBody, &responseBody); err != nil {
-		return err
-	}
-	if !responseBody.Ok {
-		return fmt.Errorf(responseBody.Error)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"fileId":       id,
+			"responseBody": respBody,
+		}).Error("can't delete file")
 	}
 
 	return err
