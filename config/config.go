@@ -32,6 +32,7 @@ type Main struct {
 		ReportClarificationIssues     Report
 		Report24HoursReviewIssues     Report
 		ReportGitAnsibleChanges       Report
+		DailyWorkersLessWorkedMessage Report
 	}
 }
 
@@ -66,6 +67,14 @@ type Slack struct {
 	RestVolume     float64
 	Secret         string
 	IgnoreList     []string
+	Employees      struct {
+		ProjectManager string
+		ArtDirector    string
+		TeamLeaderBE   string
+		TeamLeaderFE   string
+		BeTeam         []string
+		FeTeam         []string
+	}
 }
 
 // Bitbucket is template to storing bitbucket configuration
