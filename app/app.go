@@ -48,7 +48,7 @@ type App struct {
 
 // AfkTimer struct for cache of user's AFK duration with mutex defend
 type AfkTimer struct {
-	sync.Mutex
+	*sync.Mutex
 	UserDurationMap map[string]time.Duration
 }
 
@@ -62,7 +62,7 @@ func New(conf *config.Main) *App {
 		Config:       *conf,
 		CommitsCache: make(map[string]CommitsCache),
 		AnsibleCache: make(map[string]CommitsCache),
-		AfkTimer:     AfkTimer{UserDurationMap: make(map[string]time.Duration)},
+		AfkTimer:     AfkTimer{Mutex: &sync.Mutex{}, UserDurationMap: make(map[string]time.Duration)},
 	}
 }
 
