@@ -4,6 +4,11 @@
 project_name: backoffice_app
 backend_port: 23799
 
+# nginx settings
+# Note that this parameters will not overwritten after repeat deploy to the same server
+nginx_port: 8000
+nginx_hosts: ["_"]
+
 bitbucket_private_token: c3RlcGFuLm1vcm96b3ZAdGhlZmxvdy5nbG9iYWw6MTIzMTIzMTIz # login:password in base64 TODO: Encrypt it.
 
 jira_login: stepan.morozov@theflow.global # TODO: special account with full read access
