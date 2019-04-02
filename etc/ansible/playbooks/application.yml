@@ -1,11 +1,10 @@
 ---
 - hosts: backoffice_app
   vars:
-    - version: master
+    - version: BOA-96-change-second-review-notification
     - service_name: "api"
     - command: ""
   roles:
-    - common
     - backend
     - service
 

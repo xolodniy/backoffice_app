@@ -1,0 +1,19 @@
+---
+- name: install nginx
+  yum:
+    name: "nginx"
+    state: present
+
+# SSL configuration for that vhost is handled by certbot which writes directly to configuration.
+# If another deploy happens, it must not overwrite the new configuration
+- name: copy nginx configuration for {{ project_name }} server
+  template:
+    src: "project.conf"
+    dest: "/etc/nginx/conf.d/{{ project_name }}.demo.theflow.global.conf"
+    force: no
+  notify: reload nginx
+
+- name: ensure nginx started
+  service:
+    name: nginx
+    state: started
