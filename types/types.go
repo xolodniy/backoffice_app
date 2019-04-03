@@ -35,6 +35,7 @@ type PostChannelMessage struct {
 	Username    string                         `json:"username"`
 	Attachments []PostChannelMessageAttachment `json:"attachments"`
 	IconURL     string                         `json:"icon_url"`
+	ThreadTs    string                         `json:"thread_ts"`
 }
 
 // ListFilesResponse is a response sent for ListFilesMessage request.
