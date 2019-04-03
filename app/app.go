@@ -144,7 +144,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 			msgBody += issue.String()
 		}
 	}
-	msgBody = msgBody + "cc " + a.Slack.ProjectManager + "\n\n" + designMessage + "cc " + a.Slack.ArtDirector
+	msgBody = msgBody + "cc " + a.Slack.Employees.ProjectManager + "\n\n" + designMessage + "cc " + a.Slack.Employees.ArtDirector
 	a.Slack.SendMessage(msgBody, channel)
 }
 
@@ -658,7 +658,7 @@ func (a *App) ReportSprintStatus(channel string) {
 		}
 	}
 	msgBody += messageNoDeveloper + "\n" + messageAllTaskClosed
-	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.ProjectManager, channel)
+	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.Employees.ProjectManager, channel)
 }
 
 // ReportClarificationIssues create report about issues with clarification status
@@ -792,6 +792,61 @@ func (a *App) AnsibleCommitsCache(commits []bitbucket.Commit) (map[string]Commit
 		}
 	}
 	return newMapAnsibleCommits, nil
+}
+
+// MakeWorkersWorkedReportYesterday preparing a last day message of less worked users and send it to Slack
+func (a *App) MakeWorkersLessWorkedReportYesterday(channel string) {
+	a.ReportUsersLessWorked(
+		now.BeginningOfDay().AddDate(0, 0, -1),
+		now.EndOfDay().AddDate(0, 0, -1), channel)
+}
+
+// ReportLessWorked send message to channel when users worked less then 6 hours
+func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, channel string) {
+	usersReports, err := a.Hubstaff.UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd)
+	if err != nil {
+		logrus.WithError(err).Error("can't get workers worked time by member from Hubstaff")
+		return
+	}
+	var users = make(map[string]string)
+	for _, user := range usersReports {
+		if int(user.TimeWorked) < 3600*6 {
+			users[user.Name] = user.Email
+		}
+	}
+	var (
+		beTeamList string
+		feTeamList string
+	)
+	for name, email := range users {
+		userId, err := a.Slack.UserIdByEmail(email)
+		if err != nil {
+			logrus.WithError(err).Error("can't get user id by email from slack")
+			userId = name
+		}
+
+		for _, developerName := range a.Slack.Employees.BeTeam {
+			if developerName == name {
+				beTeamList += fmt.Sprintf("<@%s> ", userId)
+				break
+			}
+		}
+
+		for _, developerName := range a.Slack.Employees.FeTeam {
+			if developerName == name {
+				feTeamList += fmt.Sprintf("<@%s> ", userId)
+				break
+			}
+		}
+	}
+	if beTeamList != "" {
+		a.Slack.SendMessage(fmt.Sprintf("%sworked less than 6 hours\nfyi %s %s",
+			beTeamList, a.Slack.Employees.TeamLeaderBE, a.Slack.Employees.ProjectManager), channel)
+	}
+	if feTeamList != "" {
+		a.Slack.SendMessage(fmt.Sprintf("%sworked less than 6 hours\nfyi %s %s",
+			feTeamList, a.Slack.Employees.TeamLeaderFE, a.Slack.Employees.ProjectManager), channel)
+	}
 }
 
 // StartAfkTimer starts timer while user is afk

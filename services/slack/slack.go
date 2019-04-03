@@ -16,16 +16,25 @@ import (
 
 // Slack is main Slack client app implementation
 type Slack struct {
-	InToken        string
-	OutToken       string
-	BotName        string
+	InToken     string
+	OutToken    string
+	BotName     string
+	APIURL      string
+	TotalVolume float64
+	RestVolume  float64
+	Secret      string
+	IgnoreList  []string
+	Employees   Employees
+}
+
+// Employees is struct of employees in slack
+type Employees struct {
 	ProjectManager string
 	ArtDirector    string
-	APIURL         string
-	TotalVolume    float64
-	RestVolume     float64
-	Secret         string
-	IgnoreList     []string
+	TeamLeaderBE   string
+	TeamLeaderFE   string
+	BeTeam         []string
+	FeTeam         []string
 }
 
 // FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
@@ -75,16 +84,22 @@ type Member struct {
 // New creates new slack
 func New(config *config.Slack) Slack {
 	return Slack{
-		InToken:        config.InToken,
-		OutToken:       config.OutToken,
-		BotName:        config.BotName,
-		ProjectManager: "<@" + config.ProjectManager + ">",
-		ArtDirector:    "<@" + config.ArtDirector + ">",
-		APIURL:         config.APIURL,
-		TotalVolume:    config.TotalVolume,
-		Secret:         config.Secret,
-		RestVolume:     config.RestVolume,
-		IgnoreList:     config.IgnoreList,
+		InToken:     config.InToken,
+		OutToken:    config.OutToken,
+		BotName:     config.BotName,
+		APIURL:      config.APIURL,
+		TotalVolume: config.TotalVolume,
+		Secret:      config.Secret,
+		RestVolume:  config.RestVolume,
+		IgnoreList:  config.IgnoreList,
+		Employees: Employees{
+			ProjectManager: "<@" + config.Employees.ProjectManager + ">",
+			ArtDirector:    "<@" + config.Employees.ArtDirector + ">",
+			TeamLeaderBE:   "<@" + config.Employees.TeamLeaderBE + ">",
+			TeamLeaderFE:   "<@" + config.Employees.TeamLeaderFE + ">",
+			BeTeam:         config.Employees.BeTeam,
+			FeTeam:         config.Employees.FeTeam,
+		},
 	}
 }
 
