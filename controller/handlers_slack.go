@@ -116,3 +116,16 @@ func (c *Controller) afkCheck(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, gin.H{"challenge": request.Challenge})
 }
+
+func (c *Controller) sprintStatus(ctx *gin.Context) {
+	request := struct {
+		UserId string `form:"user_id" binding:"required"`
+	}{}
+	err := ctx.ShouldBindWith(&request, binding.FormPost)
+	if err != nil {
+		ctx.String(http.StatusOK, "Failed! UserId is empty!")
+		return
+	}
+	go c.App.ReportSprintStatus(request.UserId)
+	ctx.JSON(http.StatusOK, "ok, wait for report")
+}

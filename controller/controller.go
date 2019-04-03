@@ -72,6 +72,7 @@ func (c *Controller) initRoutes() {
 	slack.POST("/api/v1/slack/customreport", c.customReport)
 	slack.POST("/api/v1/slack/afk", c.afkCommand)
 	slack.POST("/api/v1/slack/afk/check", c.afkCheck)
+	slack.POST("/api/v1/slack/sprintstatus", c.sprintStatus)
 }
 
 func (c *Controller) checkSignature(ctx *gin.Context) {
