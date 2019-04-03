@@ -434,9 +434,9 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 		return err
 	}
 	var textIssuesReport string
-	textIssuesReport += a.textMessageAboutIssuesStatus("Completed issues", issuesWithClosedStatus)
-	textIssuesReport += a.textMessageAboutIssuesStatus("Completed, but not verified", issuesWithClosedSubtasks)
-	textIssuesReport += a.textMessageAboutIssuesStatus("Issues left for the next sprint", issuesForNextSprint)
+	textIssuesReport += a.textMessageAboutIssuesStatus("Closed issues (deployed to staging and verified)", issuesWithClosedStatus)
+	textIssuesReport += a.textMessageAboutIssuesStatus("Issues in verification (done and deployed to staging but NOT yet verified)", issuesWithClosedSubtasks)
+	textIssuesReport += a.textMessageAboutIssuesStatus("Issues which are still in development	", issuesForNextSprint)
 	textIssuesReport += a.textMessageAboutIssuesStatus("Issues from future sprint", issuesFromFutureSprint)
 	a.Slack.SendMessage(textIssuesReport, channel)
 
@@ -453,11 +453,6 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 	sprintSequence, err := a.FindLastSprintSequence(sprintInterface)
 	if err != nil {
 		logrus.WithError(err).Error("can't find sprint of closed subtasks")
-		return err
-	}
-	err = a.CreateIssuesCsvReport(issuesBugStoryOfOpenSprint, fmt.Sprintf("Sprint %v Closing", sprintSequence-1), channel, true)
-	if err != nil {
-		logrus.WithError(err).Error("can't create report of issues of open sprint from jira")
 		return err
 	}
 	for _, issue := range issuesFromFutureSprint {
