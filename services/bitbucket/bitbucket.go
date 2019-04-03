@@ -260,7 +260,7 @@ func (b *Bitbucket) CommitsOfOpenedPRs() ([]Commit, error) {
 // DiffFile returns diff of file in commits by repository slug and commit hash
 func (b *Bitbucket) DiffFile(repoSlug, spec, path string) (string, error) {
 	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/diff/" + spec + "?path=" + path
-	res, err := b.do(urlStr)
+	res, err := b.get(urlStr)
 	if err != nil {
 		return "", err
 	}
