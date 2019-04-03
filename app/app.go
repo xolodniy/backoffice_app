@@ -436,7 +436,7 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 	var textIssuesReport string
 	textIssuesReport += a.textMessageAboutIssuesStatus("Closed issues (deployed to staging and verified)", issuesWithClosedStatus)
 	textIssuesReport += a.textMessageAboutIssuesStatus("Issues in verification (done and deployed to staging but NOT yet verified)", issuesWithClosedSubtasks)
-	textIssuesReport += a.textMessageAboutIssuesStatus("Issues which are still in development	", issuesForNextSprint)
+	textIssuesReport += a.textMessageAboutIssuesStatus("Issues which are still in development", issuesForNextSprint)
 	textIssuesReport += a.textMessageAboutIssuesStatus("Issues from future sprint", issuesFromFutureSprint)
 	a.Slack.SendMessage(textIssuesReport, channel)
 
