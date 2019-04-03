@@ -6,6 +6,7 @@ import (
 	"backoffice_app/services/jira"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 func (c *Controller) issueStarted(ctx *gin.Context) {
@@ -14,7 +15,8 @@ func (c *Controller) issueStarted(ctx *gin.Context) {
 	}{}
 	err := ctx.ShouldBindJSON(&webHookBody)
 	if err != nil {
-		ctx.String(http.StatusBadRequest, err.Error())
+		ctx.String(http.StatusBadRequest, "error")
+		logrus.WithError(err).Error("can't bind json from jira webhook")
 		return
 	}
 	go c.App.CreateIssueBranches(webHookBody.Issue)
