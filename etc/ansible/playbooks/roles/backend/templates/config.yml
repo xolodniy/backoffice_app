@@ -2,16 +2,51 @@ loglevel: debug
 ginport: {{ backend_port }}
 gindebugmode: true
 maxweekworkinghours: 30.0
-cron:
-  dailyworkersworkedtime: "00 00 07 * * *"
-  weeklyworkersworkedtime: "00 00 07 * * 1"
-  reportclosedsubtasks: "00 00 07 * * *"
-  reportaftersecondreview: "00 00 07 * * *"
-  employeesexceededtasks: "00 00 07 * * *"
-  employeesexceededestimatetime: "00 00 07 * * *"
-  reportslackspaceending: "00 00 07 * * *"
-  reportgitmigrations: "@hourly"
-  reportsprintstatus: "00 00 05 * * MON"
+reports:
+  dailyworkersworkedtime:
+    schedule: "00 00 07 * * *"
+    channel: "#work-reports"
+  weeklyworkersworkedtime:
+    schedule: "00 15 07 * * 1"
+    channel: "#work-reports"
+  reportclosedsubtasks:
+    schedule: "00 00 07 * * *"
+    channel: "#back-office-app"
+  reportaftersecondreviewall:
+    schedule: "00 00 06 * * *"
+    channel: "U891K2Z2P"
+  reportaftersecondreviewbe:
+    schedule: "00 00 06 * * *"
+    channel: "U97DJLL11"
+  reportaftersecondreviewfe:
+    schedule: "00 00 06 * * *"
+    channel: "U88K5BQAD"
+  employeesexceededtasks:
+    schedule: "00 00 07 * * *"
+    channel: "#back-office-app"
+  employeesexceededestimatetime:
+    schedule: "00 00 07 * * *"
+    channel: "#back-office-app"
+  reportslackspaceending:
+    schedule: "00 00 07 * * *"
+    channel: "#back-office-app"
+  reportgitmigrations:
+    schedule: "@hourly"
+    channel: "#migrations"
+  reportsprintstatus:
+    schedule: "00 00 05 * * MON"
+    channel: "#general"
+  reportclarificationissues:
+    schedule: "00 00 07 * * *"
+  report24hoursreviewissues:
+    schedule: "00 00 06 * * *"
+  reportgitansiblechanges:
+    schedule: "@hourly"
+    channel: "U8A004WK0"
+  dailyworkerslessworkedmessage:
+    schedule: "00 00 07 * * 1-5"
+    channel: "#general"
+
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
@@ -27,24 +62,31 @@ bitbucket:
 
 slack:
   apiurl: https://slack.com/api
-  channels:
-    general: general
-    backofficeapp: back-office-app
-    migrations: migrations
   botname: Back Office Bot
-  projectmanager: U9FDU5W4D
   intoken: xoxp-281270780213-532563372454-545645521588-6e70abc49c386bb1ad94465d19866188
   outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
   totalVolume: 5.0
   restVolume: 0.0
   secret: 046b6a43f79bca89a7f9056921906b25
+  employees:
+    projectmanager: U9FDU5W4D
+    artdirector: U89802W2Z
+    teamleaderbe: U97DJLL11
+    teamleaderfe: U88K5BQAD
+    beteam:
+      - 'Stepan Morozov'
+      - 'Arthur Danilevsky'
+      - 'Roman Vlasenko'
+      - 'Muzafar Muradov'
+    feteam:
+      - 'Andrey Solovyov'
+      - 'Elena Parkacheva'
   ignorelist:
     - 'Pavel Palenin'
     - 'Oleg Raev'
     - 'Rodion Golovushkin'
     - 'Ivan Tomilov'
     - 'Former user'
-    - 'No developer'
 
 hubstaff:
   apiurl: https://api.hubstaff.com

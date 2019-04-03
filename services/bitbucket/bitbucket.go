@@ -247,10 +247,25 @@ func (b *Bitbucket) CommitsOfOpenedPRs() ([]Commit, error) {
 			return nil, err
 		}
 		for _, commit := range commits {
+			// without merge commits
+			if len(commit.Parents) > 1 {
+				continue
+			}
 			allCommits = append(allCommits, commit)
 		}
 	}
 	return allCommits, nil
+}
+
+// DiffFile returns diff of file in commits by repository slug and commit hash
+func (b *Bitbucket) DiffFile(repoSlug, spec, path string) (string, error) {
+	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/diff/" + spec + "?path=" + path
+	res, err := b.do(urlStr)
+	if err != nil {
+		return "", err
+	}
+	fileDiff := string(res)
+	return fileDiff, nil
 }
 
 // repoSlugByIsueKey retrieves repo slug by issueKey

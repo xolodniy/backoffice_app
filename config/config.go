@@ -13,21 +13,27 @@ type Main struct {
 	GinPort             string
 	GinDebugMode        bool
 	MaxWeekWorkingHours float32
-	Cron                struct {
-		DailyWorkersWorkedTime        string
-		WeeklyWorkersWorkedTime       string
-		ReportClosedSubtasks          string
-		ReportAfterSecondReview       string
-		EmployeesExceededTasks        string
-		EmployeesExceededEstimateTime string
-		ReportSlackSpaceEnding        string
-		ReportGitMigrations           string
-		ReportSprintStatus            string
-	}
 	Jira
 	Hubstaff
 	Slack
 	Bitbucket
+	Reports struct {
+		DailyWorkersWorkedTime        Report
+		WeeklyWorkersWorkedTime       Report
+		ReportClosedSubtasks          Report
+		ReportAfterSecondReviewAll    Report
+		ReportAfterSecondReviewBE     Report
+		ReportAfterSecondReviewFE     Report
+		EmployeesExceededTasks        Report
+		EmployeesExceededEstimateTime Report
+		ReportSlackSpaceEnding        Report
+		ReportGitMigrations           Report
+		ReportSprintStatus            Report
+		ReportClarificationIssues     Report
+		Report24HoursReviewIssues     Report
+		ReportGitAnsibleChanges       Report
+		DailyWorkersLessWorkedMessage Report
+	}
 }
 
 // Jira is template to storing jira configuration
@@ -55,16 +61,20 @@ type Slack struct {
 	OutToken       string
 	BotName        string
 	ProjectManager string
-	Channels       struct {
-		General       string
-		BackofficeApp string
-		Migrations    string
+	ArtDirector    string
+	APIURL         string
+	TotalVolume    float64
+	RestVolume     float64
+	Secret         string
+	IgnoreList     []string
+	Employees      struct {
+		ProjectManager string
+		ArtDirector    string
+		TeamLeaderBE   string
+		TeamLeaderFE   string
+		BeTeam         []string
+		FeTeam         []string
 	}
-	APIURL      string
-	TotalVolume float64
-	RestVolume  float64
-	Secret      string
-	IgnoreList  []string
 }
 
 // Bitbucket is template to storing bitbucket configuration
@@ -75,6 +85,12 @@ type Bitbucket struct {
 		Username string
 		Password string
 	}
+}
+
+// Report struct for cron values with channel for reports
+type Report struct {
+	Schedule string
+	Channel  string
 }
 
 // GetConfig return config parsed from config/config.yml

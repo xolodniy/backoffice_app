@@ -30,6 +30,45 @@ func New(config *config.Hubstaff) Hubstaff {
 	}
 }
 
+var CurrentActivityDuration int64 = 1000
+
+func (d DateReport) String() string {
+	//separatedDate print
+	message := fmt.Sprintf("\n\n\n*%s*", d.Date)
+	for _, worker := range d.Users {
+		//employee name print
+		message += fmt.Sprintf("\n\n\n*%s (%s total)*\n", worker.Name, worker.TimeWorked)
+		for _, project := range worker.Projects {
+			message += fmt.Sprintf("\n%s - %s", project.TimeWorked, project.Name)
+			for _, task := range project.Tasks {
+				message += fmt.Sprintf("\n - %s - %s (%s)", task.RemoteAlternateId, task.Summary, task.TimeWorked)
+			}
+			var projectNotes []string
+			for _, note := range project.Notes {
+				projectNotes = append(projectNotes, note.Description)
+			}
+			sortedNotes := removeDoubles(projectNotes)
+			for _, note := range sortedNotes {
+				message += fmt.Sprintf("\n ✎ %s", note)
+			}
+		}
+	}
+	return message
+}
+
+// removeDoubles removes the same strings in slice
+func removeDoubles(arr []string) []string {
+	for i := len(arr) - 1; i > 0; i-- {
+		for j := i - 1; j >= 0; j-- {
+			if strings.ToLower(arr[i]) == strings.ToLower(arr[j]) {
+				arr = append(arr[:j], arr[j+1:]...)
+				i = len(arr) - 1
+			}
+		}
+	}
+	return arr
+}
+
 // ObtainAuthToken retrieves auth token which must be sent along with appToken,
 // see https://support.hubstaff.com/time-tracking-api/ for details
 func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
@@ -109,9 +148,9 @@ func (h *Hubstaff) HubstaffUsers() ([]UserReport, error) {
 	return usersSlice.List, nil
 }
 
-// LastActivity returns a text report about last activities
-func (h *Hubstaff) LastActivity() ([]LastActivity, error) {
-	rawResponse, err := h.do(fmt.Sprintf("/v1/organizations/%d/last_activity", h.OrgID))
+// CurrentActivity returns a text report about last activities
+func (h *Hubstaff) CurrentActivity() ([]LastActivity, error) {
+	rawResponse, err := h.do(fmt.Sprintf("/v1/organizations/%d/last_activity?include_removed=false", h.OrgID))
 	if err != nil {
 		return []LastActivity{}, fmt.Errorf("error on getting last activities data: %v", err)
 	}
@@ -126,6 +165,17 @@ func (h *Hubstaff) LastActivity() ([]LastActivity, error) {
 		return []LastActivity{}, nil
 	}
 	for i, activity := range activities.List {
+		layout := "2006-01-02T15:04:05Z"
+		t, err := time.Parse(layout, activity.User.LastActivity)
+		// if time empty or other format we continue to remove many log messages
+		if err != nil {
+			continue
+		}
+		lastActivity := time.Now().Unix() - t.Unix()
+		if lastActivity > CurrentActivityDuration {
+			continue
+		}
+
 		activities.List[i].ProjectName, err = h.getProjectNameByID(activity.LastProjectID)
 		if err != nil {
 			continue
@@ -233,8 +283,8 @@ func (h *Hubstaff) UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd 
 func (h *Hubstaff) UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) ([]DateReport, error) {
 	var dateStart = dateOfWorkdaysStart.Format("2006-01-02")
 	var dateEnd = dateOfWorkdaysEnd.Format("2006-01-02")
-	apiURL := fmt.Sprintf("/v1/custom/by_date/team/?start_date=%s&end_date=%s&organizations=%d&show_notes=%t",
-		dateStart, dateEnd, h.OrgID, true)
+	apiURL := fmt.Sprintf("/v1/custom/by_date/team/?start_date=%s&end_date=%s&organizations=%d&show_notes=%t&show_tasks=%t",
+		dateStart, dateEnd, h.OrgID, true, true)
 
 	orgsRaw, err := h.do(apiURL)
 	if err != nil {
@@ -257,4 +307,35 @@ func (h *Hubstaff) UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd ti
 		return []DateReport{}, fmt.Errorf("No tracked time for now found")
 	}
 	return orgs.List[0].Dates, nil
+}
+
+// UserWorkTimeByDate retrieves work time of user date report slice by date and retrieve user name
+func (h *Hubstaff) UserWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, email string) (DateReport, error) {
+	users, err := h.HubstaffUsers()
+	if err != nil {
+		return DateReport{}, fmt.Errorf("error on getting workers from hubstaff: %v", err)
+	}
+	var userName string
+	for _, user := range users {
+		if user.Email == email {
+			userName = user.Name
+			break
+		}
+	}
+	if userName == "" {
+		return DateReport{}, fmt.Errorf("user was not found in Hubstaff by email: %v", email)
+	}
+	dateReports, err := h.UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd)
+	if err != nil {
+		return DateReport{}, fmt.Errorf("error on getting workers worked time: %v", err)
+	}
+	var userWorkReport DateReport
+	for _, dateReport := range dateReports {
+		for _, user := range dateReport.Users {
+			if user.Name == userName {
+				userWorkReport.Users = append(userWorkReport.Users, user)
+			}
+		}
+	}
+	return userWorkReport, nil
 }

@@ -14,6 +14,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// this variables should be specified by '--ldflags' on the building stage
+var branch, commit, author, date, summary string
+
 // Controller implements main api object
 type Controller struct {
 	Config config.Main
@@ -52,6 +55,15 @@ func (c *Controller) initRoutes() {
 	c.Gin.GET("/healthcheck", func(ctx *gin.Context) {
 		ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
 	})
+	c.Gin.GET("/api/v1/revision", func(ctx *gin.Context) {
+		c.respondOK(ctx, gin.H{
+			"branch":  branch,
+			"commit":  commit,
+			"author":  author,
+			"date":    date,
+			"summary": summary,
+		})
+	})
 
 	jira := c.Gin.Group("")
 	jira.POST("/api/v1/jira/webhooks/issue/started", c.issueStarted)
@@ -62,7 +74,10 @@ func (c *Controller) initRoutes() {
 	slack := c.Gin.Group("")
 	slack.Use(c.checkSignature)
 	slack.POST("/api/v1/slack/sprintreport", c.sprintReport)
-	slack.POST("/api/v1/slack/last_activity", c.slackLastActivityHandler)
+	slack.POST("/api/v1/slack/current_activity", c.slackCurrentActivityHandler)
+	slack.POST("/api/v1/slack/customreport", c.customReport)
+	slack.POST("/api/v1/slack/afk", c.afkCommand)
+	slack.POST("/api/v1/slack/afk/check", c.afkCheck)
 }
 
 func (c *Controller) checkSignature(ctx *gin.Context) {

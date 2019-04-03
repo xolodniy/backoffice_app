@@ -44,7 +44,12 @@ type DateReport struct {
 		Projects   []struct {
 			Name       string      `json:"name"`
 			TimeWorked WorkingTime `json:"duration"`
-			Notes      []struct {
+			Tasks      []struct {
+				Summary           string      `json:"summary"`
+				RemoteAlternateId string      `json:"remote_alternate_id"`
+				TimeWorked        WorkingTime `json:"duration"`
+			} `json:"tasks"`
+			Notes []struct {
 				Description string `json:"description"`
 			} `json:"notes"`
 		} `json:"projects"`
@@ -59,6 +64,7 @@ type LastActivity struct {
 	TaskJiraKey   string `json:"taskjirakey"`
 	TaskSummary   string `json:"tasksummary"`
 	User          struct {
-		Name string `json:"name" binding:"required"`
+		Name         string `json:"name" binding:"required"`
+		LastActivity string `json:"last_activity" binding:"required"`
 	} `json:"user" binding:"required"`
 }

@@ -127,6 +127,10 @@ type Commit struct {
 			Href string `json:"href"`
 		} `json:"diff"`
 	} `json:"links"`
+	Parents []struct {
+		Type string `json:"type"`
+		Hash string `json:"hash"`
+	} `json:"parents"`
 	Repository struct {
 		Type     string `json:"type"`
 		Name     string `json:"name"`

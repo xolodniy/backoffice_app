@@ -2,6 +2,7 @@ package jira
 
 import (
 	"fmt"
+	"strings"
 
 	"backoffice_app/config"
 
@@ -36,15 +37,29 @@ var (
 	StatusClosed          = "Closed"
 	StatusTlReview        = "TL Review"
 	StatusPeerReview      = "In peer review"
+	StatusDesignReview    = "in Design review"
+	StatusCTOReview       = "In CTO review"
+	StatusFEReview        = "In FE review"
+	StatusPMReview        = "In PM Review"
 	StatusCloseLastTask   = "Close last task"
 	StatusReadyForDemo    = "Ready for demo"
 	StatusEmptyAssignee   = "empty"
+	StatusInClarification = "In clarification"
 	FieldEpicName         = "customfield_10005"
 	FieldEpicKey          = "customfield_10008"
 	FieldSprintInfo       = "customfield_10010"
 	FieldDeveloperMap     = "customfield_10026"
-	StatusInClarification = "In clarification"
+	TypeBESubTask         = "BE Sub-Task"
+	TypeBETask            = "BE Task"
+	TypeFESubTask         = "FE Sub-Task"
+	TypeFETask            = "FE Task"
 )
+
+func (i Issue) String() string {
+	message := fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+		i.Key, i.Fields.Summary, i.Fields.Status.Name)
+	return message
+}
 
 // issues searches issues in all sprints which opened now and returning list with issues in this sprints list
 func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
@@ -100,46 +115,6 @@ func (j *Jira) AssigneeOpenIssues() ([]Issue, error) {
 	return issues, nil
 }
 
-// IssueTimeExceededNoTimeRange prepares string without employee time excess
-func (j *Jira) IssueTimeExceededNoTimeRange(issue Issue, rowIndex int) string {
-	if issue.Fields == nil {
-		logrus.WithField("issue", fmt.Sprintf("%+v", issue)).Error("issue fields is empty")
-		return ""
-	}
-
-	var listRow string
-
-	if issue.Fields.TimeTracking.RemainingEstimateSeconds != 0 {
-		return listRow
-	}
-
-	//TODO разобраться со вложенностями
-	var developer = "No developer"
-	developerMap, err := issue.Fields.Unknowns.MarshalMap(FieldDeveloperMap)
-	if err != nil {
-		logrus.WithError(err).WithField("developerMap", fmt.Sprintf("%+v", developerMap)).
-			Errorf("can't make %s map marshaling", FieldDeveloperMap)
-	} else if developerMap != nil {
-		displayName, ok := developerMap["displayName"].(string)
-		if !ok {
-			logrus.WithField("displayName", fmt.Sprintf("%+v", developerMap["displayName"])).
-				Error("can't assert to string map displayName field")
-		} else {
-			developer = displayName
-		}
-	}
-	var worklogString string
-	if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds {
-		worklogString = fmt.Sprintf(" time spent is %s instead %s", issue.Fields.TimeTracking.TimeSpent, issue.Fields.TimeTracking.OriginalEstimate)
-	}
-
-	listRow = fmt.Sprintf("%[1]d. %[2]s - <https://theflow.atlassian.net/browse/%[3]s|%[3]s - %[4]s>: _%[5]s_%[6]s\n",
-		rowIndex, developer, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name,
-		worklogString)
-
-	return listRow
-}
-
 // IssuesWithClosedSubtasks retrieves issues with closed subtasks
 func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
 	request := fmt.Sprintf(`status NOT IN ("%s") AND type in (story, bug) AND Sprint in openSprints()`, StatusClosed)
@@ -169,8 +144,13 @@ func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
 }
 
 // IssuesAfterSecondReview retrieves issues that have 2 or more reviews
-func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
-	request := fmt.Sprintf(`status NOT IN ("%s") AND (status was "%s" OR status was "%s")`, StatusClosed, StatusTlReview, StatusPeerReview)
+func (j *Jira) IssuesAfterSecondReview(typeNames []string) ([]Issue, error) {
+	request := fmt.Sprintf(`status NOT IN ("%s") AND (status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s")`,
+		StatusClosed, StatusTlReview, StatusPeerReview, StatusDesignReview, StatusPMReview, StatusCTOReview, StatusFEReview)
+	if len(typeNames) != 0 {
+		// format of jql statuses `("FE Task")` or `("FE Sub-Task","FE Task")`
+		request += ` AND type IN ("` + strings.Join(typeNames, `","`) + `")`
+	}
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, err
@@ -189,19 +169,33 @@ func (j *Jira) IssuesAfterSecondReview() ([]Issue, error) {
 			continue
 		}
 
-		countPeer := 0
-		countTl := 0
+		var (
+			countPeer   = 0
+			countTl     = 0
+			countDesign = 0
+			countPM     = 0
+			countCTO    = 0
+			countFE     = 0
+		)
 		for _, histories := range issue.Changelog.Histories {
 			for _, item := range histories.Items {
-				if item.ToString == StatusPeerReview {
+				switch item.ToString {
+				case StatusPeerReview:
 					countPeer++
-				}
-				if item.ToString == StatusTlReview {
+				case StatusTlReview:
 					countTl++
+				case StatusDesignReview:
+					countDesign++
+				case StatusPMReview:
+					countPM++
+				case StatusCTOReview:
+					countCTO++
+				case StatusFEReview:
+					countFE++
 				}
 			}
 		}
-		if countPeer > 1 || countTl > 1 {
+		if countPeer > 1 || countTl > 1 || countDesign > 1 || countPM > 1 || countCTO > 1 || countFE > 1 {
 			issuesAfterReview = append(issuesAfterReview, i)
 		}
 	}
@@ -225,7 +219,8 @@ func (j *Jira) IssuesClosedFromOpenSprint(project string) ([]Issue, error) {
 
 // IssuesClosedSubtasksFromOpenSprint retrieves issues with closed subtasks (bugs and stories)
 func (j *Jira) IssuesClosedSubtasksFromOpenSprint(project string) ([]Issue, error) {
-	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	request := fmt.Sprintf(`status NOT IN ("%s") AND project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`,
+		StatusClosed, project)
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, err
@@ -245,7 +240,8 @@ Loop:
 
 // IssuesForNextSprint retrieves issues that stands for next sprint (bugs and stories)
 func (j *Jira) IssuesForNextSprint(project string) ([]Issue, error) {
-	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	request := fmt.Sprintf(`status NOT IN ("%s") AND project = %s AND type in (story, bug) AND sprint in openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`,
+		StatusClosed, project)
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, err
@@ -274,6 +270,16 @@ func (j *Jira) IssuesFromFutureSprint(project string) ([]Issue, error) {
 	return issues, nil
 }
 
+// IssuesOfOpenSprints searches Issues in all sprints which opened now and returning list with issues in this sprints list (bugs and stories)
+func (j *Jira) IssuesStoryBugOfOpenSprints(project string) ([]Issue, error) {
+	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND Sprint IN openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't take jira issues with type in (story, bug) of open sprints: %s", err)
+	}
+	return issues, nil
+}
+
 // EpicName retrieves issue summary
 func (j *Jira) EpicName(issueKey string) (string, error) {
 	options := jira.GetQueryOptions{}
@@ -288,7 +294,7 @@ func (j *Jira) EpicName(issueKey string) (string, error) {
 
 // IssuesOfOpenSprints searches Issues in all sprints which opened now and returning list with issues in this sprints list
 func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
-	request := fmt.Sprintf(`assignee != %s AND type not in (story, bug) AND Sprint IN openSprints()`, StatusEmptyAssignee)
+	request := fmt.Sprintf(`type not in (story, bug) AND Sprint IN openSprints()`)
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, fmt.Errorf("can't take jira issues with type not in (story, bug) of open sprints: %s", err)
@@ -296,7 +302,7 @@ func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
 	return issues, nil
 }
 
-// IssueSetPMReviewStatus set PM transition for issue
+// IssueSetStatusCloseLastTask set status close transition for issue
 func (j *Jira) IssueSetStatusCloseLastTask(issueKey string) error {
 	transitions, resp, err := j.Issue.GetTransitions(issueKey)
 	if err != nil {
@@ -314,6 +320,65 @@ func (j *Jira) IssueSetStatusCloseLastTask(issueKey string) error {
 		}
 	}
 	return nil
+}
+
+// ClarificationIssuesOfOpenSprints searches Issues in open sprtints with clarification status
+func (j *Jira) ClarificationIssuesOfOpenSprints() ([]Issue, error) {
+	request := fmt.Sprintf(`assignee != %s AND status IN ("%s")`, StatusEmptyAssignee, StatusInClarification)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't take jira issues with type not in (story, bug) of open sprints: %s", err)
+	}
+	return issues, nil
+}
+
+// IssuesOnReview searches all issues with review statuses and retrieves it with changelog history
+func (j *Jira) IssuesOnReview() ([]Issue, error) {
+	request := fmt.Sprintf(`assignee != %s AND status IN ("%s","%s","%s","%s","%s","%s")`,
+		StatusEmptyAssignee, StatusPeerReview, StatusTlReview, StatusDesignReview, StatusPMReview, StatusCTOReview, StatusFEReview)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't take jira not closed issues: %s", err)
+	}
+	changeLog := &struct {
+		MaxResults int                     `json:"maxResults"`
+		StartAt    int                     `json:"startAt"`
+		Total      int                     `json:"total"`
+		IsLast     bool                    `json:"isLast"`
+		Values     []jira.ChangelogHistory `json:"values"`
+	}{}
+	var issuesOnReview []Issue
+	for _, issue := range issues {
+		index := 0
+		for {
+			url := fmt.Sprintf("/rest/api/2/issue/%s/changelog?maxResults=100&startAt=%v", issue.Key, index)
+			req, err := j.NewRequest("GET", url, nil)
+			if err != nil {
+				return nil, fmt.Errorf("can't create request of changelog enpoint: %s", err)
+			}
+			_, err = j.Do(req, changeLog)
+			if err != nil {
+				return nil, fmt.Errorf("can't take jira changelog of issue: %s", err)
+			}
+			issue.Changelog = &jira.Changelog{Histories: changeLog.Values}
+			issuesOnReview = append(issuesOnReview, issue)
+			if changeLog.IsLast {
+				break
+			}
+			index += 100
+		}
+	}
+	return issuesOnReview, nil
+}
+
+// IssueTypeByKey retrieves type of issue by id
+func (j *Jira) IssueTypeByKey(issueId string) string {
+	issue, resp, err := j.Issue.Get(issueId, &jira.GetQueryOptions{})
+	if err != nil {
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira this jira issue")
+		return ""
+	}
+	return issue.Fields.Type.Name
 }
 
 func (j *Jira) IssueTypeName(issueKey string) (string, error) {
