@@ -1,11 +1,18 @@
-image: golang:1.11
+image: golang:1.12
 
 pipelines:
   default:
     - step:
         name: build backend
         script:
-          - go build
+          - GOOS=linux GOARCH=amd64 URI=https://bitbucket.org/theflowglobal/backoffice_app;
+            go build --ldflags "
+            -X 'backoffice_app/controller.branch=$BITBUCKET_BRANCH'
+            -X 'backoffice_app/controller.commit=$URI/commits/$(git log -1 --pretty=%h)'
+            -X 'backoffice_app/controller.author=$(git log -1 --pretty=%an)'
+            -X 'backoffice_app/controller.date=$(git log -1 --pretty=%ad)'
+            -X 'backoffice_app/controller.summary=$(git log -1 --pretty=%f)'
+            "
           - mv backoffice_app backoffice_app_$BITBUCKET_BRANCH
           - curl -H "Authorization:Basic c3RlcGFuLm1vcm96b3ZAdGhlZmxvdy5nbG9iYWw6MTIzMTIzMTIz" -X POST "https://api.bitbucket.org/2.0/repositories/theflowglobal/backoffice_app/downloads" --form files=@"backoffice_app_$BITBUCKET_BRANCH"
     - step:

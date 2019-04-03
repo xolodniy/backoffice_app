@@ -267,7 +267,7 @@ Loop:
 			}
 		}
 	}
-	return issues, nil
+	return issuesForNextSprint, nil
 }
 
 // IssuesFromFutureSprint retrieves issues from future sprint (bugs and stories)
@@ -420,4 +420,14 @@ func (j *Jira) getIssueChangelog(issue Issue) (Issue, error) {
 		index += 100
 	}
 	return issue, nil
+}
+
+// IssueTypeByKey retrieves type of issue by id
+func (j *Jira) IssueTypeByKey(issueId string) string {
+	issue, resp, err := j.Issue.Get(issueId, &jira.GetQueryOptions{})
+	if err != nil {
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira this jira issue")
+		return ""
+	}
+	return issue.Fields.Type.Name
 }

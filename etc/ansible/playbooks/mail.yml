@@ -1,0 +1,7 @@
+---
+- hosts: backoffice_app
+  roles:
+    - common
+    - nginx
+
+- import_playbook: application.yml

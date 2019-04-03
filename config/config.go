@@ -32,6 +32,7 @@ type Main struct {
 		ReportClarificationIssues     Report
 		Report24HoursReviewIssues     Report
 		ReportGitAnsibleChanges       Report
+		DailyWorkersLessWorkedMessage Report
 	}
 }
 
@@ -56,20 +57,24 @@ type Hubstaff struct {
 
 // Slack is template to storing slack configuration
 type Slack struct {
-	InToken     string
-	OutToken    string
-	BotName     string
-	APIURL      string
-	TotalVolume float64
-	RestVolume  float64
-	Secret      string
-	IgnoreList  []string
-	Employees   struct {
+	InToken        string
+	OutToken       string
+	BotName        string
+	ProjectManager string
+	ArtDirector    string
+	APIURL         string
+	TotalVolume    float64
+	RestVolume     float64
+	Secret         string
+	IgnoreList     []string
+	Employees      struct {
 		DirectorOfCompany string
-		ProjectManager    string
-		ArtDirector       string
-		TeamLeaderBE      string
-		TeamLeaderFE      string
+		ProjectManager string
+		ArtDirector    string
+		TeamLeaderBE   string
+		TeamLeaderFE   string
+		BeTeam         []string
+		FeTeam         []string
 	}
 }
 
