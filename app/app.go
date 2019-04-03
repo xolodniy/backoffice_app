@@ -882,28 +882,20 @@ func (a *App) CheckUserAfk(message, threadId, channel string) {
 func (a *App) CreateIssueBranches(issue jira.Issue) {
 	if issue.Fields.Status.Name == jira.StatusStarted {
 		if issue.Fields.Parent == nil {
-			summary := strings.ToLower(strings.Replace(issue.Fields.Type.Name, " ", "-", -1))
-			err := a.Bitbucket.CreateBranch(issue.Key, issue.Key+"-"+summary, "master")
+			err := a.Bitbucket.CreateBranch(issue.Key, issue.Key, "master")
 			if err != nil {
 				logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
 					Error("can't create branch")
 			}
 			return
 		}
-		issueStatusName, err := a.Jira.IssueTypeName(issue.Fields.Parent.Key)
-		if err != nil {
-			logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Fields.Parent.Key)).
-				Error("can't get issue type")
-			return
-		}
-		summary := strings.ToLower(strings.Replace(issueStatusName, " ", "-", -1))
-		err = a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key+"-"+summary, "master")
+		err := a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key, "master")
 		if err != nil {
 			logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
 				Error("can't create branch")
 			return
 		}
-		err = a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key+"/"+issue.Key, issue.Fields.Parent.Key+"-"+summary)
+		err = a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key+">"+issue.Key, issue.Fields.Parent.Key)
 		if err != nil {
 			logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
 				Error("can't create branch")
@@ -918,7 +910,7 @@ func (a *App) CreateBranchPullRequest(repoPushPayload bitbucket.RepoPushPayload)
 	if repoPushPayload.Push.Changes[0].New.Name == "" {
 		return
 	}
-	if !strings.Contains(repoPushPayload.Push.Changes[0].New.Name, "/") {
+	if !strings.Contains(repoPushPayload.Push.Changes[0].New.Name, ">") {
 		err := a.Bitbucket.CreatePullRequestIfNotExist(repoPushPayload.Repository.Slug, repoPushPayload.Push.Changes[0].New.Name, "master")
 		if err != nil {
 			logrus.WithError(err).WithField("branch", fmt.Sprintf("%+v", repoPushPayload.Push.Changes[0].New.Name)).
@@ -927,19 +919,13 @@ func (a *App) CreateBranchPullRequest(repoPushPayload bitbucket.RepoPushPayload)
 		return
 	}
 
-	issuesKey := strings.Split(repoPushPayload.Push.Changes[0].New.Name, "/")
+	issuesKey := strings.Split(repoPushPayload.Push.Changes[0].New.Name, ">")
 	if len(issuesKey) != 2 {
 		logrus.WithField("branchName", fmt.Sprintf("%+v", repoPushPayload.Push.Changes[0].New.Name)).
 			Error("can't take issue key from branch name, format must be KEY-1/KEY-2")
 		return
 	}
-	issueStatusName, err := a.Jira.IssueTypeName(issuesKey[0])
-	if err != nil {
-		logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issuesKey[0])).
-			Error("can't get issue type")
-		return
-	}
-	err = a.Bitbucket.CreatePullRequestIfNotExist(repoPushPayload.Repository.Name, repoPushPayload.Push.Changes[0].New.Name, issuesKey[0]+"-"+issueStatusName)
+	err := a.Bitbucket.CreatePullRequestIfNotExist(repoPushPayload.Repository.Name, repoPushPayload.Push.Changes[0].New.Name, issuesKey[0])
 	if err != nil {
 		logrus.WithError(err).WithField("branch", fmt.Sprintf("%+v", repoPushPayload.Push.Changes[0].New.Name)).
 			Error("can't create pull request of branch")
