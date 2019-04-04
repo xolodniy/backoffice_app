@@ -48,7 +48,7 @@ reports:
     channel: "#general"
   weeklyreportoverworkedissues:
     schedule: "00 00 07 * * 1"
-    channel: "#back-office-app"
+    channel: "U9FDU5W4D"
 
 jira:
   apiurl: https://theflow.atlassian.net
