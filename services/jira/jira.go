@@ -256,7 +256,7 @@ Loop:
 			}
 		}
 	}
-	return issues, nil
+	return issuesForNextSprint, nil
 }
 
 // IssuesFromFutureSprint retrieves issues from future sprint (bugs and stories)

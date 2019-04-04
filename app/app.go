@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"backoffice_app/config"
@@ -42,6 +43,13 @@ type App struct {
 	Config       config.Main
 	CommitsCache map[string]CommitsCache
 	AnsibleCache map[string]CommitsCache
+	AfkTimer     AfkTimer
+}
+
+// AfkTimer struct for cache of user's AFK duration with mutex defend
+type AfkTimer struct {
+	*sync.Mutex
+	UserDurationMap map[string]time.Duration
 }
 
 // New is main App constructor
@@ -54,6 +62,7 @@ func New(conf *config.Main) *App {
 		Config:       *conf,
 		CommitsCache: make(map[string]CommitsCache),
 		AnsibleCache: make(map[string]CommitsCache),
+		AfkTimer:     AfkTimer{Mutex: &sync.Mutex{}, UserDurationMap: make(map[string]time.Duration)},
 	}
 }
 
@@ -425,9 +434,9 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 		return err
 	}
 	var textIssuesReport string
-	textIssuesReport += a.textMessageAboutIssuesStatus("Completed issues", issuesWithClosedStatus)
-	textIssuesReport += a.textMessageAboutIssuesStatus("Completed, but not verified", issuesWithClosedSubtasks)
-	textIssuesReport += a.textMessageAboutIssuesStatus("Issues left for the next sprint", issuesForNextSprint)
+	textIssuesReport += a.textMessageAboutIssuesStatus("Closed issues (deployed to staging and verified)", issuesWithClosedStatus)
+	textIssuesReport += a.textMessageAboutIssuesStatus("Issues in verification (done and deployed to staging but NOT yet verified)", issuesWithClosedSubtasks)
+	textIssuesReport += a.textMessageAboutIssuesStatus("Issues which are still in development", issuesForNextSprint)
 	textIssuesReport += a.textMessageAboutIssuesStatus("Issues from future sprint", issuesFromFutureSprint)
 	a.Slack.SendMessage(textIssuesReport, channel)
 
@@ -444,11 +453,6 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 	sprintSequence, err := a.FindLastSprintSequence(sprintInterface)
 	if err != nil {
 		logrus.WithError(err).Error("can't find sprint of closed subtasks")
-		return err
-	}
-	err = a.CreateIssuesCsvReport(issuesBugStoryOfOpenSprint, fmt.Sprintf("Sprint %v Closing", sprintSequence-1), channel, true)
-	if err != nil {
-		logrus.WithError(err).Error("can't create report of issues of open sprint from jira")
 		return err
 	}
 	for _, issue := range issuesFromFutureSprint {
@@ -837,5 +841,34 @@ func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.
 	if feTeamList != "" {
 		a.Slack.SendMessage(fmt.Sprintf("%sworked less than 6 hours\nfyi %s %s",
 			feTeamList, a.Slack.Employees.TeamLeaderFE, a.Slack.Employees.ProjectManager), channel)
+	}
+}
+
+// StartAfkTimer starts timer while user is afk
+func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
+	a.AfkTimer.UserDurationMap[userId] = userDuration
+	ticker := time.NewTicker(time.Second)
+	go func() {
+		for range ticker.C {
+			a.AfkTimer.Lock()
+			a.AfkTimer.UserDurationMap[userId] = a.AfkTimer.UserDurationMap[userId] - time.Second
+			a.AfkTimer.Unlock()
+		}
+	}()
+	time.Sleep(userDuration)
+	ticker.Stop()
+}
+
+// CheckUserAfk check user on AFK status
+func (a *App) CheckUserAfk(message, threadId, channel string) {
+	for id, duration := range a.AfkTimer.UserDurationMap {
+		if strings.Contains(message, id) && duration > 0 {
+			userName, err := a.Slack.UserNameById(id)
+			if err != nil {
+				logrus.WithError(err).Errorf("can't take information about user name from slask with id: %v", id)
+				userName = "This user"
+			}
+			a.Slack.SendToThread(fmt.Sprintf("%s will return in %.0f minutes", userName, duration.Minutes()), channel, threadId)
+		}
 	}
 }
