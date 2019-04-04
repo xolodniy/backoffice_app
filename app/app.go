@@ -890,3 +890,54 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	}
 	a.Slack.SendMessage(msgBody, "#general")
 }
+
+// ReportOverworkedIssues create report about overworked issues
+func (a *App) ReportOverworkedIssues(channel string) {
+	issues, err := a.Jira.IssuesClosedInInterim(
+		now.BeginningOfWeek().AddDate(0, 0, -8),
+		now.EndOfWeek().AddDate(0, 0, -6))
+	if err != nil {
+		logrus.WithError(err).Error("can't get closed issues in interom from jira")
+		return
+	}
+	var msgBody string
+	var developers = make(map[string][]jira.Issue)
+	for _, issue := range issues {
+		developer := issue.DeveloperMap(jira.TagDeveloperName)
+		if developer == "" {
+			developer = "No developer"
+		}
+		developers[developer] = append(developers[developer], issue)
+	}
+	for _, dev := range a.Slack.IgnoreList {
+		delete(developers, dev)
+	}
+	var messageNoDeveloper string
+	for developer, issues := range developers {
+		var message string
+		for _, issue := range issues {
+			overWorkedDuration := issue.Fields.TimeTracking.TimeSpentSeconds - issue.Fields.TimeTracking.OriginalEstimateSeconds
+			percentEstimateDuration := issue.Fields.TimeTracking.OriginalEstimateSeconds / 100
+			if overWorkedDuration > percentEstimateDuration*10 && issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
+				message += issue.String()
+				message += fmt.Sprintf("- Time spent: %s\n", issue.Fields.TimeTracking.TimeSpent)
+				message += fmt.Sprintf("- Time planned: %s\n", issue.Fields.TimeTracking.OriginalEstimate)
+				message += fmt.Sprintf("- Overwork: %v\n", time.Duration(overWorkedDuration)*time.Second)
+				message += fmt.Sprintf("- Overwork, %s: %v\n", "%%", overWorkedDuration/percentEstimateDuration)
+			}
+		}
+		switch {
+		case developer == "No developer" && message != "":
+			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
+		case message != "":
+			msgBody += fmt.Sprintf("\n" + developer + "\n" + message)
+		}
+	}
+	switch msgBody {
+	case "":
+		msgBody = "*Tasks time duration analyze*:\nThere are no issues with overworked time."
+	default:
+		msgBody = "*Tasks time duration analyze*:\n" + msgBody + messageNoDeveloper
+	}
+	a.Slack.SendMessage(msgBody, channel)
+}
