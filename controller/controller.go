@@ -65,6 +65,10 @@ func (c *Controller) initRoutes() {
 		})
 	})
 
+
+	jira := c.Gin.Group("")
+	jira.POST("/api/v1/jira/webhooks/issue/updated", c.issueUpdated)
+
 	slack := c.Gin.Group("")
 	slack.Use(c.checkSignature)
 	slack.POST("/api/v1/slack/sprintreport", c.sprintReport)

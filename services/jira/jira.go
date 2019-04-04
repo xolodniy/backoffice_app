@@ -33,8 +33,9 @@ func New(config *config.Jira) Jira {
 
 // Status variables for jql requests
 var (
+	StatusStarted         = "Started"
 	StatusClosed          = "Closed"
-	StatusTlReview        = "TL Review"
+	StatusTlReview        = "TL review"
 	StatusPeerReview      = "In peer review"
 	StatusDesignReview    = "in Design review"
 	StatusCTOReview       = "In CTO review"
@@ -52,12 +53,34 @@ var (
 	TypeBETask            = "BE Task"
 	TypeFESubTask         = "FE Sub-Task"
 	TypeFETask            = "FE Task"
+	TagDeveloperName      = "displayName"
+	TagDeveloperEmail     = "emailAddress"
 )
 
 func (i Issue) String() string {
 	message := fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 		i.Key, i.Fields.Summary, i.Fields.Status.Name)
 	return message
+}
+
+// DeveloperMap retrieves information about developer variable by key
+func (i Issue) DeveloperMap(key string) string {
+	var developerKeyInfo string
+	// Convert to marshal map to find developer emailAddress of issue developer field
+	developerMap, err := i.Fields.Unknowns.MarshalMap(FieldDeveloperMap)
+	if err != nil {
+		//can't make customfield_10026 map marshaling because field developer is empty
+		return ""
+	}
+	if developerMap != nil {
+		displayKeyInfo, ok := developerMap[key].(string)
+		if !ok {
+			logrus.WithField(key, fmt.Sprintf("%+v", developerMap[key])).
+				Error("can't assert to string map emailAddress field")
+		}
+		developerKeyInfo = displayKeyInfo
+	}
+	return developerKeyInfo
 }
 
 // issues searches issues in all sprints which opened now and returning list with issues in this sprints list
@@ -169,12 +192,8 @@ func (j *Jira) IssuesAfterSecondReview(typeNames []string) ([]Issue, error) {
 		}
 
 		var (
-			countPeer   = 0
-			countTl     = 0
-			countDesign = 0
-			countPM     = 0
-			countCTO    = 0
-			countFE     = 0
+			countPeer = 0
+			countTl   = 0
 		)
 		for _, histories := range issue.Changelog.Histories {
 			for _, item := range histories.Items {
@@ -183,18 +202,10 @@ func (j *Jira) IssuesAfterSecondReview(typeNames []string) ([]Issue, error) {
 					countPeer++
 				case StatusTlReview:
 					countTl++
-				case StatusDesignReview:
-					countDesign++
-				case StatusPMReview:
-					countPM++
-				case StatusCTOReview:
-					countCTO++
-				case StatusFEReview:
-					countFE++
 				}
 			}
 		}
-		if countPeer > 1 || countTl > 1 || countDesign > 1 || countPM > 1 || countCTO > 1 || countFE > 1 {
+		if countPeer > 1 || countTl > 1 {
 			issuesAfterReview = append(issuesAfterReview, i)
 		}
 	}
@@ -269,7 +280,7 @@ func (j *Jira) IssuesFromFutureSprint(project string) ([]Issue, error) {
 	return issues, nil
 }
 
-// IssuesOfOpenSprints searches Issues in all sprints which opened now and returning list with issues in this sprints list (bugs and stories)
+// IssuesStoryBugOfOpenSprints searches Issues in all sprints which opened now and returning list with issues in this sprints list (bugs and stories)
 func (j *Jira) IssuesStoryBugOfOpenSprints(project string) ([]Issue, error) {
 	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND Sprint IN openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
 	issues, err := j.issues(request)
@@ -339,6 +350,48 @@ func (j *Jira) IssuesOnReview() ([]Issue, error) {
 	if err != nil {
 		return nil, fmt.Errorf("can't take jira not closed issues: %s", err)
 	}
+	var issuesOnReview []Issue
+	for _, issue := range issues {
+		issueWithChangelog, err := j.getIssueChangelog(issue)
+		if err != nil {
+			return nil, err
+		}
+		issuesOnReview = append(issuesOnReview, issueWithChangelog)
+	}
+	return issuesOnReview, nil
+}
+
+// RejectedIssueTLReviewCount retrieves count of TL review rejections if tl review was rejected at last
+func (j *Jira) RejectedIssueTLReviewCount(issue Issue) (int, error) {
+	issueWithHistory, err := j.getIssueChangelog(issue)
+	if err != nil {
+		return 0, err
+	}
+	var reviewCount int
+	if issueWithHistory.Changelog == nil {
+		return 0, fmt.Errorf("Issue changelog is empty")
+	}
+	tlReviewRejected := false
+	for _, item := range issueWithHistory.Changelog.Histories[len(issueWithHistory.Changelog.Histories)-1].Items {
+		if item.FromString == StatusTlReview && item.ToString == StatusStarted {
+			tlReviewRejected = true
+		}
+	}
+	if tlReviewRejected == false {
+		return 0, nil
+	}
+	for _, histories := range issueWithHistory.Changelog.Histories {
+		for _, item := range histories.Items {
+			if item.FromString == StatusTlReview {
+				reviewCount++
+			}
+		}
+	}
+	return reviewCount, nil
+}
+
+// getIssueChangelog retrieves issue with change log history
+func (j *Jira) getIssueChangelog(issue Issue) (Issue, error) {
 	changeLog := &struct {
 		MaxResults int                     `json:"maxResults"`
 		StartAt    int                     `json:"startAt"`
@@ -346,28 +399,27 @@ func (j *Jira) IssuesOnReview() ([]Issue, error) {
 		IsLast     bool                    `json:"isLast"`
 		Values     []jira.ChangelogHistory `json:"values"`
 	}{}
-	var issuesOnReview []Issue
-	for _, issue := range issues {
-		index := 0
-		for {
-			url := fmt.Sprintf("/rest/api/2/issue/%s/changelog?maxResults=100&startAt=%v", issue.Key, index)
-			req, err := j.NewRequest("GET", url, nil)
-			if err != nil {
-				return nil, fmt.Errorf("can't create request of changelog enpoint: %s", err)
-			}
-			_, err = j.Do(req, changeLog)
-			if err != nil {
-				return nil, fmt.Errorf("can't take jira changelog of issue: %s", err)
-			}
-			issue.Changelog = &jira.Changelog{Histories: changeLog.Values}
-			issuesOnReview = append(issuesOnReview, issue)
-			if changeLog.IsLast {
-				break
-			}
-			index += 100
+	index := 0
+	issue.Changelog = &jira.Changelog{}
+	for {
+		url := fmt.Sprintf("/rest/api/2/issue/%s/changelog?maxResults=100&startAt=%v", issue.Key, index)
+		req, err := j.NewRequest("GET", url, nil)
+		if err != nil {
+			return Issue{}, fmt.Errorf("can't create request of changelog enpoint: %s", err)
 		}
+		_, err = j.Do(req, changeLog)
+		if err != nil {
+			return Issue{}, fmt.Errorf("can't take jira changelog of issue: %s", err)
+		}
+		for _, history := range changeLog.Values {
+			issue.Changelog.Histories = append(issue.Changelog.Histories, history)
+		}
+		if changeLog.IsLast {
+			break
+		}
+		index += 100
 	}
-	return issuesOnReview, nil
+	return issue, nil
 }
 
 // IssueTypeByKey retrieves type of issue by id

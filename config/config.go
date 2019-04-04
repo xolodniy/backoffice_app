@@ -68,6 +68,7 @@ type Slack struct {
 	Secret         string
 	IgnoreList     []string
 	Employees      struct {
+		DirectorOfCompany string
 		ProjectManager string
 		ArtDirector    string
 		TeamLeaderBE   string

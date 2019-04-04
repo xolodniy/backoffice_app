@@ -202,20 +202,9 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 	msgBody := "Employees have exceeded tasks:\n"
 	var developers = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		developer := ""
-		// Convert to marshal map to find developer displayName of issue developer field
-		developerMap, err := issue.Fields.Unknowns.MarshalMap(jira.FieldDeveloperMap)
-		if err != nil {
-			//can't make customfield_10026 map marshaling because field developer is empty
+		developer := issue.DeveloperMap(jira.TagDeveloperName)
+		if developer == "" {
 			developer = "No developer"
-		}
-		if developerMap != nil {
-			displayName, ok := developerMap["displayName"].(string)
-			if !ok {
-				logrus.WithField("displayName", fmt.Sprintf("%+v", developerMap["displayName"])).
-					Error("can't assert to string map displayName field")
-			}
-			developer = displayName
 		}
 		developers[developer] = append(developers[developer], issue)
 	}
@@ -606,20 +595,9 @@ func (a *App) ReportSprintStatus(channel string) {
 	}
 	var developers = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		developer := ""
-		// Convert to marshal map to find developer displayName of issue developer field
-		developerMap, err := issue.Fields.Unknowns.MarshalMap(jira.FieldDeveloperMap)
-		if err != nil {
-			//can't make customfield_10026 map marshaling because field developer is empty
+		developer := issue.DeveloperMap(jira.TagDeveloperName)
+		if developer == "" {
 			developer = "No developer"
-		}
-		if developerMap != nil {
-			displayName, ok := developerMap["displayName"].(string)
-			if !ok {
-				logrus.WithField("displayName", fmt.Sprintf("%+v", developerMap["displayName"])).
-					Error("can't assert to string map displayName field")
-			}
-			developer = displayName
 		}
 		developers[developer] = append(developers[developer], issue)
 	}
@@ -871,4 +849,44 @@ func (a *App) CheckUserAfk(message, threadId, channel string) {
 			a.Slack.SendToThread(fmt.Sprintf("%s will return in %.0f minutes", userName, duration.Minutes()), channel, threadId)
 		}
 	}
+}
+
+// MessageIssueAfterSecondReview send message about issue after second tl review round
+func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
+	if issue.Fields.Assignee == nil {
+		return
+	}
+	reviewCount, err := a.Jira.RejectedIssueTLReviewCount(issue)
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about review count after tl review from jira")
+		return
+	}
+	if reviewCount < 2 {
+		return
+	}
+	developerEmail := issue.DeveloperMap(jira.TagDeveloperEmail)
+	var userId string
+	switch developerEmail {
+	case "":
+		userId = "No developer"
+	default:
+		userId, err = a.Slack.UserIdByEmail(developerEmail)
+		if err != nil {
+			logrus.WithError(err).Error("can't take user id by email from slack")
+			userId = developerEmail
+			break
+		}
+		userId = "<@" + userId + ">"
+	}
+
+	msgBody := fmt.Sprintf("The issue %s has been rejected after %v reviews\n\n", issue.Key, reviewCount)
+	switch issue.Fields.Type.Name {
+	case jira.TypeBESubTask, jira.TypeBETask:
+		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", userId, a.Slack.Employees.TeamLeaderBE, a.Slack.Employees.DirectorOfCompany)
+	case jira.TypeFESubTask, jira.TypeFETask:
+		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", userId, a.Slack.Employees.TeamLeaderFE, a.Slack.Employees.DirectorOfCompany)
+	default:
+		return
+	}
+	a.Slack.SendMessage(msgBody, "#general")
 }

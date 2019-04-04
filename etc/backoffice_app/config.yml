@@ -5,21 +5,21 @@ maxweekworkinghours: 30.0
 reports:
   dailyworkersworkedtime:
     schedule: "00 00 07 * * *"
-    channel: "#back-office-app"
+    channel: "#work-reports"
   weeklyworkersworkedtime:
     schedule: "00 00 07 * * 1"
-    channel: "#back-office-app"
+    channel: "#work-reports"
   reportclosedsubtasks:
     schedule: "00 00 07 * * *"
     channel: "#back-office-app"
   reportaftersecondreviewall:
-    schedule: "00 00 06 * * *"
+    schedule: "@yearly"
     channel: "U891K2Z2P"
   reportaftersecondreviewbe:
-    schedule: "00 00 06 * * *"
+    schedule: "@yearly"
     channel: "U97DJLL11"
   reportaftersecondreviewfe:
-    schedule: "00 00 06 * * *"
+    schedule: "@yearly"
     channel: "U88K5BQAD"
   employeesexceededtasks:
     schedule: "00 00 07 * * *"
@@ -69,6 +69,7 @@ slack:
   restVolume: 0.0
   secret: 046b6a43f79bca89a7f9056921906b25
   employees:
+    directorofcompany: U891K2Z2P
     projectmanager: U9FDU5W4D
     artdirector: U89802W2Z
     teamleaderbe: U97DJLL11
