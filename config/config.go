@@ -33,6 +33,7 @@ type Main struct {
 		Report24HoursReviewIssues     Report
 		ReportGitAnsibleChanges       Report
 		DailyWorkersLessWorkedMessage Report
+		WeeklyReportOverworkedIssues  Report
 	}
 }
 
@@ -69,12 +70,12 @@ type Slack struct {
 	IgnoreList     []string
 	Employees      struct {
 		DirectorOfCompany string
-		ProjectManager string
-		ArtDirector    string
-		TeamLeaderBE   string
-		TeamLeaderFE   string
-		BeTeam         []string
-		FeTeam         []string
+		ProjectManager    string
+		ArtDirector       string
+		TeamLeaderBE      string
+		TeamLeaderFE      string
+		BeTeam            []string
+		FeTeam            []string
 	}
 }
 
