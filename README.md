@@ -215,6 +215,9 @@ You may use one of several pre-defined schedules in place of a cron expression.
       dailyworkerslessworkedmessage:    — preference to send report about workers worked less then 6 hours
         schedule: "00 00 06 * * *"
         channel: "#general"
+      reportepicclosedissues:           — preference to send report about all closed issues of epic
+        schedule: "00 00 07 * * *"
+        channel: "#back-office-app"
     
 #### Config.yml variables for slack users id
 
