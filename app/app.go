@@ -148,45 +148,6 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 	a.Slack.SendMessage(msgBody, channel)
 }
 
-// ReportEmployeesWithExceededEstimateTime create report about employees with ETA overhead
-func (a *App) ReportEmployeesWithExceededEstimateTime(channel string) {
-	//getting actual sum of ETA from jira by employees
-	jiraRemainingEtaMap := make(map[string]int)
-	issues, err := a.Jira.AssigneeOpenIssues()
-	if err != nil {
-		logrus.WithError(err).Error("can't take information about closed subtasks from jira")
-		return
-	}
-	for _, issue := range issues {
-		jiraRemainingEtaMap[issue.Fields.Assignee.EmailAddress] += issue.Fields.TimeTracking.RemainingEstimateSeconds
-	}
-	if len(jiraRemainingEtaMap) == 0 {
-		a.Slack.SendMessage("There are no issues with remaining ETA.", channel)
-		return
-	}
-	usersReports, err := a.Hubstaff.UsersWorkTimeByMember(now.BeginningOfWeek(), now.EndOfWeek())
-	if err != nil {
-		logrus.WithError(err).Error("can't get logged time from Hubstaff")
-		return
-	}
-	// prepare the content
-	messageHeader := fmt.Sprintf("\nExceeded estimate time report:\n\n*%v*\n", now.BeginningOfDay().Format("02.01.2006"))
-	message := ""
-	var maxWeekWorkingHours float32 = 30.0
-	for _, userReport := range usersReports {
-		if jiraRemainingEtaMap[userReport.Email] > 0 {
-			workVolume := float32(jiraRemainingEtaMap[userReport.Email]+int(userReport.TimeWorked)) / 3600.0
-			if workVolume > maxWeekWorkingHours {
-				message += fmt.Sprintf("\n%s late for %.2f hours", userReport.Name, workVolume-maxWeekWorkingHours)
-			}
-		}
-	}
-	if message == "" {
-		message = "No one developer has exceeded estimate time"
-	}
-	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message), channel)
-}
-
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
 func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 	issues, err := a.Jira.AssigneeOpenIssues()
