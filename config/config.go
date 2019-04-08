@@ -25,7 +25,6 @@ type Main struct {
 		ReportAfterSecondReviewBE     Report
 		ReportAfterSecondReviewFE     Report
 		EmployeesExceededTasks        Report
-		EmployeesExceededEstimateTime Report
 		ReportSlackSpaceEnding        Report
 		ReportGitMigrations           Report
 		ReportSprintStatus            Report
@@ -69,12 +68,12 @@ type Slack struct {
 	IgnoreList     []string
 	Employees      struct {
 		DirectorOfCompany string
-		ProjectManager string
-		ArtDirector    string
-		TeamLeaderBE   string
-		TeamLeaderFE   string
-		BeTeam         []string
-		FeTeam         []string
+		ProjectManager    string
+		ArtDirector       string
+		TeamLeaderBE      string
+		TeamLeaderFE      string
+		BeTeam            []string
+		FeTeam            []string
 	}
 }
 
