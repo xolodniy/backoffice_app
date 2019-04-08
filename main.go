@@ -118,20 +118,6 @@ func main() {
 				},
 			},
 			{
-				Name:  "report-exceeded-estimate-now",
-				Usage: "Reports exceeded estimate right now",
-				Flags: cliApp.Flags,
-				Action: func(c *cli.Context) {
-					channel := c.String("channel")
-					if channel == "" {
-						logrus.Println("Empty channel flag!")
-						return
-					}
-					application := app.New(cfg)
-					application.ReportEmployeesWithExceededEstimateTime(channel)
-				},
-			},
-			{
 				Name:  "get-jira-issues-after-second-review-round-all",
 				Usage: "Gets jira issues after second review round right now",
 				Flags: cliApp.Flags,
@@ -335,13 +321,6 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 
 	err = tm.AddTask(cfg.Reports.WeeklyWorkersWorkedTime.Schedule, func() {
 		application.MakeWorkersWorkedReportLastWeek("auto", cfg.Reports.WeeklyWorkersWorkedTime.Channel)
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	err = tm.AddTask(cfg.Reports.EmployeesExceededEstimateTime.Schedule, func() {
-		application.ReportEmployeesWithExceededEstimateTime(cfg.Reports.EmployeesExceededEstimateTime.Channel)
 	})
 	if err != nil {
 		panic(err)
