@@ -33,28 +33,29 @@ func New(config *config.Jira) Jira {
 
 // Status variables for jql requests
 var (
-	StatusStarted         = "Started"
-	StatusClosed          = "Closed"
-	StatusTlReview        = "TL review"
-	StatusPeerReview      = "In peer review"
-	StatusDesignReview    = "in Design review"
-	StatusCTOReview       = "In CTO review"
-	StatusFEReview        = "In FE review"
-	StatusPMReview        = "In PM Review"
-	StatusCloseLastTask   = "Close last task"
-	StatusReadyForDemo    = "Ready for demo"
-	StatusEmptyAssignee   = "empty"
-	StatusInClarification = "In clarification"
-	FieldEpicName         = "customfield_10005"
-	FieldEpicKey          = "customfield_10008"
-	FieldSprintInfo       = "customfield_10010"
-	FieldDeveloperMap     = "customfield_10026"
-	TypeBESubTask         = "BE Sub-Task"
-	TypeBETask            = "BE Task"
-	TypeFESubTask         = "FE Sub-Task"
-	TypeFETask            = "FE Task"
-	TagDeveloperName      = "displayName"
-	TagDeveloperEmail     = "emailAddress"
+	StatusStarted             = "Started"
+	StatusClosed              = "Closed"
+	StatusTlReview            = "TL review"
+	StatusPeerReview          = "In peer review"
+	StatusDesignReview        = "in Design review"
+	StatusCTOReview           = "In CTO review"
+	StatusFEReview            = "In FE review"
+	StatusPMReview            = "In PM Review"
+	StatusCloseLastTask       = "Close last task"
+	StatusReadyForDemo        = "Ready for demo"
+	StatusEmptyAssignee       = "empty"
+	StatusInClarification     = "In clarification"
+	StatusInArtDirectorReview = "In Art-director review"
+	FieldEpicName             = "customfield_10005"
+	FieldEpicKey              = "customfield_10008"
+	FieldSprintInfo           = "customfield_10010"
+	FieldDeveloperMap         = "customfield_10026"
+	TypeBESubTask             = "BE Sub-Task"
+	TypeBETask                = "BE Task"
+	TypeFESubTask             = "FE Sub-Task"
+	TypeFETask                = "FE Task"
+	TagDeveloperName          = "displayName"
+	TagDeveloperEmail         = "emailAddress"
 )
 
 func (i Issue) String() string {
@@ -313,14 +314,14 @@ func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
 }
 
 // IssueSetStatusCloseLastTask set status close transition for issue
-func (j *Jira) IssueSetStatusCloseLastTask(issueKey string) error {
+func (j *Jira) IssueSetStatusTransition(issueKey, transitionName string) error {
 	transitions, resp, err := j.Issue.GetTransitions(issueKey)
 	if err != nil {
 		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira transisions list of issue")
 		return err
 	}
 	for _, transition := range transitions {
-		if transition.Name == StatusCloseLastTask {
+		if transition.Name == transitionName {
 			resp, err := j.Issue.DoTransition(issueKey, transition.ID)
 			if err != nil {
 				logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't do transition from transisions list of issue")
@@ -430,4 +431,33 @@ func (j *Jira) IssueTypeByKey(issueId string) string {
 		return ""
 	}
 	return issue.Fields.Type.Name
+}
+
+// EpicsWithClosedStories retrieves epics with closed issues
+func (j *Jira) EpicsWithClosedIssues() ([]Issue, error) {
+	request := fmt.Sprintf(`type in (Epic) AND status NOT IN ("%s")`, StatusClosed)
+	openEpics, err := j.issues(request)
+	if err != nil {
+		return nil, err
+	}
+	var epicsWithClosedIssues []Issue
+	for _, epic := range openEpics {
+		request := fmt.Sprintf(`cf[10008] = "%s"`, epic.Key)
+		epicIssues, err := j.issues(request)
+		if err != nil {
+			return nil, err
+		}
+		if len(epicIssues) == 0 {
+			continue
+		}
+		func() {
+			for _, issue := range epicIssues {
+				if issue.Fields.Status.Name != StatusClosed {
+					return
+				}
+			}
+			epicsWithClosedIssues = append(epicsWithClosedIssues, epic)
+		}()
+	}
+	return epicsWithClosedIssues, nil
 }
