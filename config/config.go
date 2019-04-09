@@ -34,6 +34,7 @@ type Main struct {
 		ReportGitAnsibleChanges       Report
 		DailyWorkersLessWorkedMessage Report
 	}
+	DB Database
 }
 
 // Jira is template to storing jira configuration
@@ -69,12 +70,12 @@ type Slack struct {
 	IgnoreList     []string
 	Employees      struct {
 		DirectorOfCompany string
-		ProjectManager string
-		ArtDirector    string
-		TeamLeaderBE   string
-		TeamLeaderFE   string
-		BeTeam         []string
-		FeTeam         []string
+		ProjectManager    string
+		ArtDirector       string
+		TeamLeaderBE      string
+		TeamLeaderFE      string
+		BeTeam            []string
+		FeTeam            []string
 	}
 }
 
@@ -92,6 +93,16 @@ type Bitbucket struct {
 type Report struct {
 	Schedule string
 	Channel  string
+}
+
+// Database configuration
+type Database struct {
+	Host      string `json:"host"     binding:"required"`
+	Port      int    `json:"port"     binding:"min=1,max=65535"`
+	User      string `json:"user"     binding:"required"`
+	Password  string `json:"password" binding:"required"`
+	Name      string `json:"name"     binding:"required"`
+	EnableSSL bool   `json:"enableSSL"`
 }
 
 // GetConfig return config parsed from config/config.yml

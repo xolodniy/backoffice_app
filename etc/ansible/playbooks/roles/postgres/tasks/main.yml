@@ -1,0 +1,68 @@
+---
+- name: init PostgreSQL repo
+  yum:
+    name: https://download.postgresql.org/pub/repos/yum/9.5/redhat/rhel-7-x86_64/pgdg-redhat95-9.5-2.noarch.rpm
+
+- name: Install PostgreSQL
+  yum:
+    name: "{{ item }}"
+    state: latest
+    update_cache: yes
+  with_items:
+    - postgresql95
+    - python-psycopg2
+    - postgresql95-server
+
+# TODO: Replace with upgrade in case it's a major version upgrade.
+- name: initdb
+  command: /usr/pgsql-9.5/bin/postgresql95-setup initdb
+  args:
+    creates: /var/lib/pgsql/9.5/data/pg_hba.conf
+
+- name: enable
+  systemd:
+    name: postgresql-9.5
+    enabled: yes
+    daemon_reload: yes
+
+- name: copy configuration
+  copy:
+    src: "{{ item }}"
+    dest: "/var/lib/pgsql/9.5/data/{{ item }}"
+    force: yes
+  with_items:
+    - pg_hba.conf
+    - postgresql.conf
+  notify: restart postgres
+- meta: flush_handlers # Ensure it's been restarted after updating configuration.
+
+- name: ensure postgres started
+  service:
+    name: postgresql-9.5
+    state: started
+
+- name: init {{ postgres_user }}
+  postgresql_user:
+    login_user: "postgres"
+    name: "{{ postgres_user }}"
+    password: "{{ postgres_password }}"
+    role_attr_flags: CREATEDB
+  become_user: postgres
+
+- name: init '{{ postgres_database }}' database and ensure that user '{{ postgres_user }}' has access to it
+  postgresql_db:
+    login_user: "postgres"
+    name: "{{ postgres_database }}"
+    owner: "{{ postgres_user }}"
+  become_user: postgres
+
+- name: grant privileges for all the tables
+  postgresql_privs:
+    login_user: "postgres"
+    database: "{{ postgres_database }}"
+    privs: ALL
+    objs: ALL_IN_SCHEMA
+    type: table
+    role: "{{ postgres_user }}"
+    grant_option: no
+  become_user: postgres

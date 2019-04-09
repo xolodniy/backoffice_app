@@ -61,6 +61,11 @@ func main() {
 
 		cliApp.Flags = []cli.Flag{
 			cli.StringFlag{
+				Name:  "config",
+				Value: "/etc/backoffice/config.json",
+				Usage: "optional config path",
+			},
+			cli.StringFlag{
 				Name:  "channel, c",
 				Value: "",
 				Usage: "Channel for sending report, for example: -channel=#backoffice_app ",

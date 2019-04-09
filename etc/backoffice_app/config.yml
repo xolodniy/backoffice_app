@@ -97,3 +97,12 @@ hubstaff:
     login:
     password:
   orgsid: 60470
+
+
+database:
+  "name": backoffice
+  "host": localhost
+  "port": 5432
+  "user": backoffice
+  "password": KMp7mMnfgOws2BYw
+  "enable_ssl": false
