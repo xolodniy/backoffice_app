@@ -79,7 +79,7 @@ func (c *Controller) afkCommand(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "Failed! Duration key is empty! Please, type /afk 1h")
 		return
 	}
-	if request.Text == "stop" {
+	if request.Text == "stop" && c.App.AfkTimer.UserDurationMap[request.UserId] > 0 {
 		c.App.AfkTimer.UserDurationMap[request.UserId] = 0
 		ctx.String(http.StatusOK, "AFK timer stopped.")
 		return
