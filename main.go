@@ -13,9 +13,11 @@ import (
 	"backoffice_app/config"
 	"backoffice_app/controller"
 	"backoffice_app/libs/taskmanager"
+	"backoffice_app/model"
 	"backoffice_app/services/jira"
 
 	runtime "github.com/banzaicloud/logrus-runtime-formatter"
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -23,32 +25,41 @@ import (
 
 func main() {
 	{
-		cfg, err := config.GetConfig(true)
-		if err != nil {
-			panic(err)
-		}
-
-		level, err := logrus.ParseLevel(cfg.LogLevel)
-		if err != nil {
-			panic("invalid logLevel \"" + cfg.LogLevel + " \" in cfg. available: ") //TODO + logrus.AllLevels()
-		}
-		logrus.SetLevel(level)
-
-		formatter := runtime.Formatter{ChildFormatter: &logrus.TextFormatter{}}
-		formatter.Line = true
-
-		logrus.SetFormatter(&formatter)
-
-		now.WeekStartDay = time.Monday
 
 		cliApp := cli.NewApp()
 		cliApp.Name = "Backoffice App"
 		cliApp.Usage = "It's the best application for real time workers day and week progress."
 
+		cliApp.Flags = []cli.Flag{
+			cli.StringFlag{
+				Name:  "config",
+				Value: "/etc/backoffice/config.yml",
+				Usage: "optional config path",
+			},
+			cli.StringFlag{
+				Name:  "channel, c",
+				Value: "",
+				Usage: "Channel for sending report, for example: -channel=#backoffice_app ",
+			},
+		}
+
 		cliApp.Action = func(c *cli.Context) {
+			cfg := config.GetConfig(true, c.String("config"))
+
+			level, err := logrus.ParseLevel(cfg.LogLevel)
+			if err != nil {
+				panic("invalid logLevel \"" + cfg.LogLevel + " \" in cfg. available: ") //TODO + logrus.AllLevels()
+			}
+			logrus.SetLevel(level)
+
+			formatter := runtime.Formatter{ChildFormatter: &logrus.TextFormatter{}}
+			formatter.Line = true
+			logrus.SetFormatter(&formatter)
+
+			now.WeekStartDay = time.Monday
 			application := app.New(cfg)
 
-			go controller.New(*cfg).Start()
+			go controller.New(*cfg, application).Start()
 			log.Println("Requests listener started.")
 
 			go application.FillCache()
@@ -59,24 +70,30 @@ func main() {
 			gracefulClosing(tm.Stop, &wg)
 		}
 
-		cliApp.Flags = []cli.Flag{
-			cli.StringFlag{
-				Name:  "config",
-				Value: "/etc/backoffice/config.json",
-				Usage: "optional config path",
-			},
-			cli.StringFlag{
-				Name:  "channel, c",
-				Value: "",
-				Usage: "Channel for sending report, for example: -channel=#backoffice_app ",
-			},
-		}
-
 		cliApp.Commands = []cli.Command{
+			{
+				Name:  "migrate",
+				Usage: "update migrations to the latest stage",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
+
+					db, err := gorm.Open("postgres", cfg.Database.ConnURL())
+					if err != nil {
+						logrus.WithError(err).Fatal("can't open connection with a database")
+					}
+					if err := db.DB().Ping(); err != nil {
+						logrus.WithError(err).Fatal("can't ping connection with a database")
+					}
+					m := model.New(db)
+					m.Migrate()
+				},
+			},
 			{
 				Name:  "remove-all-slack-attachments",
 				Usage: "Removes ABSOLUTELY ALL Slack attachments",
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					application := app.New(cfg)
 					files, err := application.Slack.Files()
 					if len(files) == 0 {
@@ -99,6 +116,7 @@ func main() {
 				Usage: "Gets jira exceedions right now",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
@@ -113,6 +131,7 @@ func main() {
 				Usage: "Gets jira issues with closed subtasks right now",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
@@ -127,6 +146,7 @@ func main() {
 				Usage: "Reports exceeded estimate right now",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
@@ -141,6 +161,7 @@ func main() {
 				Usage: "Gets jira issues after second review round right now",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
@@ -155,6 +176,7 @@ func main() {
 				Usage: "Gets jira backend issues after second review round right now",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
@@ -169,6 +191,7 @@ func main() {
 				Usage: "Gets jira frontend issues after second review round right now",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
@@ -183,6 +206,7 @@ func main() {
 				Usage: "Gets git new migrations right now",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
@@ -197,6 +221,7 @@ func main() {
 				Usage: "Gets git new ansible changes right now",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
@@ -211,6 +236,7 @@ func main() {
 				Usage: "Gets report, if slack free space is empty",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
@@ -225,6 +251,7 @@ func main() {
 				Usage: "Gets report about open sprint status",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
@@ -239,6 +266,7 @@ func main() {
 				Usage: "Sends weekly report to slack channel",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
@@ -253,6 +281,7 @@ func main() {
 				Usage: "Sends daily report to slack channel",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
@@ -266,6 +295,7 @@ func main() {
 				Name:  "obtain-hubstaff-token",
 				Usage: "Obtains Hubstaff authorization token.",
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					application := app.New(cfg)
 
 					authToken, err := application.Hubstaff.ObtainAuthToken(cfg.Hubstaff.Auth)
@@ -280,6 +310,7 @@ func main() {
 				Usage: "Send last activity report right now",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
@@ -293,6 +324,7 @@ func main() {
 				Name:  "send-clarification-report-now",
 				Usage: "Send clarification issues report right now",
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					application := app.New(cfg)
 					application.ReportClarificationIssues()
 				},
@@ -301,6 +333,7 @@ func main() {
 				Name:  "send-long-review-time-report-now",
 				Usage: "Send long review time report right now",
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					application := app.New(cfg)
 					application.Report24HoursReviewIssues()
 				},
@@ -310,6 +343,7 @@ func main() {
 				Usage: "Sends daily report about user that worked less then 6h to slack channel",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
