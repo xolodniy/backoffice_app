@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"backoffice_app/common"
 	"backoffice_app/config"
 	"backoffice_app/model"
 	"backoffice_app/services/bitbucket"
@@ -39,15 +40,13 @@ type CommitsCache struct {
 
 // App is main App implementation
 type App struct {
-	Hubstaff     hubstaff.Hubstaff
-	Slack        slack.Slack
-	Jira         jira.Jira
-	Bitbucket    bitbucket.Bitbucket
-	Config       config.Main
-	CommitsCache map[string]CommitsCache
-	AnsibleCache map[string]CommitsCache
-	AfkTimer     AfkTimer
-	Model        model.Model
+	Hubstaff  hubstaff.Hubstaff
+	Slack     slack.Slack
+	Jira      jira.Jira
+	Bitbucket bitbucket.Bitbucket
+	Config    config.Main
+	AfkTimer  AfkTimer
+	model     model.Model
 }
 
 // AfkTimer struct for cache of user's AFK duration with mutex defend
@@ -71,15 +70,13 @@ func New(conf *config.Main) *App {
 		logrus.WithError(err).Fatal("invalid database condition")
 	}
 	return &App{
-		Hubstaff:     hubstaff.New(&conf.Hubstaff),
-		Slack:        slack.New(&conf.Slack),
-		Jira:         jira.New(&conf.Jira),
-		Bitbucket:    bitbucket.New(&conf.Bitbucket),
-		Config:       *conf,
-		CommitsCache: make(map[string]CommitsCache),
-		AnsibleCache: make(map[string]CommitsCache),
-		AfkTimer:     AfkTimer{Mutex: &sync.Mutex{}, UserDurationMap: make(map[string]time.Duration)},
-		Model:        model,
+		Hubstaff:  hubstaff.New(&conf.Hubstaff),
+		Slack:     slack.New(&conf.Slack),
+		Jira:      jira.New(&conf.Jira),
+		Bitbucket: bitbucket.New(&conf.Bitbucket),
+		Config:    *conf,
+		AfkTimer:  AfkTimer{Mutex: &sync.Mutex{}, UserDurationMap: make(map[string]time.Duration)},
+		model:     model,
 	}
 }
 
@@ -290,31 +287,60 @@ func (a *App) ReportGitMigrations(channel string) {
 	}
 	for _, message := range messages {
 		if message != "" {
-			a.Slack.SendMessage(message, channel)
+			a.Slack.SendMessage(message, "@bamp94")
 		}
 	}
 }
 
 // FillCache fill commits caches for searching new migrations and new changes of ansible
 func (a *App) FillCache() {
+	migrationCommits, err := a.model.GetCommitsByType(common.CommitTypeMigration)
+	if err != nil {
+		logrus.WithError(err).Error("can't take commits cache from database")
+		return
+	}
+
+	ansibleCommits, err := a.model.GetCommitsByType(common.CommitTypeAnsible)
+	if err != nil {
+		logrus.WithError(err).Error("can't take commits cache from database")
+		return
+	}
+	// if commits cache is not empty return
+	if len(migrationCommits) != 0 && len(ansibleCommits) != 0 {
+		return
+	}
 	commits, err := a.Bitbucket.CommitsOfOpenedPRs()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
 		return
 	}
-	mapSQLCommits, err := a.SQLCommitsCache(commits)
-	if err != nil {
-		logrus.WithError(err).Error("can't take diff information from bitbucket")
-		return
-	}
-	a.CommitsCache = mapSQLCommits
 
-	mapAnsibleCommits, err := a.AnsibleCommitsCache(commits)
-	if err != nil {
-		logrus.WithError(err).Error("can't take diff information from bitbucket")
-		return
+	if len(migrationCommits) == 0 {
+		SQLCommits, err := a.SQLCommitsCache(commits)
+		if err != nil {
+			logrus.WithError(err).Error("can't take diff information from bitbucket")
+			return
+		}
+		err = a.CreateCommitsCache(SQLCommits)
+		if err != nil {
+			logrus.WithError(err).Error("can't create commits cache in database")
+			return
+		}
 	}
-	a.AnsibleCache = mapAnsibleCommits
+
+	if len(ansibleCommits) == 0 {
+		AnsibleCommits, err := a.AnsibleCommitsCache(commits)
+		if err != nil {
+			logrus.WithError(err).Error("can't take diff information from bitbucket")
+			return
+		}
+
+		err = a.CreateCommitsCache(AnsibleCommits)
+		if err != nil {
+			logrus.WithError(err).Error("can't create commits cache in database")
+			return
+		}
+	}
 }
 
 // MigrationMessages returns slice of all miigration files
@@ -331,23 +357,35 @@ func (a *App) MigrationMessages() ([]string, error) {
 		return nil, err
 	}
 	var files []string
-	for hash, cache := range newCommitsCache {
-		if _, ok := a.CommitsCache[hash]; !ok {
-			file, err := a.Bitbucket.SrcFile(cache.Repository, hash, cache.Path)
+	for _, commit := range newCommitsCache {
+		dbCommit, err := a.model.GetCommitByHash(commit.Type, commit.Hash)
+		if err != nil {
+			logrus.WithError(err).Error("can't take commit from database")
+			return nil, err
+		}
+		if len(dbCommit) == 0 {
+			file, err := a.Bitbucket.SrcFile(commit.Repository, commit.Hash, commit.Path)
 			if err != nil {
 				logrus.WithError(err).Error("can't take information about file from bitbucket")
 				return []string{}, err
 			}
-			files = append(files, cache.Message+"\n```"+file+"```\n")
+			files = append(files, commit.Message+"\n```"+file+"```\n")
 		}
 	}
-	a.CommitsCache = newCommitsCache
+	err = a.model.DeleteCommitsByType(common.CommitTypeMigration)
+	if err != nil {
+		logrus.WithError(err).Error("can't clear old commits cache from database")
+	}
+	err = a.CreateCommitsCache(newCommitsCache)
+	if err != nil {
+		logrus.WithError(err).Error("can't create commits cache in database")
+	}
 	return files, nil
 }
 
 // SQLCommitsCache returns commits cache with sql migration
-func (a *App) SQLCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCache, error) {
-	newMapSQLCommits := make(map[string]CommitsCache)
+func (a *App) SQLCommitsCache(commits []bitbucket.Commit) ([]model.Commit, error) {
+	var newSQLCommits []model.Commit
 	for _, commit := range commits {
 		diffStats, err := a.Bitbucket.CommitsDiffStats(commit.Repository.Name, commit.Hash)
 		if err != nil {
@@ -355,11 +393,17 @@ func (a *App) SQLCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCac
 		}
 		for _, diffStat := range diffStats {
 			if strings.Contains(diffStat.New.Path, ".sql") {
-				newMapSQLCommits[commit.Hash] = CommitsCache{Repository: commit.Repository.Name, Path: diffStat.New.Path, Message: commit.Message}
+				newSQLCommits = append(newSQLCommits, model.Commit{
+					Type:       common.CommitTypeMigration,
+					Hash:       commit.Hash,
+					Repository: commit.Repository.Name,
+					Path:       diffStat.New.Path,
+					Message:    commit.Message,
+				})
 			}
 		}
 	}
-	return newMapSQLCommits, nil
+	return newSQLCommits, nil
 }
 
 // ReportCurrentActivityWithCallback posts last activity to slack to defined callbackUrl
@@ -751,25 +795,37 @@ func (a *App) ReportGitAnsibleChanges(channel string) {
 		return
 	}
 	var files []string
-	for hash, cache := range newAnsibleCache {
-		if _, ok := a.AnsibleCache[hash]; !ok {
-			file, err := a.Bitbucket.DiffFile(cache.Repository, hash, cache.Path)
+	for _, commit := range newAnsibleCache {
+		dbCommit, err := a.model.GetCommitByHash(commit.Type, commit.Hash)
+		if err != nil {
+			logrus.WithError(err).Error("can't take commit from database")
+			return
+		}
+		if len(dbCommit) == 0 {
+			file, err := a.Bitbucket.SrcFile(commit.Repository, commit.Hash, commit.Path)
 			if err != nil {
 				logrus.WithError(err).Error("can't take information about file from bitbucket")
 				return
 			}
-			files = append(files, cache.Message+"\n```"+file+"```\n")
+			files = append(files, commit.Message+"\n```"+file+"```\n")
 		}
 	}
-	a.AnsibleCache = newAnsibleCache
+	err = a.model.DeleteCommitsByType(common.CommitTypeAnsible)
+	if err != nil {
+		logrus.WithError(err).Error("can't clear old commits cache from database")
+	}
+	err = a.CreateCommitsCache(newAnsibleCache)
+	if err != nil {
+		logrus.WithError(err).Error("can't create commits cache in database")
+	}
 	for _, message := range files {
-		a.Slack.SendMessage(message, channel)
+		a.Slack.SendMessage(message, "@bamp94")
 	}
 }
 
 // AnsibleCommitsCache returns commits cache with etc/ansible changes
-func (a *App) AnsibleCommitsCache(commits []bitbucket.Commit) (map[string]CommitsCache, error) {
-	newMapAnsibleCommits := make(map[string]CommitsCache)
+func (a *App) AnsibleCommitsCache(commits []bitbucket.Commit) ([]model.Commit, error) {
+	var newAnsibleCommits []model.Commit
 	for _, commit := range commits {
 		diffStats, err := a.Bitbucket.CommitsDiffStats(commit.Repository.Name, commit.Hash)
 		if err != nil {
@@ -777,21 +833,27 @@ func (a *App) AnsibleCommitsCache(commits []bitbucket.Commit) (map[string]Commit
 		}
 		for _, diffStat := range diffStats {
 			if strings.Contains(diffStat.New.Path, "etc/ansible") {
-				newMapAnsibleCommits[commit.Hash] = CommitsCache{Repository: commit.Repository.Name, Path: diffStat.New.Path, Message: commit.Message}
+				newAnsibleCommits = append(newAnsibleCommits, model.Commit{
+					Type:       common.CommitTypeAnsible,
+					Hash:       commit.Hash,
+					Repository: commit.Repository.Name,
+					Path:       diffStat.New.Path,
+					Message:    commit.Message,
+				})
 			}
 		}
 	}
-	return newMapAnsibleCommits, nil
+	return newAnsibleCommits, nil
 }
 
-// MakeWorkersWorkedReportYesterday preparing a last day message of less worked users and send it to Slack
+// MakeWorkersLessWorkedReportYesterday preparing a last day message of less worked users and send it to Slack
 func (a *App) MakeWorkersLessWorkedReportYesterday(channel string) {
 	a.ReportUsersLessWorked(
 		now.BeginningOfDay().AddDate(0, 0, -1),
 		now.EndOfDay().AddDate(0, 0, -1), channel)
 }
 
-// ReportLessWorked send message to channel when users worked less then 6 hours
+// ReportUsersLessWorked send message to channel when users worked less then 6 hours
 func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, channel string) {
 	usersReports, err := a.Hubstaff.UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd)
 	if err != nil {
@@ -906,4 +968,14 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 		return
 	}
 	a.Slack.SendMessage(msgBody, "#general")
+}
+
+func (a *App) CreateCommitsCache(commits []model.Commit) error {
+	for _, commit := range commits {
+		err := a.model.CreateCommit(commit)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
