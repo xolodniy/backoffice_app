@@ -2,10 +2,10 @@ version: "2.0"
 
 services:
   db:
-    image: postgres:9.6
-    ports:
-      - "5432:5432"
+    image: postgres:11.2
     environment:
       POSTGRES_USER: "backoffice"
       POSTGRES_PASSWORD: "KMp7mMnfgOws2BYw"
       POSTGRES_DB: "backoffice"
+    ports:
+      - "5432:5432"

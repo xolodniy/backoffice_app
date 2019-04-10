@@ -99,9 +99,9 @@ hubstaff:
   orgsid: 60470
 
 database:
-  "name": {{ postgres_database }}
-  "host": {{ postgres_host }}
-  "port": {{ postgres_port }}
-  "user": {{ postgres_user }}
-  "password": {{ postgres_password }}
-  "enable_ssl": {{ postgres_enable_ssl|lower }}
+  name: {{ postgres_database }}
+  host: {{ postgres_host }}
+  port: {{ postgres_port }}
+  user: {{ postgres_user }}
+  password: {{ postgres_password }}
+  enable_ssl: {{ postgres_enable_ssl }}

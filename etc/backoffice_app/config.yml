@@ -50,15 +50,15 @@ reports:
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
-    username:
-    password:
+    username: stepan.morozov@theflow.global
+    password: 123123123
 
 bitbucket:
   apiurl: https://api.bitbucket.org/2.0
   owner: theflowglobal
   auth:
-    username:
-    password:
+    username: stepan.morozov@theflow.global
+    password: 123123123
 
 slack:
   apiurl: https://slack.com/api
@@ -98,11 +98,10 @@ hubstaff:
     password:
   orgsid: 60470
 
-
 database:
-  "name": backoffice
-  "host": localhost
-  "port": 5432
-  "user": backoffice
-  "password": KMp7mMnfgOws2BYw
-  "enable_ssl": false
+  name: backoffice
+  host: localhost
+  port: 5432
+  user: backoffice
+  password: KMp7mMnfgOws2BYw
+  enable_ssl: false
