@@ -903,6 +903,10 @@ func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.
 
 // StartAfkTimer starts timer while user is afk
 func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
+	err := a.model.CreateAfkTimer(model.AfkTimer{UserId: userId, Duration: userDuration.String()})
+	if err != nil {
+		logrus.WithError(err).Errorf("can't create afk timer in database")
+	}
 	a.AfkTimer.UserDurationMap[userId] = userDuration
 	ticker := time.NewTicker(time.Second)
 	go func() {
@@ -914,6 +918,10 @@ func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
 	}()
 	time.Sleep(userDuration)
 	ticker.Stop()
+	err = a.model.DeleteAfkTimer(userId)
+	if err != nil {
+		logrus.WithError(err).Errorf("can't delete afk timer from database")
+	}
 }
 
 // CheckUserAfk check user on AFK status
@@ -930,7 +938,7 @@ func (a *App) CheckUserAfk(message, threadId, channel string) {
 	}
 }
 
-// MessageIssueAfterSecondReview send message about issue after second tl review round
+// MessageIssueAfterSecondTLReview send message about issue after second tl review round
 func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	if issue.Fields.Assignee == nil {
 		return
@@ -978,4 +986,28 @@ func (a *App) CreateCommitsCache(commits []model.Commit) error {
 		}
 	}
 	return nil
+}
+
+func (a *App) CheckAfkTimers() {
+	afkTimers, err := a.model.GetAfkTimers()
+	if err != nil {
+		logrus.WithError(err).Errorf("can't take information about afk timers from database")
+		return
+	}
+	for _, afkTimer := range afkTimers {
+		duration, err := time.ParseDuration(afkTimer.Duration)
+		if err != nil {
+			logrus.WithError(err).Errorf("can't parse afk timer duration")
+			continue
+		}
+		difference := time.Now().Sub(afkTimer.UpdatedAt)
+		if difference < duration && difference > 0 {
+			go a.StartAfkTimer(duration-difference, afkTimer.UserId)
+			continue
+		}
+		err = a.model.DeleteAfkTimer(afkTimer.UserId)
+		if err != nil {
+			logrus.WithError(err).Errorf("can't delete afk timer")
+		}
+	}
 }

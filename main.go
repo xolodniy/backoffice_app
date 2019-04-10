@@ -62,6 +62,7 @@ func main() {
 			go controller.New(*cfg, application).Start()
 			log.Println("Requests listener started.")
 
+			go application.CheckAfkTimers()
 			go application.FillCache()
 
 			wg := sync.WaitGroup{}
