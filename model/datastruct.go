@@ -11,7 +11,6 @@ type Commit struct {
 	Path       string    `json:"path"`
 	Message    string    `json:"message"`
 	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
 // AfkTimer struct of Afk timer
