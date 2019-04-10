@@ -1,12 +1,11 @@
 package model
 
-import (
-	"fmt"
-)
-
-var (
-	// ErrorInternal returns to controller if request valid but domain can't do it
-	ErrorInternal = fmt.Errorf("ошибка сервера, обратитесь в службу поддержки или повторите попытку позже")
-	// ErrNotFound if record does not found
-	ErrNotFound = fmt.Errorf("запись не найдена")
-)
+// Commit struct of commit cache
+type Commit struct {
+	ID         int    `json:"id"`
+	Type       string `json:"type"`
+	Hash       string `json:"hash"`
+	Repository string `json:"repository"`
+	Path       string `json:"path"`
+	Message    string `json:"message"`
+}
