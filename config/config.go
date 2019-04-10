@@ -106,20 +106,19 @@ type Database struct {
 }
 
 // GetConfig return config parsed from config/config.yml
-func GetConfig(skipFieldsFilledCheck bool) (*Main, error) {
+func GetConfig(skipFieldsFilledCheck bool, path string) *Main {
 	var config Main
-	if err := configor.Load(&config, "/etc/backoffice_app/config.yml"); err != nil {
-		return &Main{}, err
-
+	if err := configor.Load(&config, path); err != nil {
+		panic(err)
 	}
 
 	if !skipFieldsFilledCheck {
 		if err := config.checkConfig(); err != nil {
-			return &Main{}, fmt.Errorf("Error on config checking: %+v", err)
+			panic(err)
 		}
 	}
 
-	return &config, nil
+	return &config
 }
 
 // checkConfig check general auth configuration
@@ -144,4 +143,20 @@ func (config *Main) checkConfig() error {
 	}
 
 	return nil
+}
+
+// DbConnURL returns string URL, which may be used for connect to postgres database.
+func (c *Database) ConnURL() string {
+	url := fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s",
+		c.User,
+		c.Password,
+		c.Host,
+		c.Port,
+		c.Name,
+	)
+	if !c.EnableSSL {
+		url += "?sslmode=disable"
+	}
+	return url
 }

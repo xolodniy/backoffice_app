@@ -25,15 +25,11 @@ type Controller struct {
 }
 
 // New returns controller object
-func New(config config.Main) *Controller {
-	appObj := app.New(&config)
-	if !config.GinDebugMode {
-		gin.SetMode(gin.ReleaseMode)
-	}
+func New(config config.Main, app *app.App) *Controller {
 	return &Controller{
 		Config: config,
 		Gin:    gin.Default(),
-		App:    *appObj,
+		App:    *app,
 	}
 }
 
@@ -64,7 +60,6 @@ func (c *Controller) initRoutes() {
 			"summary": summary,
 		})
 	})
-
 
 	jira := c.Gin.Group("")
 	jira.POST("/api/v1/jira/webhooks/issue/updated", c.issueUpdated)
