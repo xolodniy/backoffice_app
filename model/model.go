@@ -94,7 +94,7 @@ func (m *Model) CreateCommit(commit Commit) error {
 	return nil
 }
 
-// GetCommits retrieves commits by type
+// GetCommitsByType retrieves commits by type
 func (m *Model) GetCommitsByType(commitsType string) ([]Commit, error) {
 	var res []Commit
 	if err := m.db.Find(&res).Where("type = ?", commitsType).Error; err != nil {
@@ -104,7 +104,7 @@ func (m *Model) GetCommitsByType(commitsType string) ([]Commit, error) {
 	return res, nil
 }
 
-// GetCommits retrieves commits by hash and type
+// GetCommitByHash retrieves commits by hash and type
 func (m *Model) GetCommitByHash(commitType, hash string) ([]Commit, error) {
 	var res []Commit
 	if err := m.db.Find(&res).Where("type = ? AND hash = ?", commitType, hash).Error; err != nil {
@@ -118,7 +118,40 @@ func (m *Model) GetCommitByHash(commitType, hash string) ([]Commit, error) {
 func (m *Model) DeleteCommitsByType(commitsType string) error {
 	var res []Commit
 	if err := m.db.Where("type = ?", commitsType).Delete(&res).Error; err != nil {
-		logrus.WithError(err).Error("can't get commits")
+		logrus.WithError(err).Error("can't delete commits")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// CreateAfkTimer creates afk timer
+func (m *Model) CreateAfkTimer(afkTimer AfkTimer) error {
+	if err := m.db.Where(AfkTimer{UserId: afkTimer.UserId}).Assign(AfkTimer{Duration: afkTimer.Duration}).FirstOrCreate(&afkTimer).Error; err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"userId":    afkTimer.UserId,
+			"duration":  afkTimer.Duration,
+			"updatedAt": afkTimer.UpdatedAt,
+		}).Error("can't create afk timer")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// GetAfkTimers retrieves afk timers
+func (m *Model) GetAfkTimers() ([]AfkTimer, error) {
+	var res []AfkTimer
+	if err := m.db.Find(&res).Error; err != nil {
+		logrus.WithError(err).Error("can't get afk timers")
+		return nil, common.ErrInternal
+	}
+	return res, nil
+}
+
+// DeleteAfkTimer deletes afk timer
+func (m *Model) DeleteAfkTimer(userId string) error {
+	var res []AfkTimer
+	if err := m.db.Where("user_id = ?", userId).Delete(&res).Error; err != nil {
+		logrus.WithError(err).Error("can't delete afk timer")
 		return common.ErrInternal
 	}
 	return nil
