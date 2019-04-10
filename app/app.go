@@ -18,12 +18,15 @@ import (
 	"time"
 
 	"backoffice_app/config"
+	"backoffice_app/model"
 	"backoffice_app/services/bitbucket"
 	"backoffice_app/services/hubstaff"
 	"backoffice_app/services/jira"
 	"backoffice_app/services/slack"
 
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/now"
+	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 )
 
@@ -44,6 +47,7 @@ type App struct {
 	CommitsCache map[string]CommitsCache
 	AnsibleCache map[string]CommitsCache
 	AfkTimer     AfkTimer
+	Model        model.Model
 }
 
 // AfkTimer struct for cache of user's AFK duration with mutex defend
@@ -54,6 +58,18 @@ type AfkTimer struct {
 
 // New is main App constructor
 func New(conf *config.Main) *App {
+	db, err := gorm.Open("postgres", conf.Database.ConnURL())
+	if err != nil {
+		logrus.WithError(err).Fatal("can't open connection with a database")
+	}
+	if err := db.DB().Ping(); err != nil {
+		logrus.WithError(err).Fatal("can't ping connection with a database")
+	}
+
+	model := model.New(db)
+	if err := model.CheckMigrations(); err != nil {
+		logrus.WithError(err).Fatal("invalid database condition")
+	}
 	return &App{
 		Hubstaff:     hubstaff.New(&conf.Hubstaff),
 		Slack:        slack.New(&conf.Slack),
@@ -63,6 +79,7 @@ func New(conf *config.Main) *App {
 		CommitsCache: make(map[string]CommitsCache),
 		AnsibleCache: make(map[string]CommitsCache),
 		AfkTimer:     AfkTimer{Mutex: &sync.Mutex{}, UserDurationMap: make(map[string]time.Duration)},
+		Model:        model,
 	}
 }
 
