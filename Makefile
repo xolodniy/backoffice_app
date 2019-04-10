@@ -1,13 +1,13 @@
 .PHONY: up
 up:
 	docker-compose up -d db
-	GO111MODULE=on go run main.go --config=./conf/config.json
+	GO111MODULE=on go run main.go --config=./etc/backoffice_app/config.yml
 
 # Apply new migrations (if exist)
 .PHONY: migrate
 migrate:
 	docker-compose up -d db
-	GO111MODULE=on go run main.go --config=./conf/config.json migrate
+	GO111MODULE=on go run main.go migrate --config=./etc/backoffice_app/config.yml
 
 # drop old and create a new database
 .PHONY: recreate_db
