@@ -204,7 +204,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 	for _, issue := range issues {
 		developer := issue.DeveloperMap(jira.TagDeveloperName)
 		if developer == "" {
-			developer = "No developer"
+			developer = jira.NoDeveloper
 		}
 		developers[developer] = append(developers[developer], issue)
 	}
@@ -222,7 +222,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 			}
 		}
 		switch {
-		case developer == "No developer" && message != "":
+		case developer == jira.NoDeveloper && message != "":
 			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
 		case message != "":
 			msgBody += fmt.Sprintf("\n" + developer + "\n" + message)
@@ -597,7 +597,7 @@ func (a *App) ReportSprintStatus(channel string) {
 	for _, issue := range issues {
 		developer := issue.DeveloperMap(jira.TagDeveloperName)
 		if developer == "" {
-			developer = "No developer"
+			developer = jira.NoDeveloper
 		}
 		developers[developer] = append(developers[developer], issue)
 	}
@@ -612,7 +612,7 @@ func (a *App) ReportSprintStatus(channel string) {
 		var message string
 		for _, issue := range issues {
 			if issue.Fields.Status.Name != jira.StatusClosed && issue.Fields.Status.Name != jira.StatusInClarification {
-				if developer == "No developer" && issue.Fields.Assignee == nil {
+				if developer == jira.NoDeveloper && issue.Fields.Assignee == nil {
 					continue
 				}
 				if issue.Fields.Parent != nil {
@@ -622,9 +622,9 @@ func (a *App) ReportSprintStatus(channel string) {
 			}
 		}
 		switch {
-		case developer == "No developer" && message != "":
+		case developer == jira.NoDeveloper && message != "":
 			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
-		case message == "" && developer != "No developer":
+		case message == "" && developer != jira.NoDeveloper:
 			messageAllTaskClosed += fmt.Sprintf(developer + " - all tasks closed.\n")
 		case message != "":
 			msgBody += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
@@ -767,7 +767,7 @@ func (a *App) AnsibleCommitsCache(commits []bitbucket.Commit) (map[string]Commit
 	return newMapAnsibleCommits, nil
 }
 
-// MakeWorkersWorkedReportYesterday preparing a last day message of less worked users and send it to Slack
+// MakeWorkersLessWorkedReportYesterday preparing a last day message of less worked users and send it to Slack
 func (a *App) MakeWorkersLessWorkedReportYesterday(channel string) {
 	a.ReportUsersLessWorked(
 		now.BeginningOfDay().AddDate(0, 0, -1),
@@ -868,7 +868,7 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	var userId string
 	switch developerEmail {
 	case "":
-		userId = "No developer"
+		userId = jira.NoDeveloper
 	default:
 		userId, err = a.Slack.UserIdByEmail(developerEmail)
 		if err != nil {
@@ -905,7 +905,7 @@ func (a *App) ReportOverworkedIssues(channel string) {
 	for _, issue := range issues {
 		developer := issue.DeveloperMap(jira.TagDeveloperName)
 		if developer == "" {
-			developer = "No developer"
+			developer = jira.NoDeveloper
 		}
 		developers[developer] = append(developers[developer], issue)
 	}
@@ -917,27 +917,23 @@ func (a *App) ReportOverworkedIssues(channel string) {
 		var message string
 		for _, issue := range issues {
 			overWorkedDuration := issue.Fields.TimeTracking.TimeSpentSeconds - issue.Fields.TimeTracking.OriginalEstimateSeconds
-			percentEstimateDuration := issue.Fields.TimeTracking.OriginalEstimateSeconds / 100
-			if overWorkedDuration > percentEstimateDuration*10 && issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
+			if overWorkedDuration > issue.Fields.TimeTracking.OriginalEstimateSeconds/10 && issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
 				message += issue.String()
 				message += fmt.Sprintf("- Time spent: %s\n", issue.Fields.TimeTracking.TimeSpent)
 				message += fmt.Sprintf("- Time planned: %s\n", issue.Fields.TimeTracking.OriginalEstimate)
 				message += fmt.Sprintf("- Overwork: %v\n", time.Duration(overWorkedDuration)*time.Second)
-				message += fmt.Sprintf("- Overwork, %s: %v\n", "%%", overWorkedDuration/percentEstimateDuration)
+				message += fmt.Sprintf("- Overwork, %s: %v\n", "%%", overWorkedDuration/(issue.Fields.TimeTracking.OriginalEstimateSeconds/100))
 			}
 		}
 		switch {
-		case developer == "No developer" && message != "":
+		case developer == jira.NoDeveloper && message != "":
 			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
 		case message != "":
 			msgBody += fmt.Sprintf("\n" + developer + "\n" + message)
 		}
 	}
-	switch msgBody {
-	case "":
-		msgBody = "*Tasks time duration analyze*:\nThere are no issues with overworked time."
-	default:
-		msgBody = "*Tasks time duration analyze*:\n" + msgBody + messageNoDeveloper
+	if msgBody == "" && messageNoDeveloper == "" {
+		msgBody = "There are no issues with overworked time."
 	}
-	a.Slack.SendMessage(msgBody, channel)
+	a.Slack.SendMessage("*Tasks time duration analyze*:\n"+msgBody+messageNoDeveloper, channel)
 }

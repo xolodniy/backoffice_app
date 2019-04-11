@@ -56,6 +56,7 @@ var (
 	TypeFETask            = "FE Task"
 	TagDeveloperName      = "displayName"
 	TagDeveloperEmail     = "emailAddress"
+	NoDeveloper           = "No developer"
 )
 
 func (i Issue) String() string {
@@ -435,6 +436,7 @@ func (j *Jira) IssueTypeByKey(issueId string) string {
 
 // IssuesClosedInInterim retrieves isses closed in after dateStart and before dateEnd with not emmpty developer
 func (j *Jira) IssuesClosedInInterim(dateStart, dateEnd time.Time) ([]Issue, error) {
+	// this request retrieves closed and canceled issues
 	request := fmt.Sprintf(`status changed to %s after %s before %s AND Developer is not EMPTY`,
 		StatusClosed, dateStart.Format("2006-01-02"), dateEnd.Format("2006-01-02"))
 	issues, err := j.issues(request)
