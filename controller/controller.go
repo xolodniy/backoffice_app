@@ -65,6 +65,10 @@ func (c *Controller) initRoutes() {
 		})
 	})
 
+
+	jira := c.Gin.Group("")
+	jira.POST("/api/v1/jira/webhooks/issue/updated", c.issueUpdated)
+
 	jira := c.Gin.Group("")
 	jira.POST("/api/v1/jira/webhooks/issue/started", c.issueStarted)
 
@@ -78,6 +82,7 @@ func (c *Controller) initRoutes() {
 	slack.POST("/api/v1/slack/customreport", c.customReport)
 	slack.POST("/api/v1/slack/afk", c.afkCommand)
 	slack.POST("/api/v1/slack/afk/check", c.afkCheck)
+	slack.POST("/api/v1/slack/sprintstatus", c.sprintStatus)
 }
 
 func (c *Controller) checkSignature(ctx *gin.Context) {

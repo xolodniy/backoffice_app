@@ -29,6 +29,7 @@ type Slack struct {
 
 // Employees is struct of employees in slack
 type Employees struct {
+	DirectorOfCompany string
 	ProjectManager string
 	ArtDirector    string
 	TeamLeaderBE   string
@@ -93,6 +94,7 @@ func New(config *config.Slack) Slack {
 		RestVolume:  config.RestVolume,
 		IgnoreList:  config.IgnoreList,
 		Employees: Employees{
+			DirectorOfCompany: "<@" + config.Employees.DirectorOfCompany + ">",
 			ProjectManager: "<@" + config.Employees.ProjectManager + ">",
 			ArtDirector:    "<@" + config.Employees.ArtDirector + ">",
 			TeamLeaderBE:   "<@" + config.Employees.TeamLeaderBE + ">",
