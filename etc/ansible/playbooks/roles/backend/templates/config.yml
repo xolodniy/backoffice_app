@@ -14,13 +14,13 @@ reports:
     channel: "#back-office-app"
   reportaftersecondreviewall:
     schedule: "@yearly"
-    channel: "U891K2Z2P"
+    channel: "Ivan Tomilov"
   reportaftersecondreviewbe:
     schedule: "@yearly"
-    channel: "U97DJLL11"
+    channel: "Oleg Raev"
   reportaftersecondreviewfe:
     schedule: "@yearly"
-    channel: "U88K5BQAD"
+    channel: "Rodion Golovushkin"
   employeesexceededtasks:
     schedule: "00 00 07 * * *"
     channel: "#back-office-app"
@@ -42,13 +42,13 @@ reports:
     schedule: "00 00 06 * * *"
   reportgitansiblechanges:
     schedule: "@hourly"
-    channel: "U8A004WK0"
+    channel: "Stepan Morozov"
   dailyworkerslessworkedmessage:
     schedule: "00 00 07 * * 1-5"
     channel: "#general"
   weeklyreportoverworkedissues:
     schedule: "00 00 07 * * 1"
-    channel: "U9FDU5W4D"
+    channel: "Artem Efremov"
 
 jira:
   apiurl: https://theflow.atlassian.net

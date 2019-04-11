@@ -147,7 +147,7 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
 #### Cron manager reports parameters 
 
 1. schedule: "00 00 07 * * *"    — cron prefence for adding tasks
-2. channel: "#back-office-app"     - slack channel id for sending reports by cron 
+2. channel: "#back-office-app"   - slack channel, user id or user real name for sending reports by cron 
 
 #### Cron manager settings 
    
