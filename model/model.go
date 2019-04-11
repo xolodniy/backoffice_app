@@ -82,13 +82,7 @@ func (m *Model) getMigrations() []darwin.Migration {
 // CreateCommit creates new commit
 func (m *Model) CreateCommit(commit Commit) error {
 	if err := m.db.Create(&commit).Error; err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"hash":       commit.Hash,
-			"type":       commit.Type,
-			"repository": commit.Repository,
-			"path":       commit.Path,
-			"message":    commit.Message,
-		}).Error("can't create commit")
+		logrus.WithError(err).WithField("commit", fmt.Sprintf("%+v", commit)).Error("can't create commit")
 		return common.ErrInternal
 	}
 	return nil
@@ -97,8 +91,8 @@ func (m *Model) CreateCommit(commit Commit) error {
 // GetCommitsByType retrieves commits by type
 func (m *Model) GetCommitsByType(commitsType string) ([]Commit, error) {
 	var res []Commit
-	if err := m.db.Find(&res).Where("type = ?", commitsType).Error; err != nil {
-		logrus.WithError(err).Error("can't get commits")
+	if err := m.db.Find(&res).Where(Commit{Type: commitsType}).Error; err != nil {
+		logrus.WithError(err).WithField("commitType", commitsType).Error("can't get commits")
 		return nil, common.ErrInternal
 	}
 	return res, nil
@@ -107,8 +101,11 @@ func (m *Model) GetCommitsByType(commitsType string) ([]Commit, error) {
 // GetCommitByHash retrieves commits by hash and type
 func (m *Model) GetCommitByHash(commitType, hash string) ([]Commit, error) {
 	var res []Commit
-	if err := m.db.Find(&res).Where("type = ? AND hash = ?", commitType, hash).Error; err != nil {
-		logrus.WithError(err).Error("can't get commit")
+	if err := m.db.Find(&res).Where(Commit{Type: commitType, Hash: hash}).Error; err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"commitType": commitType,
+			"hash":       hash,
+		}).Error("can't get commit")
 		return nil, common.ErrInternal
 	}
 	return res, nil
@@ -117,8 +114,8 @@ func (m *Model) GetCommitByHash(commitType, hash string) ([]Commit, error) {
 // DeleteCommitsByType delete commits by type
 func (m *Model) DeleteCommitsByType(commitsType string) error {
 	var res []Commit
-	if err := m.db.Where("type = ?", commitsType).Delete(&res).Error; err != nil {
-		logrus.WithError(err).Error("can't delete commits")
+	if err := m.db.Where(Commit{Type: commitsType}).Delete(&res).Error; err != nil {
+		logrus.WithError(err).WithField("commitType", commitsType).Error("can't delete commits")
 		return common.ErrInternal
 	}
 	return nil
@@ -127,11 +124,7 @@ func (m *Model) DeleteCommitsByType(commitsType string) error {
 // CreateAfkTimer creates afk timer
 func (m *Model) CreateAfkTimer(afkTimer AfkTimer) error {
 	if err := m.db.Where(AfkTimer{UserId: afkTimer.UserId}).Assign(AfkTimer{Duration: afkTimer.Duration}).FirstOrCreate(&afkTimer).Error; err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"userId":    afkTimer.UserId,
-			"duration":  afkTimer.Duration,
-			"updatedAt": afkTimer.UpdatedAt,
-		}).Error("can't create afk timer")
+		logrus.WithError(err).WithField("afkTimer", fmt.Sprintf("%+v", afkTimer)).Error("can't create afk timer")
 		return common.ErrInternal
 	}
 	return nil
@@ -150,8 +143,8 @@ func (m *Model) GetAfkTimers() ([]AfkTimer, error) {
 // DeleteAfkTimer deletes afk timer
 func (m *Model) DeleteAfkTimer(userId string) error {
 	var res []AfkTimer
-	if err := m.db.Where("user_id = ?", userId).Delete(&res).Error; err != nil {
-		logrus.WithError(err).Error("can't delete afk timer")
+	if err := m.db.Where(AfkTimer{UserId: userId}).Delete(&res).Error; err != nil {
+		logrus.WithError(err).WithField("userId", userId).Error("can't delete afk timer by user id")
 		return common.ErrInternal
 	}
 	return nil
