@@ -287,7 +287,7 @@ func (a *App) ReportGitMigrations(channel string) {
 	}
 	for _, message := range messages {
 		if message != "" {
-			a.Slack.SendMessage(message, "@bamp94")
+			a.Slack.SendMessage(message, channel)
 		}
 	}
 }
@@ -819,7 +819,7 @@ func (a *App) ReportGitAnsibleChanges(channel string) {
 		logrus.WithError(err).Error("can't create commits cache in database")
 	}
 	for _, message := range files {
-		a.Slack.SendMessage(message, "@bamp94")
+		a.Slack.SendMessage(message, channel)
 	}
 }
 
