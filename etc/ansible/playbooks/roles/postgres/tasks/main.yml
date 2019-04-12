@@ -1,7 +1,7 @@
 ---
 - name: init PostgreSQL repo
   yum:
-    name: https://download.postgresql.org/pub/repos/yum/9.5/redhat/rhel-7-x86_64/pgdg-redhat95-9.5-2.noarch.rpm
+    name: https://download.postgresql.org/pub/repos/yum/11/redhat/rhel-7-x86_64/pgdg-redhat-repo-42.0-1.noarch.rpm
 
 - name: Install PostgreSQL
   yum:
@@ -9,26 +9,26 @@
     state: latest
     update_cache: yes
   with_items:
-    - postgresql95
+    - postgresql11
     - python-psycopg2
-    - postgresql95-server
+    - postgresql11-server
 
 # TODO: Replace with upgrade in case it's a major version upgrade.
 - name: initdb
-  command: /usr/pgsql-9.5/bin/postgresql95-setup initdb
+  command: /usr/pgsql-11/bin/postgresql11-setup initdb
   args:
-    creates: /var/lib/pgsql/9.5/data/pg_hba.conf
+    creates: /var/lib/pgsql/11/data/pg_hba.conf
 
 - name: enable
   systemd:
-    name: postgresql-9.5
+    name: postgresql-11
     enabled: yes
     daemon_reload: yes
 
 - name: copy configuration
   copy:
     src: "{{ item }}"
-    dest: "/var/lib/pgsql/9.5/data/{{ item }}"
+    dest: "/var/lib/pgsql/11/data/{{ item }}"
     force: yes
   with_items:
     - pg_hba.conf
@@ -38,7 +38,7 @@
 
 - name: ensure postgres started
   service:
-    name: postgresql-9.5
+    name: postgresql-11
     state: started
 
 - name: init {{ postgres_user }}
