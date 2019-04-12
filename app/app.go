@@ -924,8 +924,8 @@ func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
 	}
 }
 
-// CheckUserAfk check user on AFK status
-func (a *App) CheckUserAfk(message, threadId, channel string) {
+// CheckUserAfk check user on AFK and Vacation status
+func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 	for id, duration := range a.AfkTimer.UserDurationMap {
 		if strings.Contains(message, id) && duration > 0 {
 			userName, err := a.Slack.UserNameById(id)
@@ -934,6 +934,24 @@ func (a *App) CheckUserAfk(message, threadId, channel string) {
 				userName = "This user"
 			}
 			a.Slack.SendToThread(fmt.Sprintf("%s will return in %.0f minutes", userName, duration.Minutes()), channel, threadId)
+		}
+	}
+
+	vacations, err := a.model.GetVacations()
+	if err != nil {
+		if err == common.ErrNotFound {
+			return
+		}
+		logrus.WithError(err).Errorf("can't take information about vacations from database")
+	}
+	for _, vacation := range vacations {
+		if strings.Contains(message, vacation.UserId) && time.Now().Before(vacation.DateEnd) && time.Now().After(vacation.DateStart) {
+			userName, err := a.Slack.UserNameById(vacation.UserId)
+			if err != nil {
+				logrus.WithError(err).Errorf("can't take information about user name from slask with id: %v", vacation.UserId)
+				userName = "This user"
+			}
+			a.Slack.SendToThread(fmt.Sprintf("*%s* is on vacation, his message is: \n\n'%s'", userName, vacation.Message), channel, threadId)
 		}
 	}
 }
@@ -1010,4 +1028,49 @@ func (a *App) CheckAfkTimers() {
 			logrus.WithError(err).Errorf("can't delete afk timer")
 		}
 	}
+}
+
+// SetVacationPeriod create vacation period for user
+func (a *App) SetVacationPeriod(dateStart, dateEnd, message, userId string) error {
+	dStart, err := time.Parse("02.01.2006", dateStart)
+	if err != nil {
+		return err
+	}
+	dEnd, err := time.Parse("02.01.2006", dateEnd)
+	if err != nil {
+		return err
+	}
+	if dateEnd < dateStart {
+		return fmt.Errorf("Date of start vacation bigger then data of end")
+	}
+
+	err = a.model.CreateVacation(model.Vacation{
+		UserId:    userId,
+		DateStart: dStart,
+		DateEnd:   dEnd,
+		Message:   message,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (a *App) CancelVacation(userId string) error {
+	_, err := a.CheckVacationSatus(userId)
+	if err != nil {
+		return err
+	}
+	err = a.model.DeleteVacation(userId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *App) CheckVacationSatus(userId string) (model.Vacation, error) {
+	vacation, err := a.model.GetVacation(userId)
+	if err != nil {
+		return model.Vacation{}, err
+	}
+	return vacation, nil
 }
