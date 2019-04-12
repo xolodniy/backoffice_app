@@ -92,6 +92,9 @@ func (m *Model) CreateCommit(commit Commit) error {
 func (m *Model) GetCommitsByType(commitsType string) ([]Commit, error) {
 	var res []Commit
 	if err := m.db.Find(&res).Where(Commit{Type: commitsType}).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return []Commit{}, common.ErrNotFound
+		}
 		logrus.WithError(err).WithField("commitType", commitsType).Error("can't get commits")
 		return nil, common.ErrInternal
 	}
@@ -102,6 +105,9 @@ func (m *Model) GetCommitsByType(commitsType string) ([]Commit, error) {
 func (m *Model) GetCommitByHash(commitType, hash string) ([]Commit, error) {
 	var res []Commit
 	if err := m.db.Find(&res).Where(Commit{Type: commitType, Hash: hash}).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return []Commit{}, common.ErrNotFound
+		}
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"commitType": commitType,
 			"hash":       hash,
@@ -134,6 +140,9 @@ func (m *Model) CreateAfkTimer(afkTimer AfkTimer) error {
 func (m *Model) GetAfkTimers() ([]AfkTimer, error) {
 	var res []AfkTimer
 	if err := m.db.Find(&res).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return []AfkTimer{}, common.ErrNotFound
+		}
 		logrus.WithError(err).Error("can't get afk timers")
 		return nil, common.ErrInternal
 	}
@@ -145,6 +154,55 @@ func (m *Model) DeleteAfkTimer(userId string) error {
 	var res []AfkTimer
 	if err := m.db.Where(AfkTimer{UserId: userId}).Delete(&res).Error; err != nil {
 		logrus.WithError(err).WithField("userId", userId).Error("can't delete afk timer by user id")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// CreateVacation creates new vacation
+func (m *Model) CreateVacation(vacation Vacation) error {
+	if err := m.db.Where(Vacation{UserId: vacation.UserId}).Assign(Vacation{
+		DateStart: vacation.DateStart,
+		DateEnd:   vacation.DateEnd,
+		Message:   vacation.Message,
+	}).FirstOrCreate(&vacation).Error; err != nil {
+		logrus.WithError(err).WithField("commit", fmt.Sprintf("%+v", vacation)).Error("can't create vacation")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// GetVacation retrieves vacations
+func (m *Model) GetVacations() ([]Vacation, error) {
+	var res []Vacation
+	if err := m.db.Find(&res).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return []Vacation{}, common.ErrNotFound
+		}
+		logrus.WithError(err).Error("can't get vacations")
+		return nil, common.ErrInternal
+	}
+	return res, nil
+}
+
+// GetVacation retrieves vacation by user id
+func (m *Model) GetVacation(userId string) (Vacation, error) {
+	var res Vacation
+	if err := m.db.Find(&res).Where(Vacation{UserId: userId}).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return Vacation{}, common.ErrNotFound
+		}
+		logrus.WithError(err).WithField("userId", userId).Error("can't get vacation")
+		return Vacation{}, common.ErrInternal
+	}
+	return res, nil
+}
+
+// DeleteVacation deletes vacation
+func (m *Model) DeleteVacation(userId string) error {
+	var res []Vacation
+	if err := m.db.Where(Vacation{UserId: userId}).Delete(&res).Error; err != nil {
+		logrus.WithError(err).WithField("userId", userId).Error("can't delete vacation by user id")
 		return common.ErrInternal
 	}
 	return nil
