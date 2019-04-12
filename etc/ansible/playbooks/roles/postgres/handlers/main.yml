@@ -1,5 +1,5 @@
 ---
 - name: restart postgres
   service:
-    name: postgresql-9.5
+    name: postgresql-11.2
     state: restarted
