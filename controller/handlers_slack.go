@@ -3,8 +3,11 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
+
+	"backoffice_app/common"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -69,6 +72,7 @@ func (c *Controller) customReport(ctx *gin.Context) {
 	}()
 	ctx.JSON(http.StatusOK, "ok, wait for report")
 }
+
 func (c *Controller) afkCommand(ctx *gin.Context) {
 	request := struct {
 		Text   string `form:"text" binding:"required"`
@@ -92,7 +96,7 @@ func (c *Controller) afkCommand(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, fmt.Sprintf("You are now AFK for %.0f minutes", duration.Minutes()))
 }
 
-func (c *Controller) afkCheck(ctx *gin.Context) {
+func (c *Controller) afkVacationCheck(ctx *gin.Context) {
 	request := struct {
 		Challenge string `json:"challenge"`
 		Event     struct {
@@ -110,9 +114,9 @@ func (c *Controller) afkCheck(ctx *gin.Context) {
 	case request.Event.Subtype == "message_deleted", request.Event.Subtype == "message_changed":
 		break
 	case request.Event.ThreadTs != "":
-		go c.App.CheckUserAfk(request.Event.Text, request.Event.ThreadTs, request.Event.Channel)
+		go c.App.CheckUserAfkVacation(request.Event.Text, request.Event.ThreadTs, request.Event.Channel)
 	case request.Event.Text != "":
-		go c.App.CheckUserAfk(request.Event.Text, request.Event.Ts, request.Event.Channel)
+		go c.App.CheckUserAfkVacation(request.Event.Text, request.Event.Ts, request.Event.Channel)
 	}
 	ctx.JSON(http.StatusOK, gin.H{"challenge": request.Challenge})
 }
@@ -128,4 +132,58 @@ func (c *Controller) sprintStatus(ctx *gin.Context) {
 	}
 	go c.App.ReportSprintStatus(request.UserId)
 	ctx.JSON(http.StatusOK, "ok, wait for report")
+}
+
+func (c *Controller) vacation(ctx *gin.Context) {
+	request := struct {
+		Text   string `form:"text" binding:"required"`
+		UserId string `form:"user_id" binding:"required"`
+	}{}
+	err := ctx.ShouldBindWith(&request, binding.FormPost)
+	if err != nil {
+		ctx.String(http.StatusOK, `Failed! Project key is empty! Please, type /vacation 02.01.1970 02.01.1970 "Your message"`)
+		return
+	}
+	if request.Text == "cancel" {
+		err := c.App.CancelVacation(request.UserId)
+		if err != nil {
+			if err == common.ErrNotFound {
+				ctx.String(http.StatusOK, "You have no actived vacation autoreply yet")
+				return
+			}
+			ctx.String(http.StatusOK, err.Error())
+			return
+		}
+		ctx.String(http.StatusOK, "Your vacation autoreply has been cancelled")
+		return
+	}
+	if request.Text == "status" {
+		vacation, err := c.App.CheckVacationSatus(request.UserId)
+		if err != nil {
+			if err == common.ErrNotFound {
+				ctx.String(http.StatusOK, "You have no actived vacation autoreply yet")
+				return
+			}
+			ctx.String(http.StatusOK, err.Error())
+			return
+		}
+		ctx.JSON(http.StatusOK, fmt.Sprintf(`You have registered vacation autoreply from %s to %s '%s'`,
+			vacation.DateStart.Format("02.01.2006"), vacation.DateEnd.Format("02.01.2006"), vacation.Message))
+		return
+	}
+
+	message := regexp.MustCompile(`"(.+)?"`).FindStringSubmatch(request.Text)
+	splitFn := func(c rune) bool {
+		return c == ' '
+	}
+	textSlice := strings.FieldsFunc(request.Text[:strings.IndexByte(request.Text, '"')], splitFn)
+	if len(textSlice) != 2 {
+		ctx.String(http.StatusOK, `Failed! Project key is empty! Please, type /vacation 02.01.1970 02.01.1970 "Your message"`)
+		return
+	}
+	err = c.App.SetVacationPeriod(textSlice[0], textSlice[1], message[1], request.UserId)
+	if err != nil {
+		ctx.JSON(http.StatusOK, fmt.Sprintf(err.Error()))
+	}
+	ctx.JSON(http.StatusOK, fmt.Sprintf("Your vacation autoreply from %s to %s has registered", textSlice[0], textSlice[1]))
 }
