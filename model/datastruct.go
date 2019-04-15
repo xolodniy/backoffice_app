@@ -23,7 +23,6 @@ type AfkTimer struct {
 
 // Vacation struct of user vacation
 type Vacation struct {
-	ID        int       `json:"id"`
 	UserId    string    `json:"userId"`
 	DateStart time.Time `json:"dateStart"`
 	DateEnd   time.Time `json:"dateEnd"`

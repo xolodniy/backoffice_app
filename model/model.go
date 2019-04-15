@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/GuiaBolso/darwin"
 	"github.com/gobuffalo/packr"
@@ -160,7 +161,7 @@ func (m *Model) DeleteAfkTimer(userId string) error {
 }
 
 // CreateVacation creates new vacation
-func (m *Model) CreateVacation(vacation Vacation) error {
+func (m *Model) SaveVacation(vacation Vacation) error {
 	if err := m.db.Where(Vacation{UserId: vacation.UserId}).Assign(Vacation{
 		DateStart: vacation.DateStart,
 		DateEnd:   vacation.DateEnd,
@@ -172,10 +173,10 @@ func (m *Model) CreateVacation(vacation Vacation) error {
 	return nil
 }
 
-// GetVacation retrieves vacations
-func (m *Model) GetVacations() ([]Vacation, error) {
+// GetVacation retrieves actual vacations by today
+func (m *Model) GetActualVacations() ([]Vacation, error) {
 	var res []Vacation
-	if err := m.db.Find(&res).Error; err != nil {
+	if err := m.db.Where("date_start <= ? AND date_end >= ?", time.Now(), time.Now()).Find(&res).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return []Vacation{}, common.ErrNotFound
 		}
