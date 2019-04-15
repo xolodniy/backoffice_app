@@ -139,51 +139,53 @@ func (c *Controller) vacation(ctx *gin.Context) {
 		Text   string `form:"text" binding:"required"`
 		UserId string `form:"user_id" binding:"required"`
 	}{}
+	errWrongFormat := `Failed! Format is wrong! Please, type /vacation 02.01.1970 02.01.1970 "Your message"`
 	err := ctx.ShouldBindWith(&request, binding.FormPost)
 	if err != nil {
-		ctx.String(http.StatusOK, `Failed! Project key is empty! Please, type /vacation 02.01.1970 02.01.1970 "Your message"`)
+		ctx.String(http.StatusOK, errWrongFormat)
 		return
 	}
-	if request.Text == "cancel" {
+	switch {
+	case request.Text == "cancel":
 		err := c.App.CancelVacation(request.UserId)
-		if err != nil {
-			if err == common.ErrNotFound {
-				ctx.String(http.StatusOK, "You have no actived vacation autoreply yet")
-				return
-			}
+		switch {
+		case err == common.ErrNotFound:
+			ctx.String(http.StatusOK, "You have no actived vacation autoreply yet")
+		case err != nil:
 			ctx.String(http.StatusOK, err.Error())
-			return
+		default:
+			ctx.String(http.StatusOK, "Your vacation autoreply has been cancelled")
 		}
-		ctx.String(http.StatusOK, "Your vacation autoreply has been cancelled")
-		return
-	}
-	if request.Text == "status" {
+	case request.Text == "status":
 		vacation, err := c.App.CheckVacationSatus(request.UserId)
-		if err != nil {
-			if err == common.ErrNotFound {
-				ctx.String(http.StatusOK, "You have no actived vacation autoreply yet")
-				return
-			}
+		switch {
+		case err == common.ErrNotFound:
+			ctx.String(http.StatusOK, "You have no actived vacation autoreply yet")
+		case err != nil:
 			ctx.String(http.StatusOK, err.Error())
+		default:
+			ctx.JSON(http.StatusOK, fmt.Sprintf(`You have registered vacation autoreply from %s to %s '%s'`,
+				vacation.DateStart.Format("02.01.2006"), vacation.DateEnd.Format("02.01.2006"), vacation.Message))
+		}
+	default:
+		if !strings.Contains(request.Text, `"`) {
+			ctx.String(http.StatusOK, errWrongFormat)
 			return
 		}
-		ctx.JSON(http.StatusOK, fmt.Sprintf(`You have registered vacation autoreply from %s to %s '%s'`,
-			vacation.DateStart.Format("02.01.2006"), vacation.DateEnd.Format("02.01.2006"), vacation.Message))
-		return
+		message := regexp.MustCompile(`"(.+)?"`).FindStringSubmatch(request.Text)
+		splitFn := func(c rune) bool {
+			return c == ' '
+		}
+		textSlice := strings.FieldsFunc(request.Text[:strings.IndexByte(request.Text, '"')], splitFn)
+		if len(message) != 0 && len(textSlice) == 2 {
+			err = c.App.SetVacationPeriod(textSlice[0], textSlice[1], message[1], request.UserId)
+			if err != nil {
+				ctx.JSON(http.StatusOK, fmt.Sprintf(err.Error()))
+				return
+			}
+			ctx.JSON(http.StatusOK, fmt.Sprintf("Your vacation autoreply from %s to %s has registered", textSlice[0], textSlice[1]))
+			return
+		}
+		ctx.String(http.StatusOK, errWrongFormat)
 	}
-
-	message := regexp.MustCompile(`"(.+)?"`).FindStringSubmatch(request.Text)
-	splitFn := func(c rune) bool {
-		return c == ' '
-	}
-	textSlice := strings.FieldsFunc(request.Text[:strings.IndexByte(request.Text, '"')], splitFn)
-	if len(textSlice) != 2 {
-		ctx.String(http.StatusOK, `Failed! Project key is empty! Please, type /vacation 02.01.1970 02.01.1970 "Your message"`)
-		return
-	}
-	err = c.App.SetVacationPeriod(textSlice[0], textSlice[1], message[1], request.UserId)
-	if err != nil {
-		ctx.JSON(http.StatusOK, fmt.Sprintf(err.Error()))
-	}
-	ctx.JSON(http.StatusOK, fmt.Sprintf("Your vacation autoreply from %s to %s has registered", textSlice[0], textSlice[1]))
 }
