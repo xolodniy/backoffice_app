@@ -924,7 +924,7 @@ func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
 	}
 }
 
-// CheckUserAfk check user on AFK and Vacation status
+// CheckUserAfkVacation check user on AFK and Vacation status
 func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 	for id, duration := range a.AfkTimer.UserDurationMap {
 		if strings.Contains(message, id) && duration > 0 {
@@ -937,7 +937,7 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 		}
 	}
 
-	vacations, err := a.model.GetVacations()
+	vacations, err := a.model.GetActualVacations()
 	if err != nil {
 		if err == common.ErrNotFound {
 			return
@@ -945,7 +945,7 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 		logrus.WithError(err).Errorf("can't take information about vacations from database")
 	}
 	for _, vacation := range vacations {
-		if strings.Contains(message, vacation.UserId) && time.Now().Before(vacation.DateEnd) && time.Now().After(vacation.DateStart) {
+		if strings.Contains(message, vacation.UserId) {
 			userName, err := a.Slack.UserNameById(vacation.UserId)
 			if err != nil {
 				logrus.WithError(err).Errorf("can't take information about user name from slask with id: %v", vacation.UserId)
@@ -996,6 +996,7 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	a.Slack.SendMessage(msgBody, "#general")
 }
 
+// CreateCommitsCache creates commits in database
 func (a *App) CreateCommitsCache(commits []model.Commit) error {
 	for _, commit := range commits {
 		err := a.model.CreateCommit(commit)
@@ -1006,6 +1007,7 @@ func (a *App) CreateCommitsCache(commits []model.Commit) error {
 	return nil
 }
 
+// CheckAfkTimers checks saved afk timers and started it again
 func (a *App) CheckAfkTimers() {
 	afkTimers, err := a.model.GetAfkTimers()
 	if err != nil {
@@ -1040,11 +1042,11 @@ func (a *App) SetVacationPeriod(dateStart, dateEnd, message, userId string) erro
 	if err != nil {
 		return err
 	}
-	if dateEnd < dateStart {
+	if dStart.After(dEnd) {
 		return fmt.Errorf("Date of start vacation bigger then data of end")
 	}
 
-	err = a.model.CreateVacation(model.Vacation{
+	err = a.model.SaveVacation(model.Vacation{
 		UserId:    userId,
 		DateStart: dStart,
 		DateEnd:   dEnd,
@@ -1055,6 +1057,8 @@ func (a *App) SetVacationPeriod(dateStart, dateEnd, message, userId string) erro
 	}
 	return nil
 }
+
+// CancelVacation delete vacation
 func (a *App) CancelVacation(userId string) error {
 	_, err := a.CheckVacationSatus(userId)
 	if err != nil {
@@ -1067,6 +1071,7 @@ func (a *App) CancelVacation(userId string) error {
 	return nil
 }
 
+// CheckVacationSatus get vacation if exist
 func (a *App) CheckVacationSatus(userId string) (model.Vacation, error) {
 	vacation, err := a.model.GetVacation(userId)
 	if err != nil {
