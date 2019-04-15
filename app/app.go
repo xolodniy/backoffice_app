@@ -1053,7 +1053,7 @@ func (a *App) FindLastSprintDates(sprints []interface{}) (time.Time, time.Time, 
 		if !ok {
 			return time.Time{}, time.Time{}, fmt.Errorf("can't parse to string: %v", sprints[i])
 		}
-		// Find string submatch and get slice of match string and this sequence
+		// Find string submatch and get slice of match string and this startDate
 		// For example, one of sprint:
 		// "com.atlassian.greenhopper.service.sprint.Sprint@6f00eb7b[id=47,rapidViewId=12,state=ACTIVE,name=Sprint 46,
 		// goal=,startDate=2019-02-20T04:19:23.907Z,endDate=2019-02-25T04:19:00.000Z,completeDate=<null>,sequence=47]"
@@ -1062,19 +1062,20 @@ func (a *App) FindLastSprintDates(sprints []interface{}) (time.Time, time.Time, 
 		if len(sd) != 2 {
 			return time.Time{}, time.Time{}, fmt.Errorf("can't find submatch string to startDate: %v", sprints[i])
 		}
-		ed := eDate.FindStringSubmatch(s)
-		if len(ed) != 2 {
-			return time.Time{}, time.Time{}, fmt.Errorf("can't find submatch string to endDate: %v", sprints[i])
-		}
-
 		ts, err := time.Parse("2006-01-02", sd[1])
 		if err != nil {
 			return time.Time{}, time.Time{}, err
+		}
+
+		ed := eDate.FindStringSubmatch(s)
+		if len(ed) != 2 {
+			return time.Time{}, time.Time{}, fmt.Errorf("can't find submatch string to endDate: %v", sprints[i])
 		}
 		te, err := time.Parse("2006-01-02", ed[1])
 		if err != nil {
 			return time.Time{}, time.Time{}, err
 		}
+
 		if ts.After(startDate) {
 			startDate = ts
 			endDate = te
