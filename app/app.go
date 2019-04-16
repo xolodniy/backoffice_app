@@ -1034,7 +1034,7 @@ func (a *App) CheckAfkTimers() {
 	}
 }
 
-// FindLastSprintSequence will find sequence of sprint from issue.Fields.Unknowns["customfield_10010"].([]interface{})
+// FindLastSprintDates will find date of sprint from issue.Fields.Unknowns["customfield_10010"].([]interface{})
 func (a *App) FindLastSprintDates(sprints []interface{}) (time.Time, time.Time, error) {
 	var (
 		startDate time.Time
