@@ -53,15 +53,15 @@ reports:
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
-    username:
-    password:
+    username: stepan.morozov@theflow.global
+    password: 123123123
 
 bitbucket:
   apiurl: https://api.bitbucket.org/2.0
   owner: theflowglobal
   auth:
-    username:
-    password:
+    username: stepan.morozov@theflow.global
+    password: 123123123
 
 slack:
   apiurl: https://slack.com/api
@@ -70,7 +70,7 @@ slack:
   outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
   totalVolume: 5.0
   restVolume: 0.0
-  secret: 046b6a43f79bca89a7f9056921906b25
+  secret: 27f79262fd9f22a1db80a4fd70b2374a
   employees:
     directorofcompany: U891K2Z2P
     projectmanager: U9FDU5W4D
@@ -100,3 +100,11 @@ hubstaff:
     login:
     password:
   orgsid: 60470
+
+database:
+  name: backoffice
+  host: localhost
+  port: 5432
+  user: backoffice
+  password: KMp7mMnfgOws2BYw
+  enable_ssl: false

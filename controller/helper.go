@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"reflect"
 
+	"backoffice_app/common"
 	"backoffice_app/controller/validators"
-	"backoffice_app/model"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -33,9 +33,9 @@ func (c *Controller) respondError(ctx *gin.Context, err error) {
 	}
 
 	h := gin.H{"error": err.Error()}
-	if err == model.ErrorInternal {
+	if err == common.ErrInternal {
 		ctx.JSON(http.StatusInternalServerError, h)
-	} else if err == model.ErrNotFound {
+	} else if err == common.ErrNotFound {
 		ctx.JSON(http.StatusNotFound, h)
 	} else {
 		ctx.JSON(http.StatusBadRequest, h)
