@@ -359,6 +359,7 @@ func main() {
 				Usage: "Sends report about overworked issues during the last week",
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
 					channel := c.String("channel")
 					if channel == "" {
 						logrus.Println("Empty channel flag!")
