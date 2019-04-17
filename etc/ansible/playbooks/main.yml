@@ -1,4 +1,9 @@
 ---
+- hosts: db
+  roles:
+    - common
+    - postgres
+
 - hosts: backoffice_app
   roles:
     - common

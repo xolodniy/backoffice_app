@@ -1,12 +1,22 @@
 package model
 
-import (
-	"fmt"
-)
+import "time"
 
-var (
-	// ErrorInternal returns to controller if request valid but domain can't do it
-	ErrorInternal = fmt.Errorf("ошибка сервера, обратитесь в службу поддержки или повторите попытку позже")
-	// ErrNotFound if record does not found
-	ErrNotFound = fmt.Errorf("запись не найдена")
-)
+// Commit struct of commit cache
+type Commit struct {
+	ID         int       `json:"id"`
+	Type       string    `json:"type"`
+	Hash       string    `json:"hash"`
+	Repository string    `json:"repository"`
+	Path       string    `json:"path"`
+	Message    string    `json:"message"`
+	CreatedAt  time.Time `json:"createdAt"`
+}
+
+// AfkTimer struct of Afk timer
+type AfkTimer struct {
+	ID        int       `json:"id"`
+	UserId    string    `json:"userId"`
+	Duration  string    `json:"userId"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
