@@ -37,3 +37,6 @@
     dest: "/etc/{{ project_name }}/config.yml"
     mode: 0755
     force: yes
+
+- name: apply migrations
+  command: /usr/local/bin/{{ project_name }} migrate

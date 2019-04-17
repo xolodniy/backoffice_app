@@ -1,7 +1,42 @@
 ---
+- name: install epel-release
+  yum:
+    name: epel-release
+    state: present
+
 - name: install packages
   yum:
     name: "{{ item }}"
     state: present
   with_items:
+    - python-pip
+    - gcc
+    - gcc-c++
+    - python-devel
+    - libselinux-python
+    - git
+    - ntp
     - unzip
+
+- name: ensure pip is the latest version
+  command: pip install --upgrade pip
+
+# permissive policy for disabling active selinux on some servers.
+# but dev container does not have selinux config and can't exec selinux command.
+# Therefore I'm coping config file with disabled 'force' method (don't copy if config already exist)
+- name: copy selinux config
+  copy:
+    src: selinux.config
+    dest: /etc/selinux/config
+    force: no
+
+- selinux:
+    policy: targeted
+    state: permissive
+
+# TODO: fatal: [localhost]: FAILED! => {"changed": false, "msg": "Could not find the requested service ntp: host"}
+#- name: ensure ntpd
+#  service:
+#    name: ntp
+#    state: started
+#    enabled: yes
