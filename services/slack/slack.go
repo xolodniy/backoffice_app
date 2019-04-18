@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"backoffice_app/config"
 	"backoffice_app/types"
@@ -30,12 +31,12 @@ type Slack struct {
 // Employees is struct of employees in slack
 type Employees struct {
 	DirectorOfCompany string
-	ProjectManager string
-	ArtDirector    string
-	TeamLeaderBE   string
-	TeamLeaderFE   string
-	BeTeam         []string
-	FeTeam         []string
+	ProjectManager    string
+	ArtDirector       string
+	TeamLeaderBE      string
+	TeamLeaderFE      string
+	BeTeam            []string
+	FeTeam            []string
 }
 
 // FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
@@ -95,18 +96,27 @@ func New(config *config.Slack) Slack {
 		IgnoreList:  config.IgnoreList,
 		Employees: Employees{
 			DirectorOfCompany: "<@" + config.Employees.DirectorOfCompany + ">",
-			ProjectManager: "<@" + config.Employees.ProjectManager + ">",
-			ArtDirector:    "<@" + config.Employees.ArtDirector + ">",
-			TeamLeaderBE:   "<@" + config.Employees.TeamLeaderBE + ">",
-			TeamLeaderFE:   "<@" + config.Employees.TeamLeaderFE + ">",
-			BeTeam:         config.Employees.BeTeam,
-			FeTeam:         config.Employees.FeTeam,
+			ProjectManager:    "<@" + config.Employees.ProjectManager + ">",
+			ArtDirector:       "<@" + config.Employees.ArtDirector + ">",
+			TeamLeaderBE:      "<@" + config.Employees.TeamLeaderBE + ">",
+			TeamLeaderFE:      "<@" + config.Employees.TeamLeaderFE + ">",
+			BeTeam:            config.Employees.BeTeam,
+			FeTeam:            config.Employees.FeTeam,
 		},
 	}
 }
 
 // SendMessage is main message sending method
 func (s *Slack) SendMessage(text, channel string) {
+	channel, err := s.checkChannelOnUserRealName(channel)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"msgBody":        text,
+			"channelID":      channel,
+			"channelBotName": s.BotName,
+		}).Error("can't find user in slack")
+		return
+	}
 	var message = &types.PostChannelMessage{
 		Token:   s.OutToken,
 		Channel: channel,
@@ -357,7 +367,7 @@ func (s *Slack) UserIdByEmail(email string) (string, error) {
 	return "", fmt.Errorf("User was not found ")
 }
 
-// UserInfoByName retrieve user email by his name
+// UserInfoByName retrieve user info by his name
 func (s *Slack) UserInfoByName(username string) (Member, error) {
 	allMembers, err := s.usersSlice()
 	if err != nil {
@@ -383,4 +393,21 @@ func (s *Slack) UserNameById(userId string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("User was not found in Slask ")
+}
+
+// checkChannelOnUserRealName retrieve channel with user id if it user real name
+func (s *Slack) checkChannelOnUserRealName(channel string) (string, error) {
+	userNameSlice := strings.Split(channel, " ")
+	if len(userNameSlice) > 1 {
+		allMembers, err := s.usersSlice()
+		if err != nil {
+			return "", err
+		}
+		for _, member := range allMembers {
+			if member.Profile.RealName == channel {
+				return member.Id, nil
+			}
+		}
+	}
+	return channel, nil
 }

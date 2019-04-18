@@ -147,7 +147,7 @@ Can be gathered from https://api.slack.com/custom-integrations/legacy-tokens#leg
 #### Cron manager reports parameters 
 
 1. schedule: "00 00 07 * * *"    — cron prefence for adding tasks
-2. channel: "#back-office-app"     - slack channel id for sending reports by cron 
+2. channel: "#back-office-app"   - slack channel, user id or user real name for sending reports by cron 
 
 #### Cron manager settings 
    
@@ -193,9 +193,6 @@ You may use one of several pre-defined schedules in place of a cron expression.
       employeesexceededtasks:           — preference to send report about employers that have exceeded tasks
         schedule: "00 00 07 * * *" 
         channel: "#back-office-app"
-      employeesexceededestimatetime:    — preference to send report about employers that have exceeded time of tasks
-        schedule: "00 00 07 * * *"
-        channel: "#back-office-app"
       reportslackspaceending:           — start everyday at 7:00 to send report if free space on slack < 0.5GB
         schedule: "00 00 07 * * *"
         channel: "#back-office-app"
@@ -215,6 +212,9 @@ You may use one of several pre-defined schedules in place of a cron expression.
       dailyworkerslessworkedmessage:    — preference to send report about workers worked less then 6 hours
         schedule: "00 00 06 * * *"
         channel: "#general"
+      weeklyreportoverworkedissues:     — preference to send report about issues with overworked time if remaining time == 0
+        schedule: "00 00 07 * * 1"
+        channel: "#back-office-app"
     
 #### Config.yml variables for slack users id
 

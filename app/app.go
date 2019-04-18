@@ -162,45 +162,6 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 	a.Slack.SendMessage(msgBody, channel)
 }
 
-// ReportEmployeesWithExceededEstimateTime create report about employees with ETA overhead
-func (a *App) ReportEmployeesWithExceededEstimateTime(channel string) {
-	//getting actual sum of ETA from jira by employees
-	jiraRemainingEtaMap := make(map[string]int)
-	issues, err := a.Jira.AssigneeOpenIssues()
-	if err != nil {
-		logrus.WithError(err).Error("can't take information about closed subtasks from jira")
-		return
-	}
-	for _, issue := range issues {
-		jiraRemainingEtaMap[issue.Fields.Assignee.EmailAddress] += issue.Fields.TimeTracking.RemainingEstimateSeconds
-	}
-	if len(jiraRemainingEtaMap) == 0 {
-		a.Slack.SendMessage("There are no issues with remaining ETA.", channel)
-		return
-	}
-	usersReports, err := a.Hubstaff.UsersWorkTimeByMember(now.BeginningOfWeek(), now.EndOfWeek())
-	if err != nil {
-		logrus.WithError(err).Error("can't get logged time from Hubstaff")
-		return
-	}
-	// prepare the content
-	messageHeader := fmt.Sprintf("\nExceeded estimate time report:\n\n*%v*\n", now.BeginningOfDay().Format("02.01.2006"))
-	message := ""
-	var maxWeekWorkingHours float32 = 30.0
-	for _, userReport := range usersReports {
-		if jiraRemainingEtaMap[userReport.Email] > 0 {
-			workVolume := float32(jiraRemainingEtaMap[userReport.Email]+int(userReport.TimeWorked)) / 3600.0
-			if workVolume > maxWeekWorkingHours {
-				message += fmt.Sprintf("\n%s late for %.2f hours", userReport.Name, workVolume-maxWeekWorkingHours)
-			}
-		}
-	}
-	if message == "" {
-		message = "No one developer has exceeded estimate time"
-	}
-	a.Slack.SendMessage(fmt.Sprintf("%s\n%s", messageHeader, message), channel)
-}
-
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
 func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 	issues, err := a.Jira.AssigneeOpenIssues()
@@ -218,7 +179,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 	for _, issue := range issues {
 		developer := issue.DeveloperMap(jira.TagDeveloperName)
 		if developer == "" {
-			developer = "No developer"
+			developer = jira.NoDeveloper
 		}
 		developers[developer] = append(developers[developer], issue)
 	}
@@ -236,7 +197,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 			}
 		}
 		switch {
-		case developer == "No developer" && message != "":
+		case developer == jira.NoDeveloper && message != "":
 			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
 		case message != "":
 			msgBody += fmt.Sprintf("\n" + developer + "\n" + message)
@@ -680,7 +641,7 @@ func (a *App) ReportSprintStatus(channel string) {
 	for _, issue := range closedIssues {
 		developer := issue.DeveloperMap(jira.TagDeveloperName)
 		if developer == "" {
-			developer = "No developer"
+			developer = jira.NoDeveloper
 		}
 		developers[developer] = append(developers[developer], issue)
 	}
@@ -695,7 +656,7 @@ func (a *App) ReportSprintStatus(channel string) {
 		var message string
 		for _, issue := range issues {
 			if issue.Fields.Status.Name != jira.StatusClosed && issue.Fields.Status.Name != jira.StatusInClarification {
-				if developer == "No developer" && issue.Fields.Assignee == nil {
+				if developer == jira.NoDeveloper && issue.Fields.Assignee == nil {
 					continue
 				}
 				if issue.Fields.Parent != nil {
@@ -705,9 +666,9 @@ func (a *App) ReportSprintStatus(channel string) {
 			}
 		}
 		switch {
-		case developer == "No developer" && message != "":
+		case developer == jira.NoDeveloper && message != "":
 			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
-		case message == "" && developer != "No developer":
+		case message == "" && developer != jira.NoDeveloper:
 			messageAllTaskClosed += fmt.Sprintf(developer + " - all tasks closed.\n")
 		case message != "":
 			msgBody += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
@@ -936,14 +897,15 @@ func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
 			a.AfkTimer.Lock()
 			a.AfkTimer.UserDurationMap[userId] = a.AfkTimer.UserDurationMap[userId] - time.Second
 			a.AfkTimer.Unlock()
+			if a.AfkTimer.UserDurationMap[userId] <= 0 {
+				ticker.Stop()
+				err = a.model.DeleteAfkTimer(userId)
+				if err != nil {
+					logrus.WithError(err).Errorf("can't delete afk timer from database")
+				}
+			}
 		}
 	}()
-	time.Sleep(userDuration)
-	ticker.Stop()
-	err = a.model.DeleteAfkTimer(userId)
-	if err != nil {
-		logrus.WithError(err).Errorf("can't delete afk timer from database")
-	}
 }
 
 // CheckUserAfk check user on AFK status
@@ -977,7 +939,7 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	var userId string
 	switch developerEmail {
 	case "":
-		userId = "No developer"
+		userId = jira.NoDeveloper
 	default:
 		userId, err = a.Slack.UserIdByEmail(developerEmail)
 		if err != nil {
@@ -1032,6 +994,53 @@ func (a *App) CheckAfkTimers() {
 			logrus.WithError(err).Errorf("can't delete afk timer")
 		}
 	}
+}
+
+// ReportOverworkedIssues create report about overworked issues
+func (a *App) ReportOverworkedIssues(channel string) {
+	issues, err := a.Jira.IssuesClosedInInterim(
+		now.BeginningOfWeek().AddDate(0, 0, -8),
+		now.EndOfWeek().AddDate(0, 0, -6))
+	if err != nil {
+		logrus.WithError(err).Error("can't get closed issues in interom from jira")
+		return
+	}
+	var msgBody string
+	var developers = make(map[string][]jira.Issue)
+	for _, issue := range issues {
+		developer := issue.DeveloperMap(jira.TagDeveloperName)
+		if developer == "" {
+			developer = jira.NoDeveloper
+		}
+		developers[developer] = append(developers[developer], issue)
+	}
+	for _, dev := range a.Slack.IgnoreList {
+		delete(developers, dev)
+	}
+	var messageNoDeveloper string
+	for developer, issues := range developers {
+		var message string
+		for _, issue := range issues {
+			overWorkedDuration := issue.Fields.TimeTracking.TimeSpentSeconds - issue.Fields.TimeTracking.OriginalEstimateSeconds
+			if overWorkedDuration > issue.Fields.TimeTracking.OriginalEstimateSeconds/10 && issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
+				message += issue.String()
+				message += fmt.Sprintf("- Time spent: %s\n", issue.Fields.TimeTracking.TimeSpent)
+				message += fmt.Sprintf("- Time planned: %s\n", issue.Fields.TimeTracking.OriginalEstimate)
+				message += fmt.Sprintf("- Overwork: %v\n", time.Duration(overWorkedDuration)*time.Second)
+				message += fmt.Sprintf("- Overwork, %s: %v\n", "%%", overWorkedDuration/(issue.Fields.TimeTracking.OriginalEstimateSeconds/100))
+			}
+		}
+		switch {
+		case developer == jira.NoDeveloper && message != "":
+			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
+		case message != "":
+			msgBody += fmt.Sprintf("\n" + developer + "\n" + message)
+		}
+	}
+	if msgBody == "" && messageNoDeveloper == "" {
+		msgBody = "There are no issues with overworked time."
+	}
+	a.Slack.SendMessage("*Tasks time duration analyze*:\n"+msgBody+messageNoDeveloper, channel)
 }
 
 // FindLastSprintDates will find date of sprint from issue.Fields.Unknowns["customfield_10010"].([]interface{})
