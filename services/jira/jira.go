@@ -425,17 +425,7 @@ func (j *Jira) getIssueChangelog(issue Issue) (Issue, error) {
 	return issue, nil
 }
 
-// IssueTypeByKey retrieves type of issue by id
-func (j *Jira) IssueTypeByKey(issueId string) string {
-	issue, resp, err := j.Issue.Get(issueId, &jira.GetQueryOptions{})
-	if err != nil {
-		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira this jira issue")
-		return ""
-	}
-	return issue.Fields.Type.Name
-}
-
-// IssuesClosedInInterim retrieves isses closed in after dateStart and before dateEnd
+// IssuesClosedInInterim retrieves isses closed in after dateStart and before dateEnd with not emmpty developer
 func (j *Jira) IssuesClosedInInterim(dateStart, dateEnd time.Time) ([]Issue, error) {
 	// this request retrieves closed and canceled issues
 	request := fmt.Sprintf(`type not in (story, bug) and status changed to %s after %s before %s`,

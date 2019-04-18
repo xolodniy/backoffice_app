@@ -1161,6 +1161,62 @@ func (a *App) CheckVacationSatus(userId string) (model.Vacation, error) {
 	return vacation, nil
 }
 
+// CreateIssueBranches create branch of issue and its parent
+func (a *App) CreateIssueBranches(issue jira.Issue) {
+	if issue.Fields.Status.Name != jira.StatusStarted {
+		return
+	}
+	if issue.Fields.Parent == nil {
+		err := a.Bitbucket.CreateBranch(issue.Key, issue.Key, "master")
+		if err != nil {
+			logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
+				Error("can't create branch")
+		}
+		return
+	}
+	err := a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key, "master")
+	if err != nil {
+		logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
+			Error("can't create branch")
+		return
+	}
+	err = a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key+">"+issue.Key, issue.Fields.Parent.Key)
+	if err != nil {
+		logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
+			Error("can't create branch")
+		return
+	}
+}
+
+// CreateBranchPullRequest create pull request for first branch commit
+func (a *App) CreateBranchPullRequest(repoPushPayload bitbucket.RepoPushPayload) {
+	// if commit was deleted or branch was deleted, new name will be empty, and we check it to do nothing
+	if repoPushPayload.Push.Changes[0].New.Name == "" {
+		return
+	}
+	if !strings.Contains(repoPushPayload.Push.Changes[0].New.Name, ">") {
+		err := a.Bitbucket.CreatePullRequestIfNotExist(repoPushPayload.Repository.Slug, repoPushPayload.Push.Changes[0].New.Name, "master")
+		if err != nil {
+			logrus.WithError(err).WithField("branch", fmt.Sprintf("%+v", repoPushPayload.Push.Changes[0].New.Name)).
+				Error("can't create pull request of branch")
+		}
+		return
+	}
+
+	issuesKey := strings.Split(repoPushPayload.Push.Changes[0].New.Name, ">")
+	if len(issuesKey) != 2 {
+		logrus.WithField("branchName", fmt.Sprintf("%+v", repoPushPayload.Push.Changes[0].New.Name)).
+			Error("can't take issue key from branch name, format must be KEY-1/KEY-2")
+		return
+	}
+	err := a.Bitbucket.CreatePullRequestIfNotExist(repoPushPayload.Repository.Name, repoPushPayload.Push.Changes[0].New.Name, issuesKey[0])
+	if err != nil {
+		logrus.WithError(err).WithField("branch", fmt.Sprintf("%+v", repoPushPayload.Push.Changes[0].New.Name)).
+			Error("can't create pull request of branch")
+		return
+	}
+}
+
 // ReportEpicsWithClosedIssues create report about epics with closed issues
 func (a *App) ReportEpicsWithClosedIssues(channel string) {
 	epics, err := a.Jira.EpicsWithClosedIssues()
