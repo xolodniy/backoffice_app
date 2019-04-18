@@ -25,7 +25,6 @@ type Main struct {
 		ReportAfterSecondReviewBE     Report
 		ReportAfterSecondReviewFE     Report
 		EmployeesExceededTasks        Report
-		EmployeesExceededEstimateTime Report
 		ReportSlackSpaceEnding        Report
 		ReportGitMigrations           Report
 		ReportSprintStatus            Report

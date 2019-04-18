@@ -193,9 +193,6 @@ You may use one of several pre-defined schedules in place of a cron expression.
       employeesexceededtasks:           — preference to send report about employers that have exceeded tasks
         schedule: "00 00 07 * * *" 
         channel: "#back-office-app"
-      employeesexceededestimatetime:    — preference to send report about employers that have exceeded time of tasks
-        schedule: "00 00 07 * * *"
-        channel: "#back-office-app"
       reportslackspaceending:           — start everyday at 7:00 to send report if free space on slack < 0.5GB
         schedule: "00 00 07 * * *"
         channel: "#back-office-app"
