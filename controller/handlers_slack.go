@@ -3,8 +3,11 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
+
+	"backoffice_app/common"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -69,6 +72,7 @@ func (c *Controller) customReport(ctx *gin.Context) {
 	}()
 	ctx.JSON(http.StatusOK, "ok, wait for report")
 }
+
 func (c *Controller) afkCommand(ctx *gin.Context) {
 	request := struct {
 		Text   string `form:"text" binding:"required"`
@@ -79,20 +83,29 @@ func (c *Controller) afkCommand(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "Failed! Duration key is empty! Please, type /afk 1h")
 		return
 	}
+	if request.Text == "stop" && c.App.AfkTimer.UserDurationMap[request.UserId] > 0 {
+		c.App.AfkTimer.UserDurationMap[request.UserId] = 0
+		ctx.String(http.StatusOK, "AFK timer stopped.")
+		return
+	}
 	duration, err := time.ParseDuration(request.Text)
 	if err != nil {
 		ctx.String(http.StatusOK, "Failed! Duration format failed! Please, type /afk 1h30m")
 		return
 	}
 	if c.App.AfkTimer.UserDurationMap[request.UserId] > 0 {
-		ctx.String(http.StatusOK, "Failed! You are AFK already")
+		c.App.AfkTimer.Lock()
+		c.App.AfkTimer.UserDurationMap[request.UserId] += duration
+		c.App.AfkTimer.Unlock()
+		ctx.JSON(http.StatusOK, fmt.Sprintf("Timer increased. You are now AFK for %.0f minutes",
+			c.App.AfkTimer.UserDurationMap[request.UserId].Minutes()))
 		return
 	}
 	go c.App.StartAfkTimer(duration, request.UserId)
 	ctx.JSON(http.StatusOK, fmt.Sprintf("You are now AFK for %.0f minutes", duration.Minutes()))
 }
 
-func (c *Controller) afkCheck(ctx *gin.Context) {
+func (c *Controller) afkVacationCheck(ctx *gin.Context) {
 	request := struct {
 		Challenge string `json:"challenge"`
 		Event     struct {
@@ -110,9 +123,9 @@ func (c *Controller) afkCheck(ctx *gin.Context) {
 	case request.Event.Subtype == "message_deleted", request.Event.Subtype == "message_changed":
 		break
 	case request.Event.ThreadTs != "":
-		go c.App.CheckUserAfk(request.Event.Text, request.Event.ThreadTs, request.Event.Channel)
+		go c.App.CheckUserAfkVacation(request.Event.Text, request.Event.ThreadTs, request.Event.Channel)
 	case request.Event.Text != "":
-		go c.App.CheckUserAfk(request.Event.Text, request.Event.Ts, request.Event.Channel)
+		go c.App.CheckUserAfkVacation(request.Event.Text, request.Event.Ts, request.Event.Channel)
 	}
 	ctx.JSON(http.StatusOK, gin.H{"challenge": request.Challenge})
 }
@@ -128,4 +141,60 @@ func (c *Controller) sprintStatus(ctx *gin.Context) {
 	}
 	go c.App.ReportSprintStatus(request.UserId)
 	ctx.JSON(http.StatusOK, "ok, wait for report")
+}
+
+func (c *Controller) vacation(ctx *gin.Context) {
+	request := struct {
+		Text   string `form:"text" binding:"required"`
+		UserId string `form:"user_id" binding:"required"`
+	}{}
+	errWrongFormat := `Failed! Format is wrong! Please, type /vacation 02.01.1970 02.01.1970 "Your message"`
+	err := ctx.ShouldBindWith(&request, binding.FormPost)
+	if err != nil {
+		ctx.String(http.StatusOK, errWrongFormat)
+		return
+	}
+	switch {
+	case request.Text == "cancel":
+		err := c.App.CancelVacation(request.UserId)
+		switch {
+		case err == common.ErrNotFound:
+			ctx.String(http.StatusOK, "You have no actived vacation autoreply yet")
+		case err != nil:
+			ctx.String(http.StatusOK, err.Error())
+		default:
+			ctx.String(http.StatusOK, "Your vacation autoreply has been cancelled")
+		}
+	case request.Text == "status":
+		vacation, err := c.App.CheckVacationSatus(request.UserId)
+		switch {
+		case err == common.ErrNotFound:
+			ctx.String(http.StatusOK, "You have no actived vacation autoreply yet")
+		case err != nil:
+			ctx.String(http.StatusOK, err.Error())
+		default:
+			ctx.JSON(http.StatusOK, fmt.Sprintf(`You have registered vacation autoreply from %s to %s '%s'`,
+				vacation.DateStart.Format("02.01.2006"), vacation.DateEnd.Format("02.01.2006"), vacation.Message))
+		}
+	default:
+		if !strings.Contains(request.Text, `"`) {
+			ctx.String(http.StatusOK, errWrongFormat)
+			return
+		}
+		message := regexp.MustCompile(`"(.+)?"`).FindStringSubmatch(request.Text)
+		splitFn := func(c rune) bool {
+			return c == ' '
+		}
+		textSlice := strings.FieldsFunc(request.Text[:strings.IndexByte(request.Text, '"')], splitFn)
+		if len(message) != 0 && len(textSlice) == 2 {
+			err = c.App.SetVacationPeriod(textSlice[0], textSlice[1], message[1], request.UserId)
+			if err != nil {
+				ctx.JSON(http.StatusOK, fmt.Sprintf(err.Error()))
+				return
+			}
+			ctx.JSON(http.StatusOK, fmt.Sprintf("Your vacation autoreply from %s to %s has registered", textSlice[0], textSlice[1]))
+			return
+		}
+		ctx.String(http.StatusOK, errWrongFormat)
+	}
 }

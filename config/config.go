@@ -25,7 +25,6 @@ type Main struct {
 		ReportAfterSecondReviewBE     Report
 		ReportAfterSecondReviewFE     Report
 		EmployeesExceededTasks        Report
-		EmployeesExceededEstimateTime Report
 		ReportSlackSpaceEnding        Report
 		ReportGitMigrations           Report
 		ReportSprintStatus            Report
@@ -33,6 +32,7 @@ type Main struct {
 		Report24HoursReviewIssues     Report
 		ReportGitAnsibleChanges       Report
 		DailyWorkersLessWorkedMessage Report
+		WeeklyReportOverworkedIssues  Report
 		ReportEpicClosedIssues        Report
 	}
 	Database
