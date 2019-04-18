@@ -339,6 +339,21 @@ func main() {
 					application.MakeWorkersLessWorkedReportYesterday(channel)
 				},
 			},
+			{
+				Name:  "make-report-overworked-issues-now",
+				Usage: "Sends report about overworked issues during the last week",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
+					application := app.New(cfg)
+					application.ReportOverworkedIssues(channel)
+				},
+			},
 		}
 
 		if err := cliApp.Run(os.Args); err != nil {
@@ -444,6 +459,13 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 
 	err = tm.AddTask(cfg.Reports.DailyWorkersLessWorkedMessage.Schedule, func() {
 		application.MakeWorkersLessWorkedReportYesterday(cfg.Reports.DailyWorkersLessWorkedMessage.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.WeeklyReportOverworkedIssues.Schedule, func() {
+		application.ReportOverworkedIssues(cfg.Reports.WeeklyReportOverworkedIssues.Channel)
 	})
 	if err != nil {
 		panic(err)
