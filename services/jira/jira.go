@@ -315,7 +315,7 @@ func (j *Jira) OpenIssuesOfOpenSprints() ([]Issue, error) {
 	return issues, nil
 }
 
-// IssueSetStatusCloseLastTask set status close transition for issue
+// IssueSetStatusTransition set status close transition for issue
 func (j *Jira) IssueSetStatusTransition(issueKey, transitionName string) error {
 	transitions, resp, err := j.Issue.GetTransitions(issueKey)
 	if err != nil {
@@ -465,14 +465,16 @@ func (j *Jira) EpicsWithClosedIssues() ([]Issue, error) {
 		if len(epicIssues) == 0 {
 			continue
 		}
-		func() {
-			for _, issue := range epicIssues {
-				if issue.Fields.Status.Name != StatusClosed {
-					return
-				}
+		allIssuesClosed := true
+		for _, issue := range epicIssues {
+			if issue.Fields.Status.Name != StatusClosed {
+				allIssuesClosed = false
+				break
 			}
+		}
+		if allIssuesClosed {
 			epicsWithClosedIssues = append(epicsWithClosedIssues, epic)
-		}()
+		}
 	}
 	return epicsWithClosedIssues, nil
 }
