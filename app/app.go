@@ -634,7 +634,7 @@ func (a *App) ReportSprintStatus(channel string) {
 	for _, issue := range openIssues {
 		developer := issue.DeveloperMap(jira.TagDeveloperName)
 		if developer == "" {
-			developer = "No developer"
+			developer = jira.NoDeveloper
 		}
 		developers[developer] = append(developers[developer], issue)
 	}
