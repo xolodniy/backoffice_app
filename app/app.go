@@ -605,18 +605,40 @@ func (a *App) SendFileToSlack(channel, fileName string) error {
 
 // ReportSprintStatus create report about sprint status
 func (a *App) ReportSprintStatus(channel string) {
-	issues, err := a.Jira.IssuesOfOpenSprints()
+	openIssues, err := a.Jira.OpenIssuesOfOpenSprints()
 	if err != nil {
 		logrus.WithError(err).Error("can't take information about issues of open sprint from jira")
 		return
 	}
+	sprintInterface, ok := openIssues[0].Fields.Unknowns[jira.FieldSprintInfo].([]interface{})
+	if !ok {
+		logrus.WithError(err).Error("can't parse interface from map")
+		return
+	}
+	startDate, endDate, err := a.FindLastSprintDates(sprintInterface)
+	if err != nil {
+		logrus.WithError(err).Error("can't find sprint of open issue")
+		return
+	}
+	closedIssues, err := a.Jira.IssuesClosedInInterim(startDate.AddDate(0, 0, -1), endDate.AddDate(0, 0, +1))
+	if err != nil {
+		logrus.WithError(err).Error("can't get closed issues of open sprint from jira")
+		return
+	}
 	msgBody := "*Sprint status*\n"
-	if len(issues) == 0 {
+	if len(openIssues) == 0 {
 		a.Slack.SendMessage(msgBody+"Open issues was not found. All issues of open sprint was closed.", channel)
 		return
 	}
 	var developers = make(map[string][]jira.Issue)
-	for _, issue := range issues {
+	for _, issue := range openIssues {
+		developer := issue.DeveloperMap(jira.TagDeveloperName)
+		if developer == "" {
+			developer = "No developer"
+		}
+		developers[developer] = append(developers[developer], issue)
+	}
+	for _, issue := range closedIssues {
 		developer := issue.DeveloperMap(jira.TagDeveloperName)
 		if developer == "" {
 			developer = jira.NoDeveloper
@@ -1039,6 +1061,56 @@ func (a *App) ReportOverworkedIssues(channel string) {
 		msgBody = "There are no issues with overworked time."
 	}
 	a.Slack.SendMessage("*Tasks time duration analyze*:\n"+msgBody+messageNoDeveloper, channel)
+}
+
+// FindLastSprintDates will find date of sprint from issue.Fields.Unknowns["customfield_10010"].([]interface{})
+func (a *App) FindLastSprintDates(sprints []interface{}) (time.Time, time.Time, error) {
+	var (
+		startDate time.Time
+		endDate   time.Time
+	)
+	sDate, err := regexp.Compile(`startDate=(\d{4}-\d{2}-\d{2})`)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	eDate, err := regexp.Compile(`endDate=(\d{4}-\d{2}-\d{2})`)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	for i := range sprints {
+		s, ok := sprints[i].(string)
+		if !ok {
+			return time.Time{}, time.Time{}, fmt.Errorf("can't parse to string: %v", sprints[i])
+		}
+		// Find string submatch and get slice of match string and this startDate
+		// For example, one of sprint:
+		// "com.atlassian.greenhopper.service.sprint.Sprint@6f00eb7b[id=47,rapidViewId=12,state=ACTIVE,name=Sprint 46,
+		// goal=,startDate=2019-02-20T04:19:23.907Z,endDate=2019-02-25T04:19:00.000Z,completeDate=<null>,sequence=47]"
+		// we get string submatch of slice ["startDate=2019-02-20" "2019-02-20"] and then parse "2019-02-20" as time to find the biggest one
+		sd := sDate.FindStringSubmatch(s)
+		if len(sd) != 2 {
+			return time.Time{}, time.Time{}, fmt.Errorf("can't find submatch string to startDate: %v", sprints[i])
+		}
+		ts, err := time.Parse("2006-01-02", sd[1])
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+
+		ed := eDate.FindStringSubmatch(s)
+		if len(ed) != 2 {
+			return time.Time{}, time.Time{}, fmt.Errorf("can't find submatch string to endDate: %v", sprints[i])
+		}
+		te, err := time.Parse("2006-01-02", ed[1])
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+
+		if ts.After(startDate) {
+			startDate = ts
+			endDate = te
+		}
+	}
+	return startDate, endDate, nil
 }
 
 // SetVacationPeriod create vacation period for user

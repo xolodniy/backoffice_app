@@ -304,9 +304,9 @@ func (j *Jira) EpicName(issueKey string) (string, error) {
 	return fmt.Sprint(epicIssue.Fields.Unknowns[FieldEpicName]), nil
 }
 
-// IssuesOfOpenSprints searches Issues in all sprints which opened now and returning list with issues in this sprints list
-func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
-	request := fmt.Sprintf(`type not in (story, bug) AND Sprint IN openSprints()`)
+// OpenIssuesOfOpenSprints searches Issues in all sprints which opened now and returning list with issues in this sprints list
+func (j *Jira) OpenIssuesOfOpenSprints() ([]Issue, error) {
+	request := fmt.Sprintf(`type not in (story, bug) AND status NOT IN ("%s") AND Sprint IN openSprints()`, StatusClosed)
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, fmt.Errorf("can't take jira issues with type not in (story, bug) of open sprints: %s", err)
@@ -434,10 +434,10 @@ func (j *Jira) IssueTypeByKey(issueId string) string {
 	return issue.Fields.Type.Name
 }
 
-// IssuesClosedInInterim retrieves isses closed in after dateStart and before dateEnd with not emmpty developer
+// IssuesClosedInInterim retrieves isses closed in after dateStart and before dateEnd
 func (j *Jira) IssuesClosedInInterim(dateStart, dateEnd time.Time) ([]Issue, error) {
 	// this request retrieves closed and canceled issues
-	request := fmt.Sprintf(`status changed to %s after %s before %s AND Developer is not EMPTY`,
+	request := fmt.Sprintf(`type not in (story, bug) and status changed to %s after %s before %s`,
 		StatusClosed, dateStart.Format("2006-01-02"), dateEnd.Format("2006-01-02"))
 	issues, err := j.issues(request)
 	if err != nil {
