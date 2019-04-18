@@ -46,6 +46,9 @@ reports:
   weeklyreportoverworkedissues:
     schedule: "00 00 07 * * 1"
     channel: "Artem Efremov"
+  reportepicclosedissues:
+    schedule: "00 00 07 * * *"
+    channel: "#back-office-app"
 
 jira:
   apiurl: https://theflow.atlassian.net

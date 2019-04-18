@@ -215,6 +215,9 @@ You may use one of several pre-defined schedules in place of a cron expression.
       weeklyreportoverworkedissues:     — preference to send report about issues with overworked time if remaining time == 0
         schedule: "00 00 07 * * 1"
         channel: "#back-office-app"
+      reportepicclosedissues:           — preference to send report about all closed issues of epic
+        schedule: "00 00 07 * * *"
+        channel: "#back-office-app"
     
 #### Config.yml variables for slack users id
 

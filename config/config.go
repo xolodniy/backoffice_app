@@ -33,6 +33,7 @@ type Main struct {
 		ReportGitAnsibleChanges       Report
 		DailyWorkersLessWorkedMessage Report
 		WeeklyReportOverworkedIssues  Report
+		ReportEpicClosedIssues        Report
 	}
 	Database
 }

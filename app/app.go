@@ -146,7 +146,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 	var designMessage string
 	for _, issue := range issues {
 		if issue.Fields.Status.Name != jira.StatusCloseLastTask {
-			err := a.Jira.IssueSetStatusCloseLastTask(issue.Key)
+			err := a.Jira.IssueSetStatusTransition(issue.Key, jira.StatusCloseLastTask)
 			if err != nil {
 				logrus.WithError(err).Errorf("can't set close last task transition for issue %s", issue.Key)
 			}
@@ -634,7 +634,7 @@ func (a *App) ReportSprintStatus(channel string) {
 	for _, issue := range openIssues {
 		developer := issue.DeveloperMap(jira.TagDeveloperName)
 		if developer == "" {
-			developer = "No developer"
+			developer = jira.NoDeveloper
 		}
 		developers[developer] = append(developers[developer], issue)
 	}
@@ -1215,4 +1215,29 @@ func (a *App) CreateBranchPullRequest(repoPushPayload bitbucket.RepoPushPayload)
 			Error("can't create pull request of branch")
 		return
 	}
+}
+
+// ReportEpicsWithClosedIssues create report about epics with closed issues
+func (a *App) ReportEpicsWithClosedIssues(channel string) {
+	epics, err := a.Jira.EpicsWithClosedIssues()
+	if err != nil {
+		logrus.WithError(err).Error("can't take information about epics with closed issues from jira")
+		return
+	}
+	if len(epics) == 0 {
+		a.Slack.SendMessage("There are no epics with all closed issues", channel)
+		return
+	}
+	msgBody := "\n*Epics have all closed issues:*\n\n"
+	for _, epic := range epics {
+		if epic.Fields.Status.Name != jira.StatusInArtDirectorReview {
+			err := a.Jira.IssueSetStatusTransition(epic.Key, jira.StatusInArtDirectorReview)
+			if err != nil {
+				logrus.WithError(err).Errorf("can't set close last task transition for issue %s", epic.Key)
+			}
+		}
+		msgBody += epic.String()
+	}
+	msgBody += "cc " + a.Slack.Employees.ArtDirector
+	a.Slack.SendMessage(msgBody, channel)
 }

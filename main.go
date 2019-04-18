@@ -354,6 +354,21 @@ func main() {
 					application.ReportOverworkedIssues(channel)
 				},
 			},
+			{
+				Name:  "get-jira-epics-with-closed-issues-now",
+				Usage: "Gets jira epics with closed issues right now",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
+					application := app.New(cfg)
+					application.ReportEpicsWithClosedIssues(channel)
+				},
+			},
 		}
 
 		if err := cliApp.Run(os.Args); err != nil {
@@ -466,6 +481,13 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 
 	err = tm.AddTask(cfg.Reports.WeeklyReportOverworkedIssues.Schedule, func() {
 		application.ReportOverworkedIssues(cfg.Reports.WeeklyReportOverworkedIssues.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.ReportEpicClosedIssues.Schedule, func() {
+		application.ReportEpicsWithClosedIssues(cfg.Reports.ReportEpicClosedIssues.Channel)
 	})
 	if err != nil {
 		panic(err)
