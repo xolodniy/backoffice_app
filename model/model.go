@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/GuiaBolso/darwin"
 	"github.com/gobuffalo/packr"
@@ -145,6 +146,52 @@ func (m *Model) DeleteAfkTimer(userId string) error {
 	var res []AfkTimer
 	if err := m.db.Where(AfkTimer{UserId: userId}).Delete(&res).Error; err != nil {
 		logrus.WithError(err).WithField("userId", userId).Error("can't delete afk timer by user id")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// CreateVacation creates new vacation
+func (m *Model) SaveVacation(vacation Vacation) error {
+	if err := m.db.Where(Vacation{UserId: vacation.UserId}).Assign(Vacation{
+		DateStart: vacation.DateStart,
+		DateEnd:   vacation.DateEnd,
+		Message:   vacation.Message,
+	}).FirstOrCreate(&vacation).Error; err != nil {
+		logrus.WithError(err).WithField("commit", fmt.Sprintf("%+v", vacation)).Error("can't create vacation")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// GetVacation retrieves actual vacations by today
+func (m *Model) GetActualVacations() ([]Vacation, error) {
+	var res []Vacation
+	if err := m.db.Where("date_start <= ? AND date_end >= ?", time.Now(), time.Now()).Find(&res).Error; err != nil {
+		logrus.WithError(err).Error("can't get vacations")
+		return nil, common.ErrInternal
+	}
+	return res, nil
+}
+
+// GetVacation retrieves vacation by user id
+func (m *Model) GetVacation(userId string) (Vacation, error) {
+	var res Vacation
+	if err := m.db.Find(&res).Where(Vacation{UserId: userId}).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return Vacation{}, common.ErrNotFound
+		}
+		logrus.WithError(err).WithField("userId", userId).Error("can't get vacation")
+		return Vacation{}, common.ErrInternal
+	}
+	return res, nil
+}
+
+// DeleteVacation deletes vacation
+func (m *Model) DeleteVacation(userId string) error {
+	var res []Vacation
+	if err := m.db.Where(Vacation{UserId: userId}).Delete(&res).Error; err != nil {
+		logrus.WithError(err).WithField("userId", userId).Error("can't delete vacation by user id")
 		return common.ErrInternal
 	}
 	return nil
