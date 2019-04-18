@@ -875,14 +875,15 @@ func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
 			a.AfkTimer.Lock()
 			a.AfkTimer.UserDurationMap[userId] = a.AfkTimer.UserDurationMap[userId] - time.Second
 			a.AfkTimer.Unlock()
+			if a.AfkTimer.UserDurationMap[userId] <= 0 {
+				ticker.Stop()
+				err = a.model.DeleteAfkTimer(userId)
+				if err != nil {
+					logrus.WithError(err).Errorf("can't delete afk timer from database")
+				}
+			}
 		}
 	}()
-	time.Sleep(userDuration)
-	ticker.Stop()
-	err = a.model.DeleteAfkTimer(userId)
-	if err != nil {
-		logrus.WithError(err).Errorf("can't delete afk timer from database")
-	}
 }
 
 // CheckUserAfk check user on AFK status
