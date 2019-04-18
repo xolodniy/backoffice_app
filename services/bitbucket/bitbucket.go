@@ -270,10 +270,10 @@ func (b *Bitbucket) DiffFile(repoSlug, spec, path string) (string, error) {
 
 // repoSlugByIsueKey retrieves repo slug by issueKey
 func (b *Bitbucket) repoSlugByProjectKey(projectKey string) (string, error) {
-	var repositoryInfo = struct {
+	var repositoryInfo struct {
 		Type   string       `json:"type"`
 		Values []repository `json:"values"`
-	}{}
+	}
 	urlStr := b.Url + "/repositories/" + b.Owner + "?q=project.key=\"" + projectKey + "\""
 	res, err := b.get(urlStr)
 	if err != nil {
@@ -296,13 +296,13 @@ func (b *Bitbucket) branchTargetCommitHash(repoSlug, branchName string) (string,
 	if err != nil {
 		return "", err
 	}
-	var branchInfo = struct {
+	var branchInfo struct {
 		Type   string `json:"type"`
 		Name   string `json:"name"`
 		Target struct {
 			Hash string `json:"hash"`
 		} `json:"target"`
-	}{}
+	}
 	err = json.Unmarshal(res, &branchInfo)
 	if err != nil {
 		return "", err

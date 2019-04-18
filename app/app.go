@@ -1163,27 +1163,28 @@ func (a *App) CheckVacationSatus(userId string) (model.Vacation, error) {
 
 // CreateIssueBranches create branch of issue and its parent
 func (a *App) CreateIssueBranches(issue jira.Issue) {
-	if issue.Fields.Status.Name == jira.StatusStarted {
-		if issue.Fields.Parent == nil {
-			err := a.Bitbucket.CreateBranch(issue.Key, issue.Key, "master")
-			if err != nil {
-				logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
-					Error("can't create branch")
-			}
-			return
-		}
-		err := a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key, "master")
+	if issue.Fields.Status.Name != jira.StatusStarted {
+		return
+	}
+	if issue.Fields.Parent == nil {
+		err := a.Bitbucket.CreateBranch(issue.Key, issue.Key, "master")
 		if err != nil {
 			logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
 				Error("can't create branch")
-			return
 		}
-		err = a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key+">"+issue.Key, issue.Fields.Parent.Key)
-		if err != nil {
-			logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
-				Error("can't create branch")
-			return
-		}
+		return
+	}
+	err := a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key, "master")
+	if err != nil {
+		logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
+			Error("can't create branch")
+		return
+	}
+	err = a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key+">"+issue.Key, issue.Fields.Parent.Key)
+	if err != nil {
+		logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
+			Error("can't create branch")
+		return
 	}
 }
 
