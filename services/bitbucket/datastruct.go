@@ -65,11 +65,12 @@ type repository struct {
 	} `json:"links"`
 	UUID      string  `json:"uuid"`
 	Project   project `json:"project"`
-	FullName  string  `json:"full_name"` //empty
+	FullName  string  `json:"full_name"`
 	Name      string  `json:"name"`
 	Website   string  `json:"website"`
 	Owner     owner   `json:"owner"`
 	Scm       string  `json:"scm"`
+	Slug      string  `json:"slug"`
 	IsPrivate bool    `json:"is_private"`
 }
 
@@ -164,4 +165,144 @@ type diffStat struct {
 			} `json:"self"`
 		} `json:"links"`
 	} `json:"new"`
+}
+
+// PullRequestCreateInfo struct for create PR
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/pullrequests#post
+type PullRequestCreateInfo struct {
+	Title  string `json:"title"`
+	Source struct {
+		Branch struct {
+			Name string `json:"name"`
+		} `json:"branch"`
+	} `json:"source"`
+	Destination struct {
+		Branch struct {
+			Name string `json:"name"`
+		} `json:"branch"`
+	} `json:"destination"`
+}
+
+// RepoPushPayload struct for webhook about push event of repository
+// https://confluence.atlassian.com/bitbucket/event-payloads-740262817.html#EventPayloads-entity_repository (Repository events -> Push)
+type RepoPushPayload struct {
+	Actor      owner      `json:"actor"`
+	Repository repository `json:"repository"`
+	Push       struct {
+		Changes []struct {
+			New struct {
+				Type   string `json:"type"`
+				Name   string `json:"name"`
+				Target struct {
+					Type    string    `json:"type"`
+					Hash    string    `json:"hash"`
+					Author  owner     `json:"author"`
+					Message string    `json:"message"`
+					Date    time.Time `json:"date"`
+					Parents []struct {
+						Type  string `json:"type"`
+						Hash  string `json:"hash"`
+						Links struct {
+							Self struct {
+								Href string `json:"href"`
+							} `json:"self"`
+							HTML struct {
+								Href string `json:"href"`
+							} `json:"html"`
+						} `json:"links"`
+					} `json:"parents"`
+					Links struct {
+						Self struct {
+							Href string `json:"href"`
+						} `json:"self"`
+						HTML struct {
+							Href string `json:"href"`
+						} `json:"html"`
+					} `json:"links"`
+				} `json:"target"`
+				Links struct {
+					Self struct {
+						Href string `json:"href"`
+					} `json:"self"`
+					Commits struct {
+						Href string `json:"href"`
+					} `json:"commits"`
+					HTML struct {
+						Href string `json:"href"`
+					} `json:"html"`
+				} `json:"links"`
+			} `json:"new"`
+			Old struct {
+				Type   string `json:"type"`
+				Name   string `json:"name"`
+				Target struct {
+					Type    string    `json:"type"`
+					Hash    string    `json:"hash"`
+					Author  owner     `json:"author"`
+					Message string    `json:"message"`
+					Date    time.Time `json:"date"`
+					Parents []struct {
+						Type  string `json:"type"`
+						Hash  string `json:"hash"`
+						Links struct {
+							Self struct {
+								Href string `json:"href"`
+							} `json:"self"`
+							HTML struct {
+								Href string `json:"href"`
+							} `json:"html"`
+						} `json:"links"`
+					} `json:"parents"`
+					Links struct {
+						Self struct {
+							Href string `json:"href"`
+						} `json:"self"`
+						HTML struct {
+							Href string `json:"href"`
+						} `json:"html"`
+					} `json:"links"`
+				} `json:"target"`
+				Links struct {
+					Self struct {
+						Href string `json:"href"`
+					} `json:"self"`
+					Commits struct {
+						Href string `json:"href"`
+					} `json:"commits"`
+					HTML struct {
+						Href string `json:"href"`
+					} `json:"html"`
+				} `json:"links"`
+			} `json:"old"`
+			Links struct {
+				HTML struct {
+					Href string `json:"href"`
+				} `json:"html"`
+				Diff struct {
+					Href string `json:"href"`
+				} `json:"diff"`
+				Commits struct {
+					Href string `json:"href"`
+				} `json:"commits"`
+			} `json:"links"`
+			Created bool `json:"created"`
+			Forced  bool `json:"forced"`
+			Closed  bool `json:"closed"`
+			Commits []struct {
+				Hash    string `json:"hash"`
+				Type    string `json:"type"`
+				Message string `json:"message"`
+				Author  owner  `json:"author"`
+				Links   struct {
+					Self struct {
+						Href string `json:"href"`
+					} `json:"self"`
+					HTML struct {
+						Href string `json:"href"`
+					} `json:"html"`
+				} `json:"links"`
+			} `json:"commits"`
+			Truncated bool `json:"truncated"`
+		} `json:"changes"`
+	} `json:"push"`
 }
