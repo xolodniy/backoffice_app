@@ -83,13 +83,22 @@ func (c *Controller) afkCommand(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "Failed! Duration key is empty! Please, type /afk 1h")
 		return
 	}
+	if request.Text == "stop" && c.App.AfkTimer.UserDurationMap[request.UserId] > 0 {
+		c.App.AfkTimer.UserDurationMap[request.UserId] = 0
+		ctx.String(http.StatusOK, "AFK timer stopped.")
+		return
+	}
 	duration, err := time.ParseDuration(request.Text)
 	if err != nil {
 		ctx.String(http.StatusOK, "Failed! Duration format failed! Please, type /afk 1h30m")
 		return
 	}
 	if c.App.AfkTimer.UserDurationMap[request.UserId] > 0 {
-		ctx.String(http.StatusOK, "Failed! You are AFK already")
+		c.App.AfkTimer.Lock()
+		c.App.AfkTimer.UserDurationMap[request.UserId] += duration
+		c.App.AfkTimer.Unlock()
+		ctx.JSON(http.StatusOK, fmt.Sprintf("Timer increased. You are now AFK for %.0f minutes",
+			c.App.AfkTimer.UserDurationMap[request.UserId].Minutes()))
 		return
 	}
 	go c.App.StartAfkTimer(duration, request.UserId)

@@ -3,6 +3,7 @@ package jira
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"backoffice_app/config"
 
@@ -55,6 +56,7 @@ var (
 	TypeFETask            = "FE Task"
 	TagDeveloperName      = "displayName"
 	TagDeveloperEmail     = "emailAddress"
+	NoDeveloper           = "No developer"
 )
 
 func (i Issue) String() string {
@@ -430,4 +432,17 @@ func (j *Jira) IssueTypeByKey(issueId string) string {
 		return ""
 	}
 	return issue.Fields.Type.Name
+}
+
+// IssuesClosedInInterim retrieves isses closed in after dateStart and before dateEnd with not emmpty developer
+func (j *Jira) IssuesClosedInInterim(dateStart, dateEnd time.Time) ([]Issue, error) {
+	// this request retrieves closed and canceled issues
+	request := fmt.Sprintf(`status changed to %s after %s before %s AND Developer is not EMPTY`,
+		StatusClosed, dateStart.Format("2006-01-02"), dateEnd.Format("2006-01-02"))
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't take jira issues closed after %s before %s with error: %s",
+			dateStart.Format("2006-01-02"), dateEnd.Format("2006-01-02"), err)
+	}
+	return issues, nil
 }
