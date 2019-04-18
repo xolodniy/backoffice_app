@@ -36,7 +36,7 @@ reports:
   reportclarificationissues:
     schedule: "00 00 07 * * *"
   report24hoursreviewissues:
-    schedule: "00 00 06 * * *"
+    schedule: "00 00 07 * * *"
   reportgitansiblechanges:
     schedule: "@hourly"
     channel: "Stepan Morozov"
