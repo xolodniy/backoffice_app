@@ -24,9 +24,6 @@ reports:
   employeesexceededtasks:
     schedule: "00 00 07 * * *"
     channel: "#back-office-app"
-  employeesexceededestimatetime:
-    schedule: "@yearly"
-    channel: "#back-office-app"
   reportslackspaceending:
     schedule: "00 00 07 * * *"
     channel: "#back-office-app"
@@ -97,3 +94,11 @@ hubstaff:
     login:
     password:
   orgsid: 60470
+
+database:
+  name: {{ postgres_database }}
+  host: {{ postgres_host }}
+  port: {{ postgres_port }}
+  user: {{ postgres_user }}
+  password: {{ postgres_password }}
+  enable_ssl: {{ postgres_enable_ssl }}
