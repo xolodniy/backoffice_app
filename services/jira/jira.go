@@ -448,7 +448,7 @@ func (j *Jira) IssuesClosedInInterim(dateStart, dateEnd time.Time) ([]Issue, err
 	return issues, nil
 }
 
-// EpicsWithClosedStories retrieves epics with closed issues
+// EpicsWithClosedIssues retrieves epics with closed issues
 func (j *Jira) EpicsWithClosedIssues() ([]Issue, error) {
 	request := fmt.Sprintf(`type in (Epic) AND status NOT IN ("%s")`, StatusClosed)
 	openEpics, err := j.issues(request)
