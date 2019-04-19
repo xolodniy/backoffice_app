@@ -33,7 +33,7 @@ func main() {
 		cliApp.Flags = []cli.Flag{
 			cli.StringFlag{
 				Name:  "config",
-				Value: "/etc/backoffice/config.yml",
+				Value: "/etc/backoffice_app/config.yml",
 				Usage: "optional config path",
 			},
 			cli.StringFlag{
