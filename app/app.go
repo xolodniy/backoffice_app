@@ -648,12 +648,30 @@ func (a *App) ReportSprintStatus(channel string) {
 	for _, dev := range a.Slack.IgnoreList {
 		delete(developers, dev)
 	}
+
+	fileName := "Sprint status"
+	file, err := os.Create(fileName + ".csv")
+	if err != nil {
+		logrus.WithError(err).Error("can't create sprint status file")
+		return
+	}
+
+	writer := csv.NewWriter(file)
+	err = writer.Write([]string{"Name", "Keys"})
+	if err != nil {
+		logrus.WithError(err).Error("can't write to sprint status file")
+		return
+	}
+
 	var (
 		messageAllTaskClosed string
 		messageNoDeveloper   string
 	)
 	for developer, issues := range developers {
-		var message string
+		var (
+			message         string
+			developerIssues []string
+		)
 		for _, issue := range issues {
 			if issue.Fields.Status.Name != jira.StatusClosed && issue.Fields.Status.Name != jira.StatusInClarification {
 				if developer == jira.NoDeveloper && issue.Fields.Assignee == nil {
@@ -663,6 +681,7 @@ func (a *App) ReportSprintStatus(channel string) {
 					message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s> / ", issue.Fields.Parent.Key)
 				}
 				message += issue.String()
+				developerIssues = append(developerIssues, issue.Key)
 			}
 		}
 		switch {
@@ -673,9 +692,18 @@ func (a *App) ReportSprintStatus(channel string) {
 		case message != "":
 			msgBody += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
 		}
+		err = writer.Write([]string{developer, strings.Join(developerIssues, ",")})
+		if err != nil {
+			logrus.WithError(err).Error("can't write to sprint status file")
+			return
+		}
+
 	}
 	msgBody += messageNoDeveloper + "\n" + messageAllTaskClosed
 	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.Employees.ProjectManager, channel)
+	writer.Flush()
+	file.Close()
+	a.SendFileToSlack(channel, fileName+".csv")
 }
 
 // ReportClarificationIssues create report about issues with clarification status
