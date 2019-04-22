@@ -4,6 +4,8 @@ pipelines:
   default:
     - step:
         name: build backend
+        caches:
+          - go-modules
         script:
           - GO111MODULE=off go get github.com/gobuffalo/packr/packr
           - packr
@@ -19,5 +21,10 @@ pipelines:
           - curl -H "Authorization:Basic c3RlcGFuLm1vcm96b3ZAdGhlZmxvdy5nbG9iYWw6MTIzMTIzMTIz" -X POST "https://api.bitbucket.org/2.0/repositories/theflowglobal/backoffice_app/downloads" --form files=@"backoffice_app_$BITBUCKET_BRANCH"
     - step:
         name: test backend
+        caches:
+          - go-modules
         script:
           - go test ./...
+definitions:
+  caches:
+    go-modules: $GOPATH/pkg/mod
