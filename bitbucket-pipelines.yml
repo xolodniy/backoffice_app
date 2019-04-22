@@ -5,6 +5,8 @@ pipelines:
     - step:
         name: build backend
         script:
+          - GO111MODULE=off go get github.com/gobuffalo/packr/packr
+          - packr
           - GOOS=linux GOARCH=amd64 URI=https://bitbucket.org/theflowglobal/backoffice_app;
             go build --ldflags "
             -X 'backoffice_app/controller.branch=$BITBUCKET_BRANCH'
