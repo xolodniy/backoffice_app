@@ -1270,12 +1270,12 @@ func (a *App) ReportEpicsWithClosedIssues(channel string) {
 	a.Slack.SendMessage(msgBody, channel)
 }
 
-// MessageIssueAfterSecondTLReview send message about issue after second tl review round
+// MoveJiraStatuses move jira issues statuses
 func (a *App) MoveJiraStatuses(issue jira.Issue) {
 	if issue.Fields.Type.Subtask {
 		parentType, err := a.Jira.IssueType(issue.Fields.Parent.ID)
 		if err != nil {
-			logrus.WithError(err).Errorf("can't get issue type for issue %s", issue.Fields.Parent.Key)
+			return
 		}
 		switch issue.Fields.Status.Name {
 		case jira.StatusOpen:

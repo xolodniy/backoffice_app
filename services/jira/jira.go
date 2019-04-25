@@ -466,7 +466,7 @@ func (j *Jira) EpicsWithClosedIssues() ([]Issue, error) {
 func (j *Jira) IssueType(issueID string) (string, error) {
 	issue, resp, err := j.Issue.Get(issueID, &jira.GetQueryOptions{})
 	if err != nil {
-		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira issue info")
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Errorf("can't take from jira issue '%s' info", issueID)
 		return "", err
 	}
 	return issue.Fields.Type.Name, nil
