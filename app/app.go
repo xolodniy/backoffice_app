@@ -1307,6 +1307,7 @@ func (a *App) MoveJiraStatuses(issue jira.Issue) {
 			}
 		}
 	}
+
 	if issue.Fields.Type.Name == jira.TypeStory && issue.Fields.Unknowns[jira.FieldEpicKey] != nil {
 		if issue.Fields.Status.Name == jira.StatusStarted {
 			err := a.Jira.IssueSetStatusTransition(fmt.Sprint(issue.Fields.Unknowns[jira.FieldEpicKey]), jira.TransitionApprove)
@@ -1321,5 +1322,4 @@ func (a *App) MoveJiraStatuses(issue jira.Issue) {
 			}
 		}
 	}
-
 }
