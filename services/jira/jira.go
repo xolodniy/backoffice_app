@@ -34,30 +34,38 @@ func New(config *config.Jira) Jira {
 
 // Status variables for jql requests
 var (
-	StatusStarted             = "Started"
-	StatusClosed              = "Closed"
-	StatusTlReview            = "TL review"
-	StatusPeerReview          = "In peer review"
-	StatusDesignReview        = "in Design review"
-	StatusCTOReview           = "In CTO review"
-	StatusFEReview            = "In FE review"
-	StatusPMReview            = "In PM Review"
-	StatusCloseLastTask       = "Close last task"
-	StatusReadyForDemo        = "Ready for demo"
-	StatusEmptyAssignee       = "empty"
-	StatusInClarification     = "In clarification"
-	StatusInArtDirectorReview = "In Art-director review"
-	FieldEpicName             = "customfield_10005"
-	FieldEpicKey              = "customfield_10008"
-	FieldSprintInfo           = "customfield_10010"
-	FieldDeveloperMap         = "customfield_10026"
-	TypeBESubTask             = "BE Sub-Task"
-	TypeBETask                = "BE Task"
-	TypeFESubTask             = "FE Sub-Task"
-	TypeFETask                = "FE Task"
-	TagDeveloperName          = "displayName"
-	TagDeveloperEmail         = "emailAddress"
-	NoDeveloper               = "No developer"
+	StatusStarted                      = "Started"
+	StatusClosed                       = "Closed"
+	StatusOpen                         = "Open"
+	StatusTlReview                     = "TL review"
+	StatusPeerReview                   = "In peer review"
+	StatusDesignReview                 = "in Design review"
+	StatusCTOReview                    = "In CTO review"
+	StatusFEReview                     = "In FE review"
+	StatusPMReview                     = "In PM Review"
+	StatusCloseLastTask                = "Close last task"
+	StatusReadyForDemo                 = "Ready for demo"
+	StatusEmptyAssignee                = "empty"
+	StatusInClarification              = "In clarification"
+	StatusInArtDirectorReview          = "In Art-director review"
+	FieldEpicName                      = "customfield_10005"
+	FieldEpicKey                       = "customfield_10008"
+	FieldSprintInfo                    = "customfield_10010"
+	FieldDeveloperMap                  = "customfield_10026"
+	TypeBESubTask                      = "BE Sub-Task"
+	TypeBETask                         = "BE Task"
+	TypeFESubTask                      = "FE Sub-Task"
+	TypeFETask                         = "FE Task"
+	TypeStory                          = "Story"
+	TypeBug                            = "Bug"
+	TransitionCreatingDevSubtasks      = "Creating Dev Subtasks"
+	TransitionCompleteSubtasksCreation = "Complete sub-tasks creation"
+	TransitionStart                    = "Start"
+	TransitionDone                     = "Done"
+	TransitionApprove                  = "Approve"
+	TagDeveloperName                   = "displayName"
+	TagDeveloperEmail                  = "emailAddress"
+	NoDeveloper                        = "No developer"
 )
 
 func (i Issue) String() string {
@@ -447,24 +455,55 @@ func (j *Jira) EpicsWithClosedIssues() ([]Issue, error) {
 	}
 	var epicsWithClosedIssues []Issue
 	for _, epic := range openEpics {
-		request := fmt.Sprintf(`cf[10008] = "%s"`, epic.Key)
-		epicIssues, err := j.issues(request)
-		if err != nil {
-			return nil, err
-		}
-		if len(epicIssues) == 0 {
-			continue
-		}
-		allIssuesClosed := true
-		for _, issue := range epicIssues {
-			if issue.Fields.Status.Name != StatusClosed {
-				allIssuesClosed = false
-				break
-			}
-		}
-		if allIssuesClosed {
+		if j.EpicIssuesClosed(epic.Key) {
 			epicsWithClosedIssues = append(epicsWithClosedIssues, epic)
 		}
 	}
 	return epicsWithClosedIssues, nil
+}
+
+// IssueType retrieve issue type name by issue id
+func (j *Jira) IssueType(issueID string) (string, error) {
+	issue, resp, err := j.Issue.Get(issueID, &jira.GetQueryOptions{})
+	if err != nil {
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira issue info")
+		return "", err
+	}
+	return issue.Fields.Type.Name, nil
+}
+
+// IssueSubtasksClosed retrieves true if all subtasks of issue closed
+func (j *Jira) IssueSubtasksClosed(issueID string) bool {
+	issue, resp, err := j.Issue.Get(issueID, &jira.GetQueryOptions{})
+	if err != nil {
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira issue info")
+		return false
+	}
+	if len(issue.Fields.Subtasks) == 0 {
+		return false
+	}
+	for _, subtask := range issue.Fields.Subtasks {
+		if subtask.Fields.Status.Name != StatusClosed {
+			return false
+		}
+	}
+	return true
+}
+
+// EpicIssuesClosed retrieves true if all issues of epic closed
+func (j *Jira) EpicIssuesClosed(epicKey string) bool {
+	epicIssues, err := j.issues(fmt.Sprintf(`cf[10008] = "%s"`, epicKey))
+	if err != nil {
+		logrus.WithError(err).Error("can't take from jira epic issues")
+		return false
+	}
+	if len(epicIssues) == 0 {
+		return false
+	}
+	for _, issue := range epicIssues {
+		if issue.Fields.Status.Name != StatusClosed {
+			return false
+		}
+	}
+	return true
 }
