@@ -1070,7 +1070,9 @@ func (a *App) ReportOverworkedIssues(channel string) {
 		var message string
 		for _, issue := range issues {
 			overWorkedDuration := issue.Fields.TimeTracking.TimeSpentSeconds - issue.Fields.TimeTracking.OriginalEstimateSeconds
-			if overWorkedDuration > issue.Fields.TimeTracking.OriginalEstimateSeconds/10 && issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
+			if overWorkedDuration > issue.Fields.TimeTracking.OriginalEstimateSeconds/10 &&
+				issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 &&
+				issue.Fields.TimeTracking.OriginalEstimateSeconds != 0 {
 				message += issue.String()
 				message += fmt.Sprintf("- Time spent: %s\n", issue.Fields.TimeTracking.TimeSpent)
 				message += fmt.Sprintf("- Time planned: %s\n", issue.Fields.TimeTracking.OriginalEstimate)
