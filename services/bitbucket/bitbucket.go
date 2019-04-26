@@ -58,8 +58,9 @@ func (b *Bitbucket) do(request *http.Request) ([]byte, error) {
 		} `json:"error"`
 	}{}
 	err = json.Unmarshal(body, &CheckResponse)
+	// if can't unmarshal it means, that struct of answer hasn't error struct
 	if err != nil {
-		return nil, err
+		return body, nil
 	}
 	if CheckResponse.Type == "error" {
 		if CheckResponse.Error.Message != "There are no changes to be pulled" && CheckResponse.Error.Data.Key != "BRANCH_ALREADY_EXISTS" {
