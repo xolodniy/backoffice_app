@@ -66,11 +66,11 @@ bitbucket:
 slack:
   apiurl: https://slack.com/api
   botname: Back Office Bot
-  intoken: xoxp-281270780213-532563372454-545645521588-6e70abc49c386bb1ad94465d19866188
-  outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
+  intoken: {{ slack_intoken }}
+  outtoken: {{ slack_outtoken }}
   totalVolume: 5.0
   restVolume: 0.0
-  secret: 27f79262fd9f22a1db80a4fd70b2374a
+  secret: {{ slack_secret }}
   employees:
     directorofcompany: U891K2Z2P
     projectmanager: U9FDU5W4D
