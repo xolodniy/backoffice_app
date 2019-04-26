@@ -20,6 +20,7 @@ func (c *Controller) issueUpdated(ctx *gin.Context) {
 		return
 	}
 	go c.App.MessageIssueAfterSecondTLReview(webHookBody.Issue)
+	go c.App.MoveJiraStatuses(webHookBody.Issue)
 	ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
 }
 

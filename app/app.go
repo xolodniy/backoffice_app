@@ -1269,3 +1269,57 @@ func (a *App) ReportEpicsWithClosedIssues(channel string) {
 	msgBody += "cc " + a.Slack.Employees.ArtDirector
 	a.Slack.SendMessage(msgBody, channel)
 }
+
+// MoveJiraStatuses move jira issues statuses
+func (a *App) MoveJiraStatuses(issue jira.Issue) {
+	if issue.Fields.Type.Subtask {
+		parentType, err := a.Jira.IssueType(issue.Fields.Parent.ID)
+		if err != nil {
+			return
+		}
+		switch issue.Fields.Status.Name {
+		case jira.StatusOpen:
+			if parentType == jira.TypeStory {
+				err := a.Jira.IssueSetStatusTransition(issue.Fields.Parent.ID, jira.TransitionCreatingDevSubtasks)
+				if err != nil {
+					return
+				}
+			}
+		case jira.StatusStarted:
+			if parentType == jira.TypeStory {
+				err := a.Jira.IssueSetStatusTransition(issue.Fields.Parent.ID, jira.TransitionCompleteSubtasksCreation)
+				if err != nil {
+					return
+				}
+			}
+			if parentType == jira.TypeBug {
+				err := a.Jira.IssueSetStatusTransition(issue.Fields.Parent.ID, jira.TransitionStart)
+				if err != nil {
+					return
+				}
+			}
+		case jira.StatusClosed:
+			if parentType == jira.TypeBug && a.Jira.IssueSubtasksClosed(issue.Fields.Parent.ID) {
+				err := a.Jira.IssueSetStatusTransition(issue.Fields.Parent.ID, jira.TransitionDone)
+				if err != nil {
+					return
+				}
+			}
+		}
+	}
+
+	if issue.Fields.Type.Name == jira.TypeStory && issue.Fields.Unknowns[jira.FieldEpicKey] != nil {
+		if issue.Fields.Status.Name == jira.StatusStarted {
+			err := a.Jira.IssueSetStatusTransition(fmt.Sprint(issue.Fields.Unknowns[jira.FieldEpicKey]), jira.TransitionApprove)
+			if err != nil {
+				return
+			}
+		}
+		if issue.Fields.Status.Name == jira.StatusClosed && a.Jira.EpicIssuesClosed(fmt.Sprint(issue.Fields.Unknowns[jira.FieldEpicKey])) {
+			err := a.Jira.IssueSetStatusTransition(fmt.Sprint(issue.Fields.Unknowns[jira.FieldEpicKey]), jira.TransitionDone)
+			if err != nil {
+				return
+			}
+		}
+	}
+}
