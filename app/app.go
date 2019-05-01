@@ -1005,7 +1005,7 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	default:
 		return
 	}
-	a.Slack.SendMessage(msgBody, a.Config.Reports.ReportTlRejectReview.Channel)
+	a.Slack.SendMessage(msgBody, "#general")
 }
 
 // CreateCommitsCache creates commits in database
