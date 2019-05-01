@@ -42,15 +42,13 @@ reports:
     channel: "Stepan Morozov"
   dailyworkerslessworkedmessage:
     schedule: "00 00 07 * * 1-5"
-    channel: "#general"
+    channel: "#managers"
   weeklyreportoverworkedissues:
     schedule: "00 00 07 * * 1"
     channel: "Artem Efremov"
   reportepicclosedissues:
     schedule: "00 00 07 * * *"
     channel: "#back-office-app"
-  reporttlrejectreview:
-    channel: "#managers"
 
 jira:
   apiurl: https://theflow.atlassian.net
