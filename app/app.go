@@ -190,7 +190,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 	for developer, issues := range developers {
 		var message string
 		for _, issue := range issues {
-			if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds {
+			if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds && issue.Fields.TimeTracking.RemainingEstimateSeconds > 0 {
 				worklogString := fmt.Sprintf(" time spent is %s instead %s", issue.Fields.TimeTracking.TimeSpent, issue.Fields.TimeTracking.OriginalEstimate)
 				message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_%[4]s\n",
 					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, worklogString)
