@@ -34,6 +34,7 @@ type Main struct {
 		DailyWorkersLessWorkedMessage Report
 		WeeklyReportOverworkedIssues  Report
 		ReportEpicClosedIssues        Report
+		ReportTlRejectReview          Report
 	}
 	Database
 }

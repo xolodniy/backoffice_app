@@ -49,6 +49,8 @@ reports:
   reportepicclosedissues:
     schedule: "00 00 07 * * *"
     channel: "#back-office-app"
+  reporttlrejectreview:
+    channel: "#managers"
 
 jira:
   apiurl: https://theflow.atlassian.net
