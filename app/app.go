@@ -649,23 +649,10 @@ func (a *App) ReportSprintStatus(channel string) {
 		delete(developers, dev)
 	}
 
-	fileName := "Sprint status"
-	file, err := os.Create(fileName + ".csv")
-	if err != nil {
-		logrus.WithError(err).Error("can't create sprint status file")
-		return
-	}
-
-	writer := csv.NewWriter(file)
-	err = writer.Write([]string{"Name", "Keys"})
-	if err != nil {
-		logrus.WithError(err).Error("can't write to sprint status file")
-		return
-	}
-
 	var (
 		messageAllTaskClosed string
 		messageNoDeveloper   string
+		messageSummaryData   string
 	)
 	for developer, issues := range developers {
 		var (
@@ -692,18 +679,11 @@ func (a *App) ReportSprintStatus(channel string) {
 		case message != "":
 			msgBody += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
 		}
-		err = writer.Write([]string{developer, strings.Join(developerIssues, ",")})
-		if err != nil {
-			logrus.WithError(err).Error("can't write to sprint status file")
-			return
-		}
-
+		messageSummaryData = developer + " " + strings.Join(developerIssues, ",") + "\n"
 	}
 	msgBody += messageNoDeveloper + "\n" + messageAllTaskClosed
 	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.Employees.ProjectManager, channel)
-	writer.Flush()
-	file.Close()
-	a.SendFileToSlack(channel, fileName+".csv")
+	a.Slack.SendMessage("*Summary sprint table:*\n```"+messageSummaryData+"```", channel)
 }
 
 // ReportClarificationIssues create report about issues with clarification status
