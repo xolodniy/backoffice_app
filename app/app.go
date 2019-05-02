@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -1034,47 +1035,36 @@ func (a *App) ReportOverworkedIssues(channel string) {
 		return
 	}
 	// sort by overwork %
-	for i := 0; i < len(issues); i++ {
-		for j := i + 1; j < len(issues); j++ {
-			if issues[i].Fields.TimeTracking.OriginalEstimateSeconds == 0 || issues[j].Fields.TimeTracking.OriginalEstimateSeconds == 0 {
-				continue
-			}
-			if (issues[i].Fields.TimeTracking.TimeSpentSeconds-issues[i].Fields.TimeTracking.OriginalEstimateSeconds)/(issues[i].Fields.TimeTracking.OriginalEstimateSeconds/100) <
-				(issues[j].Fields.TimeTracking.TimeSpentSeconds-issues[j].Fields.TimeTracking.OriginalEstimateSeconds)/(issues[j].Fields.TimeTracking.OriginalEstimateSeconds/100) {
-				issues[i], issues[j] = issues[j], issues[i]
-			}
+	sort.SliceStable(issues, func(i, j int) bool {
+		if issues[i].Fields.TimeTracking.OriginalEstimateSeconds == 0 || issues[j].Fields.TimeTracking.OriginalEstimateSeconds == 0 {
+			return false
 		}
-	}
+		return (issues[i].Fields.TimeTracking.TimeSpentSeconds-issues[i].Fields.TimeTracking.OriginalEstimateSeconds)/(issues[i].Fields.TimeTracking.OriginalEstimateSeconds/100) <
+			(issues[j].Fields.TimeTracking.TimeSpentSeconds-issues[j].Fields.TimeTracking.OriginalEstimateSeconds)/(issues[j].Fields.TimeTracking.OriginalEstimateSeconds/100)
+	})
 	var msgBody string
 	for _, issue := range issues {
 		developer := issue.DeveloperMap(jira.TagDeveloperName)
 		if developer == "" {
 			developer = jira.NoDeveloper
 		}
-		var ignoreDeveloper bool
+	Loop:
 		for _, dev := range a.Slack.IgnoreList {
 			if developer == dev {
-				ignoreDeveloper = true
-				break
+				continue Loop
 			}
 		}
-		if ignoreDeveloper {
+		overWorkedDuration := issue.Fields.TimeTracking.TimeSpentSeconds - issue.Fields.TimeTracking.OriginalEstimateSeconds
+		if overWorkedDuration < issue.Fields.TimeTracking.OriginalEstimateSeconds/10 ||
+			issue.Fields.TimeTracking.RemainingEstimateSeconds != 0 ||
+			issue.Fields.TimeTracking.OriginalEstimateSeconds == 0 || overWorkedDuration < 60*60 {
 			continue
 		}
-		var message string
-		overWorkedDuration := issue.Fields.TimeTracking.TimeSpentSeconds - issue.Fields.TimeTracking.OriginalEstimateSeconds
-		if overWorkedDuration > issue.Fields.TimeTracking.OriginalEstimateSeconds/10 &&
-			issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 &&
-			issue.Fields.TimeTracking.OriginalEstimateSeconds != 0 && overWorkedDuration > 60*60 {
-			message += issue.String()
-			message += fmt.Sprintf("- Time spent: %s\n", issue.Fields.TimeTracking.TimeSpent)
-			message += fmt.Sprintf("- Time planned: %s\n", issue.Fields.TimeTracking.OriginalEstimate)
-			message += fmt.Sprintf("- Overwork: %v\n", time.Duration(overWorkedDuration)*time.Second)
-			message += fmt.Sprintf("- Overwork, %s: %v\n", "%%", overWorkedDuration/(issue.Fields.TimeTracking.OriginalEstimateSeconds/100))
-		}
-		if message != "" {
-			msgBody += fmt.Sprintf("\n" + developer + "\n" + message)
-		}
+		msgBody += "\n" + developer + "\n" + issue.String()
+		msgBody += fmt.Sprintf("- Time spent: %s\n", issue.Fields.TimeTracking.TimeSpent)
+		msgBody += fmt.Sprintf("- Time planned: %s\n", issue.Fields.TimeTracking.OriginalEstimate)
+		msgBody += fmt.Sprintf("- Overwork: %v\n", time.Duration(overWorkedDuration)*time.Second)
+		msgBody += fmt.Sprintf("- Overwork, %%: %v\n", overWorkedDuration/(issue.Fields.TimeTracking.OriginalEstimateSeconds/100))
 	}
 	if msgBody == "" {
 		msgBody = "There are no issues with overworked time."
