@@ -675,12 +675,13 @@ func (a *App) ReportSprintStatus(channel string) {
 		switch {
 		case developer == jira.NoDeveloper && message != "":
 			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
+			messageSummaryData += developer + " " + strings.Join(developerIssues, ",") + "\n"
 		case message == "" && developer != jira.NoDeveloper:
 			messageAllTaskClosed += fmt.Sprintf(developer + " - all tasks closed.\n")
 		case message != "":
 			msgBody += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
+			messageSummaryData += developer + " " + strings.Join(developerIssues, ",") + "\n"
 		}
-		messageSummaryData = developer + " " + strings.Join(developerIssues, ",") + "\n"
 	}
 	msgBody += messageNoDeveloper + "\n" + messageAllTaskClosed
 	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.Employees.ProjectManager, channel)
