@@ -782,7 +782,6 @@ func (a *App) ReportGitAnsibleChanges(channel string) {
 		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
 		return
 	}
-
 	newAnsibleCache, err := a.AnsibleCommitsCache(commits)
 	if err != nil {
 		logrus.WithError(err).Error("can't take diff information from bitbucket")
