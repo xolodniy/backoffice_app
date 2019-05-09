@@ -379,8 +379,8 @@ func (j *Jira) RejectedIssueTLReviewCount(issue Issue) (int, error) {
 		return 0, err
 	}
 	var reviewCount int
-	if issueWithHistory.Changelog == nil {
-		return 0, fmt.Errorf("Issue changelog is empty")
+	if issueWithHistory.Changelog == nil || len(issueWithHistory.Changelog.Histories) == 0 {
+		return 0, nil
 	}
 	tlReviewRejected := false
 	for _, item := range issueWithHistory.Changelog.Histories[len(issueWithHistory.Changelog.Histories)-1].Items {
