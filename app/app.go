@@ -320,18 +320,19 @@ func (a *App) MigrationMessages() ([]string, error) {
 	}
 	var files []string
 	for _, commit := range newCommitsCache {
-		dbCommit, err := a.model.GetCommitByHash(commit.Type, commit.Hash)
-		if err != nil {
-			logrus.WithError(err).Error("can't take commit from database")
-			return nil, err
-		}
-		if len(dbCommit) == 0 {
+		_, err := a.model.GetCommitByHash(commit.Hash)
+		if err == common.ErrNotFound {
 			file, err := a.Bitbucket.SrcFile(commit.Repository, commit.Hash, commit.Path)
 			if err != nil {
 				logrus.WithError(err).Error("can't take information about file from bitbucket")
 				return []string{}, err
 			}
 			files = append(files, commit.Message+"\n```"+file+"```\n")
+			continue
+		}
+		if err != nil {
+			logrus.WithError(err).Error("can't take commit from database")
+			return nil, err
 		}
 	}
 	err = a.model.DeleteCommitsByType(common.CommitTypeMigration)
@@ -675,12 +676,13 @@ func (a *App) ReportSprintStatus(channel string) {
 		switch {
 		case developer == jira.NoDeveloper && message != "":
 			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
+			messageSummaryData += developer + " " + strings.Join(developerIssues, ",") + "\n"
 		case message == "" && developer != jira.NoDeveloper:
 			messageAllTaskClosed += fmt.Sprintf(developer + " - all tasks closed.\n")
 		case message != "":
 			msgBody += fmt.Sprintf("\n" + developer + " - has open tasks:\n" + message)
+			messageSummaryData += developer + " " + strings.Join(developerIssues, ",") + "\n"
 		}
-		messageSummaryData = developer + " " + strings.Join(developerIssues, ",") + "\n"
 	}
 	msgBody += messageNoDeveloper + "\n" + messageAllTaskClosed
 	a.Slack.SendMessage(msgBody+"\ncc "+a.Slack.Employees.ProjectManager, channel)
@@ -780,7 +782,6 @@ func (a *App) ReportGitAnsibleChanges(channel string) {
 		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
 		return
 	}
-
 	newAnsibleCache, err := a.AnsibleCommitsCache(commits)
 	if err != nil {
 		logrus.WithError(err).Error("can't take diff information from bitbucket")
@@ -788,18 +789,19 @@ func (a *App) ReportGitAnsibleChanges(channel string) {
 	}
 	var files []string
 	for _, commit := range newAnsibleCache {
-		dbCommit, err := a.model.GetCommitByHash(commit.Type, commit.Hash)
-		if err != nil {
-			logrus.WithError(err).Error("can't take commit from database")
-			return
-		}
-		if len(dbCommit) == 0 {
+		_, err := a.model.GetCommitByHash(commit.Hash)
+		if err == common.ErrNotFound {
 			file, err := a.Bitbucket.SrcFile(commit.Repository, commit.Hash, commit.Path)
 			if err != nil {
 				logrus.WithError(err).Error("can't take information about file from bitbucket")
 				return
 			}
 			files = append(files, commit.Message+"\n```"+file+"```\n")
+			continue
+		}
+		if err != nil {
+			logrus.WithError(err).Error("can't take commit from database")
+			return
 		}
 	}
 	err = a.model.DeleteCommitsByType(common.CommitTypeAnsible)

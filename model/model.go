@@ -99,15 +99,15 @@ func (m *Model) GetCommitsByType(commitsType string) ([]Commit, error) {
 	return res, nil
 }
 
-// GetCommitByHash retrieves commits by hash and type
-func (m *Model) GetCommitByHash(commitType, hash string) ([]Commit, error) {
-	var res []Commit
-	if err := m.db.Find(&res).Where(Commit{Type: commitType, Hash: hash}).Error; err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"commitType": commitType,
-			"hash":       hash,
-		}).Error("can't get commit")
-		return nil, common.ErrInternal
+// GetCommitByHash retrieves commit by hash
+func (m *Model) GetCommitByHash(hash string) (Commit, error) {
+	var res Commit
+	if err := m.db.Where(Commit{Hash: hash}).First(&res).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return Commit{}, common.ErrNotFound
+		}
+		logrus.WithError(err).WithField("hash", hash).Error("can't get commit")
+		return Commit{}, common.ErrInternal
 	}
 	return res, nil
 }
