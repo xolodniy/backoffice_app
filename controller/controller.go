@@ -74,7 +74,7 @@ func (c *Controller) initRoutes() {
 	slack.POST("/api/v1/slack/current_activity", c.slackCurrentActivityHandler)
 	slack.POST("/api/v1/slack/customreport", c.customReport)
 	slack.POST("/api/v1/slack/afk", c.afkCommand)
-	slack.POST("/api/v1/slack/afk/check", c.afkVacationCheck)
+	slack.POST("/api/v1/slack/afk/check", c.afkVacationAmplifyCheck)
 	slack.POST("/api/v1/slack/sprintstatus", c.sprintStatus)
 	slack.POST("/api/v1/slack/vacation", c.vacation)
 }

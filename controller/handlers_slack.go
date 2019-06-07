@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"backoffice_app/common"
+	"backoffice_app/types"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -105,15 +106,18 @@ func (c *Controller) afkCommand(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, fmt.Sprintf("You are now AFK for %.0f minutes", duration.Minutes()))
 }
 
-func (c *Controller) afkVacationCheck(ctx *gin.Context) {
+func (c *Controller) afkVacationAmplifyCheck(ctx *gin.Context) {
 	request := struct {
 		Challenge string `json:"challenge"`
 		Event     struct {
-			Subtype  string `json:"subtype"`
-			Text     string `json:"text"`
-			Ts       string `json:"ts"`
-			ThreadTs string `json:"thread_ts"`
-			Channel  string `json:"channel"`
+			UserName    string                               `json:"username"`
+			BotID       string                               `json:"bot_id"`
+			Subtype     string                               `json:"subtype"`
+			Text        string                               `json:"text"`
+			Ts          string                               `json:"ts"`
+			ThreadTs    string                               `json:"thread_ts"`
+			Channel     string                               `json:"channel"`
+			Attachments []types.PostChannelMessageAttachment `json:"attachments"`
 		} `json:"event" binding:"required"`
 	}{}
 	err := ctx.ShouldBindJSON(&request)
@@ -126,6 +130,9 @@ func (c *Controller) afkVacationCheck(ctx *gin.Context) {
 		go c.App.CheckUserAfkVacation(request.Event.Text, request.Event.ThreadTs, request.Event.Channel)
 	case request.Event.Text != "":
 		go c.App.CheckUserAfkVacation(request.Event.Text, request.Event.Ts, request.Event.Channel)
+	}
+	if len(request.Event.Attachments) != 0 && request.Event.Subtype == "bot_message" {
+		go c.App.CheckAmplifyMessage(request.Event.BotID, request.Event.Attachments)
 	}
 	ctx.JSON(http.StatusOK, gin.H{"challenge": request.Challenge})
 }
