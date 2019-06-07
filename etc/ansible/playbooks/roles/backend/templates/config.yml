@@ -108,3 +108,12 @@ database:
   user: {{ postgres_user }}
   password: {{ postgres_password }}
   enable_ssl: {{ postgres_enable_ssl }}
+
+amplify:
+  botid: BK0RAM7JN
+  channelstag: '#cdto-staging'
+  channelprod: '#cdto'
+  mention:
+    - U97DJLL11
+    - U891K2Z2P
+    - UG47GFL92

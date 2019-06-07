@@ -36,6 +36,7 @@ type Main struct {
 		ReportEpicClosedIssues        Report
 	}
 	Database
+	Amplify
 }
 
 // Jira is template to storing jira configuration
@@ -104,6 +105,14 @@ type Database struct {
 	Password  string
 	Name      string
 	EnableSSL bool
+}
+
+// Amplify struct for resending amplify messages
+type Amplify struct {
+	BotID       string
+	ChannelStag string
+	ChannelProd string
+	Mention     []string
 }
 
 // GetConfig return config parsed from config/config.yml

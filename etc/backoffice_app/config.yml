@@ -108,3 +108,12 @@ database:
   user: backoffice
   password: KMp7mMnfgOws2BYw
   enable_ssl: false
+
+amplify:
+  botid: BK0RAM7JN
+  channelstag: '#cdto-staging'
+  channelprod: '#cdto'
+  mention:
+    - U97DJLL11
+    - U891K2Z2P
+    - UG47GFL92
