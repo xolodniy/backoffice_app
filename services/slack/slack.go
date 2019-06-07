@@ -143,6 +143,44 @@ func (s *Slack) SendMessage(text, channel string) {
 	}
 }
 
+// SendMessageWithAttachments is sending method with attachments
+func (s *Slack) SendMessageWithAttachments(text, channel string, attachments []types.PostChannelMessageAttachment) {
+	channel, err := s.checkChannelOnUserRealName(channel)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"msgBody":        text,
+			"channelID":      channel,
+			"channelBotName": s.BotName,
+		}).Error("can't find user in slack")
+		return
+	}
+	var message = &types.PostChannelMessage{
+		Token:       s.OutToken,
+		Channel:     channel,
+		AsUser:      true,
+		Text:        text,
+		Attachments: attachments,
+	}
+
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"msgBody":        text,
+			"channelID":      channel,
+			"channelBotName": s.BotName,
+		}).Error("can't decode to json")
+	}
+	respBody, err := s.jsonRequest("chat.postMessage", jsonMessage)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"msgBody":        text,
+			"channelID":      channel,
+			"channelBotName": s.BotName,
+			"responseBody":   respBody,
+		}).Error("can't send message")
+	}
+}
+
 // SendToThread sends message to thread as answer
 func (s *Slack) SendToThread(text, channel, threadId string) {
 	var message = &types.PostChannelMessage{
