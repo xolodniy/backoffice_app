@@ -106,7 +106,8 @@ func (c *Controller) afkCommand(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, fmt.Sprintf("You are now AFK for %.0f minutes", duration.Minutes()))
 }
 
-func (c *Controller) afkVacationAmplifyCheck(ctx *gin.Context) {
+// messagesCheck check if message contains mention of people with status afk or vacation, or Amplify notification about staging or production
+func (c *Controller) messagesCheck(ctx *gin.Context) {
 	request := struct {
 		Challenge string `json:"challenge"`
 		Event     struct {
