@@ -39,7 +39,7 @@ reports:
     schedule: "00 00 07 * * *"
   reportgitansiblechanges:
     schedule: "@hourly"
-    channel: "Stepan Morozov"
+    channel: "Denis Yudin"
   dailyworkerslessworkedmessage:
     schedule: "00 00 07 * * 1-5"
     channel: "#managers"

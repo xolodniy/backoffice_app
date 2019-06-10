@@ -39,7 +39,7 @@ reports:
     schedule: "@yearly"
   reportgitansiblechanges:
     schedule: "@yearly"
-    channel: "Stepan Morozov"
+    channel: "Denis Yudin"
   dailyworkerslessworkedmessage:
     schedule: "@yearly"
     channel: "#managers"
