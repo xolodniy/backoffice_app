@@ -110,7 +110,7 @@ database:
   enable_ssl: {{ postgres_enable_ssl }}
 
 amplify:
-  botid: BK0RAM7JN
+  channelid: CKBT66G5A
   channelstag: '#cdto-staging'
   channelprod: '#cdto'
   mention:

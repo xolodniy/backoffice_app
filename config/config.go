@@ -109,7 +109,7 @@ type Database struct {
 
 // Amplify struct for resending amplify messages
 type Amplify struct {
-	BotID       string
+	ChannelID   string
 	ChannelStag string
 	ChannelProd string
 	Mention     []string
