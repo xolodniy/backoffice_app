@@ -25,7 +25,6 @@ type PostChannelMessageAttachment struct {
 	Text     string `json:"text"`
 	PreText  string `json:"pre-text" json:"text"`
 	Fallback string `json:"fallback"`
-	ID       int    `json:"id"`
 	Color    string `json:"color"`
 	Fields   []struct {
 		Title string `json:"title"`
