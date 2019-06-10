@@ -132,7 +132,7 @@ func (c *Controller) afkVacationAmplifyCheck(ctx *gin.Context) {
 		go c.App.CheckUserAfkVacation(request.Event.Text, request.Event.Ts, request.Event.Channel)
 	}
 	if len(request.Event.Attachments) != 0 && request.Event.Subtype == "bot_message" {
-		go c.App.CheckAmplifyMessage(request.Event.BotID, request.Event.Attachments)
+		go c.App.CheckAmplifyMessage(request.Event.Channel, request.Event.Attachments)
 	}
 	ctx.JSON(http.StatusOK, gin.H{"challenge": request.Challenge})
 }

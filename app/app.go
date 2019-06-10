@@ -953,20 +953,22 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 }
 
 // CheckAmplifyMessage check message from amplify and resend
-func (a *App) CheckAmplifyMessage(botID string, attachments []types.PostChannelMessageAttachment) {
-	if botID != a.Config.Amplify.BotID {
+func (a *App) CheckAmplifyMessage(channelID string, attachments []types.PostChannelMessageAttachment) {
+	if channelID != a.Config.Amplify.ChannelID {
 		return
 	}
 	for _, attachment := range attachments {
 		switch {
 		case strings.Contains(attachment.Fallback, "Host: Staging"):
 			a.Slack.SendMessageWithAttachments("", a.Config.Amplify.ChannelStag, attachments)
+			return
 		case strings.Contains(attachment.Fallback, "Host: Production"):
 			var usersMention string
 			for _, mention := range a.Config.Amplify.Mention {
 				usersMention += "<@" + mention + "> "
 			}
 			a.Slack.SendMessageWithAttachments(usersMention, a.Config.Amplify.ChannelProd, attachments)
+			return
 		}
 	}
 }
