@@ -110,7 +110,7 @@ database:
   enable_ssl: false
 
 amplify:
-  channelid: CKBT66G5A
+  notifychannelid: CKBT66G5A
   channelstag: '#test-backoffice-bot'
   channelprod: '#test-backoffice-bot'
   mention:

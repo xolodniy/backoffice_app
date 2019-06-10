@@ -109,10 +109,10 @@ type Database struct {
 
 // Amplify struct for resending amplify messages
 type Amplify struct {
-	ChannelID   string
-	ChannelStag string
-	ChannelProd string
-	Mention     []string
+	NotifyChannelID string
+	ChannelStag     string
+	ChannelProd     string
+	Mention         []string
 }
 
 // GetConfig return config parsed from config/config.yml

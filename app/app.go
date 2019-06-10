@@ -954,7 +954,7 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 
 // CheckAmplifyMessage check message from amplify and resend
 func (a *App) CheckAmplifyMessage(channelID string, attachments []types.PostChannelMessageAttachment) {
-	if channelID != a.Config.Amplify.ChannelID {
+	if channelID != a.Config.Amplify.NotifyChannelID {
 		return
 	}
 	for _, attachment := range attachments {
