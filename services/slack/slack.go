@@ -131,6 +131,7 @@ func (s *Slack) SendMessage(text, channel string) {
 			"channelID":      channel,
 			"channelBotName": s.BotName,
 		}).Error("can't decode to json")
+		return
 	}
 	respBody, err := s.jsonRequest("chat.postMessage", jsonMessage)
 	if err != nil {
@@ -169,6 +170,7 @@ func (s *Slack) SendMessageWithAttachments(text, channel string, attachments []t
 			"channelID":      channel,
 			"channelBotName": s.BotName,
 		}).Error("can't decode to json")
+		return
 	}
 	respBody, err := s.jsonRequest("chat.postMessage", jsonMessage)
 	if err != nil {
