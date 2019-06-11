@@ -1254,7 +1254,7 @@ func (a *App) ReportEpicsWithClosedIssues(channel string) {
 		a.Slack.SendMessage("There are no epics with all closed issues", channel)
 		return
 	}
-	msgBody := "\n*Epics have all closed issues:*\n\n"
+	var msgBody string
 	for _, epic := range epics {
 		if epic.Fields.Status.Name != jira.StatusInArtDirectorReview {
 			err := a.Jira.IssueSetStatusTransition(epic.Key, jira.StatusInArtDirectorReview)
@@ -1264,8 +1264,11 @@ func (a *App) ReportEpicsWithClosedIssues(channel string) {
 		}
 		msgBody += epic.String()
 	}
-	msgBody += "cc " + a.Slack.Employees.ArtDirector
-	a.Slack.SendMessage(msgBody, channel)
+
+	if msgBody != "" {
+		msgBody = "\n*Epics have all closed issues:*\n\n" + msgBody + "cc " + a.Slack.Employees.ArtDirector
+		a.Slack.SendMessage(msgBody, channel)
+	}
 }
 
 // MoveJiraStatuses move jira issues statuses
