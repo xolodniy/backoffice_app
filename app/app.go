@@ -143,8 +143,10 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 		a.Slack.SendMessage("There are no issues with all closed subtasks", channel)
 		return
 	}
-	msgBody := "\n*Issues have all closed subtasks:*\n\n"
-	var designMessage string
+	var (
+		generalMessage string
+		designMessage  string
+	)
 	for _, issue := range issues {
 		if issue.Fields.Status.Name != jira.StatusCloseLastTask {
 			err := a.Jira.IssueSetStatusTransition(issue.Key, jira.StatusCloseLastTask)
@@ -156,11 +158,19 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 		case issue.Fields.Status.Name == jira.StatusDesignReview:
 			designMessage += issue.String()
 		case issue.Fields.Status.Name != jira.StatusReadyForDemo:
-			msgBody += issue.String()
+			generalMessage += issue.String()
 		}
 	}
-	msgBody = msgBody + "cc " + a.Slack.Employees.ProjectManager + "\n\n" + designMessage + "cc " + a.Slack.Employees.ArtDirector
-	a.Slack.SendMessage(msgBody, channel)
+	var msgBody string
+	if generalMessage != "" {
+		msgBody += generalMessage + "cc " + a.Slack.Employees.ProjectManager + "\n\n"
+	}
+	if designMessage != "" {
+		msgBody += designMessage + "cc " + a.Slack.Employees.ArtDirector
+	}
+	if msgBody != "" {
+		a.Slack.SendMessage("*Issues have all closed subtasks:*\n\n"+msgBody, channel)
+	}
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
