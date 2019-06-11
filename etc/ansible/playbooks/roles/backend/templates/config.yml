@@ -39,7 +39,7 @@ reports:
     schedule: "00 00 07 * * *"
   reportgitansiblechanges:
     schedule: "@hourly"
-    channel: "Stepan Morozov"
+    channel: "Denis Yudin"
   dailyworkerslessworkedmessage:
     schedule: "00 00 07 * * 1-5"
     channel: "#managers"
@@ -108,3 +108,12 @@ database:
   user: {{ postgres_user }}
   password: {{ postgres_password }}
   enable_ssl: {{ postgres_enable_ssl }}
+
+amplify:
+  notifychannelid: CKBT66G5A
+  channelstag: '#cdto-staging'
+  channelprod: '#cdto'
+  mention:
+    - U97DJLL11
+    - UG47GFL92
+    - U9FDU5W4D
