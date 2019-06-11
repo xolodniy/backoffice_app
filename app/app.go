@@ -25,6 +25,7 @@ import (
 	"backoffice_app/services/hubstaff"
 	"backoffice_app/services/jira"
 	"backoffice_app/services/slack"
+	"backoffice_app/types"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/now"
@@ -974,6 +975,27 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 				userName = "This user"
 			}
 			a.Slack.SendToThread(fmt.Sprintf("*%s* is on vacation, his message is: \n\n'%s'", userName, vacation.Message), channel, threadId)
+		}
+	}
+}
+
+// CheckAmplifyMessage check message from amplify and resend
+func (a *App) CheckAmplifyMessage(channelID string, attachments []types.PostChannelMessageAttachment) {
+	if channelID != a.Config.Amplify.NotifyChannelID {
+		return
+	}
+	for _, attachment := range attachments {
+		switch {
+		case strings.Contains(attachment.Fallback, "Host: Staging"):
+			a.Slack.SendMessageWithAttachments("", a.Config.Amplify.ChannelStag, attachments)
+			return
+		case strings.Contains(attachment.Fallback, "Host: Production"):
+			var usersMention string
+			for _, mention := range a.Config.Amplify.Mention {
+				usersMention += "<@" + mention + "> "
+			}
+			a.Slack.SendMessageWithAttachments(usersMention, a.Config.Amplify.ChannelProd, attachments)
+			return
 		}
 	}
 }
