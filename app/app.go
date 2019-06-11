@@ -185,22 +185,29 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 		return
 	}
 
-	var developers = make(map[string][]jira.Issue)
+	var developerEmails = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		developer := issue.DeveloperMap(jira.TagDeveloperName)
-		if developer == "" {
-			developer = jira.NoDeveloper
+		var ignoreDeveloper bool
+		for _, dev := range a.Slack.IgnoreList {
+			if dev == issue.DeveloperMap(jira.TagDeveloperName) {
+				ignoreDeveloper = true
+				break
+			}
 		}
-		developers[developer] = append(developers[developer], issue)
-	}
-	for _, dev := range a.Slack.IgnoreList {
-		delete(developers, dev)
+		if ignoreDeveloper {
+			continue
+		}
+		developerEmail := issue.DeveloperMap(jira.TagDeveloperEmail)
+		if developerEmail == "" {
+			developerEmail = jira.NoDeveloper
+		}
+		developerEmails[developerEmail] = append(developerEmails[developerEmail], issue)
 	}
 	var (
 		msgBody            string
 		messageNoDeveloper string
 	)
-	for developer, issues := range developers {
+	for developerEmail, issues := range developerEmails {
 		var message string
 		for _, issue := range issues {
 			if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds && issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
@@ -210,10 +217,15 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 			}
 		}
 		switch {
-		case developer == jira.NoDeveloper && message != "":
+		case developerEmail == jira.NoDeveloper && message != "":
 			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
 		case message != "":
-			msgBody += fmt.Sprintf("\n" + developer + "\n" + message)
+			userId, err := a.Slack.UserIdByEmail(developerEmail)
+			if err != nil {
+				msgBody += fmt.Sprintf("\n" + developerEmail + "\n" + message)
+				continue
+			}
+			msgBody += fmt.Sprintf("\n<@%s> "+"\n"+message, userId)
 		}
 	}
 	if msgBody == "" && messageNoDeveloper == "" {
