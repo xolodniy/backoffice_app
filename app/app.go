@@ -185,7 +185,6 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 		return
 	}
 
-	msgBody := "Employees have exceeded tasks:\n"
 	var developers = make(map[string][]jira.Issue)
 	for _, issue := range issues {
 		developer := issue.DeveloperMap(jira.TagDeveloperName)
@@ -197,11 +196,14 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 	for _, dev := range a.Slack.IgnoreList {
 		delete(developers, dev)
 	}
-	var messageNoDeveloper string
+	var (
+		msgBody            string
+		messageNoDeveloper string
+	)
 	for developer, issues := range developers {
 		var message string
 		for _, issue := range issues {
-			if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds && issue.Fields.TimeTracking.RemainingEstimateSeconds > 0 {
+			if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds && issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
 				worklogString := fmt.Sprintf(" time spent is %s instead %s", issue.Fields.TimeTracking.TimeSpent, issue.Fields.TimeTracking.OriginalEstimate)
 				message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_%[4]s\n",
 					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, worklogString)
@@ -214,8 +216,11 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 			msgBody += fmt.Sprintf("\n" + developer + "\n" + message)
 		}
 	}
+	if msgBody == "" && messageNoDeveloper == "" {
+		return
+	}
 	msgBody += messageNoDeveloper
-	a.Slack.SendMessage(msgBody, channel)
+	a.Slack.SendMessage("Employees have exceeded tasks:\n"+msgBody, channel)
 }
 
 // ReportIssuesAfterSecondReview create report about issues after second review round
