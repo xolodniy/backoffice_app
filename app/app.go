@@ -232,7 +232,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 		return
 	}
 	msgBody += messageNoDeveloper
-	a.Slack.SendMessage("Employees have exceeded tasks:\n"+msgBody, channel)
+	a.Slack.SendMessage("Employees have exceeded tasks:\n"+msgBody+"\n\ncc "+a.Slack.Employees.ProjectManager, channel)
 }
 
 // ReportIssuesAfterSecondReview create report about issues after second review round
