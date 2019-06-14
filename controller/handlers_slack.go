@@ -98,12 +98,12 @@ func (c *Controller) afkCommand(ctx *gin.Context) {
 		c.App.AfkTimer.Lock()
 		c.App.AfkTimer.UserDurationMap[request.UserId] += duration
 		c.App.AfkTimer.Unlock()
-		ctx.JSON(http.StatusOK, fmt.Sprintf("Timer increased. You are now AFK for %.0f minutes",
-			c.App.AfkTimer.UserDurationMap[request.UserId].Minutes()))
+		ctx.JSON(http.StatusOK, fmt.Sprintf("You are now AFK for %s",
+			common.FmtDuration(c.App.AfkTimer.UserDurationMap[request.UserId])))
 		return
 	}
 	go c.App.StartAfkTimer(duration, request.UserId)
-	ctx.JSON(http.StatusOK, fmt.Sprintf("You are now AFK for %.0f minutes", duration.Minutes()))
+	ctx.JSON(http.StatusOK, fmt.Sprintf("You are now AFK for %s", common.FmtDuration(duration)))
 }
 
 // messagesCheck check if message contains mention of people with status afk or vacation, or Amplify notification about staging or production
