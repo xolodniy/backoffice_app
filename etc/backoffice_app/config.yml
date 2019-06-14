@@ -4,13 +4,13 @@ gindebugmode: true
 maxweekworkinghours: 30.0
 reports:
   dailyworkersworkedtime:
-    schedule: "00 00 07 * * *"
+    schedule: "@yearly"
     channel: "#work-reports"
   weeklyworkersworkedtime:
-    schedule: "00 15 07 * * 1"
+    schedule: "@yearly"
     channel: "#work-reports"
   reportclosedsubtasks:
-    schedule: "00 00 07 * * *"
+    schedule: "@yearly"
     channel: "#back-office-app"
   reportaftersecondreviewall:
     schedule: "@yearly"
@@ -22,32 +22,32 @@ reports:
     schedule: "@yearly"
     channel: "Rodion Golovushkin"
   employeesexceededtasks:
-    schedule: "00 00 07 * * *"
+    schedule: "@yearly"
     channel: "#back-office-app"
   reportslackspaceending:
-    schedule: "00 00 07 * * *"
+    schedule: "@yearly"
     channel: "#back-office-app"
   reportgitmigrations:
     schedule: "@hourly"
     channel: "#migrations"
   reportsprintstatus:
-    schedule: "00 00 05 * * MON"
+    schedule: "@yearly"
     channel: "#general"
   reportclarificationissues:
-    schedule: "00 00 07 * * *"
+    schedule: "@yearly"
   report24hoursreviewissues:
-    schedule: "00 00 07 * * *"
+    schedule: "@yearly"
   reportgitansiblechanges:
-    schedule: "@hourly"
-    channel: "Stepan Morozov"
+    schedule: "@yearly"
+    channel: "Denis Yudin"
   dailyworkerslessworkedmessage:
-    schedule: "00 00 07 * * 1-5"
+    schedule: "@yearly"
     channel: "#managers"
   weeklyreportoverworkedissues:
-    schedule: "00 00 07 * * 1"
+    schedule: "@yearly"
     channel: "Artem Efremov"
   reportepicclosedissues:
-    schedule: "00 00 07 * * *"
+    schedule: "@yearly"
     channel: "#back-office-app"
 
 jira:
@@ -108,3 +108,10 @@ database:
   user: backoffice
   password: KMp7mMnfgOws2BYw
   enable_ssl: false
+
+amplify:
+  notifychannelid: CKBT66G5A
+  channelstag: '#test-backoffice-bot'
+  channelprod: '#test-backoffice-bot'
+  mention:
+    - UFNGKAYDC

@@ -237,6 +237,18 @@ You may use one of several pre-defined schedules in place of a cron expression.
           - 'Andrey Solovyov'
           - 'Elena Parkacheva'
           
+          
+#### Config.yml variables for Amplify 
+
+    amplify:
+      notifychannelid: CKBT66G5A    - channel, where Amplify sends all notifies
+      channelstag: '#cdto-staging'  - channel, where we must resend message of staging
+      channelprod: '#cdto'          - channel, where we must resend message of production
+      mention:                      - people, that we mention if message about production
+        - U97DJLL11
+        - U891K2Z2P
+        - UG47GFL92
+
 User id you can find in slack: 
 1. Click on the users name and choose "Show Profile".
 2. Open the "..." menu.

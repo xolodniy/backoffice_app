@@ -22,8 +22,15 @@ type Attachment struct {
 
 // PostChannelMessageAttachment used to make append and attachment to a PostChannelMessage
 type PostChannelMessageAttachment struct {
-	Text    string `json:"text"`
-	PreText string `json:"pre-text" json:"text"`
+	Text     string `json:"text"`
+	PreText  string `json:"pre-text"`
+	Fallback string `json:"fallback"`
+	Color    string `json:"color"`
+	Fields   []struct {
+		Title string `json:"title"`
+		Value string `json:"value"`
+		Short bool   `json:"short"`
+	} `json:"fields"`
 }
 
 // PostChannelMessage used to make a message with specifying of more details

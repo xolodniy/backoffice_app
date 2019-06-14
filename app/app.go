@@ -25,6 +25,7 @@ import (
 	"backoffice_app/services/hubstaff"
 	"backoffice_app/services/jira"
 	"backoffice_app/services/slack"
+	"backoffice_app/types"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/now"
@@ -143,8 +144,10 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 		a.Slack.SendMessage("There are no issues with all closed subtasks", channel)
 		return
 	}
-	msgBody := "\n*Issues have all closed subtasks:*\n\n"
-	var designMessage string
+	var (
+		generalMessage string
+		designMessage  string
+	)
 	for _, issue := range issues {
 		if issue.Fields.Status.Name != jira.StatusCloseLastTask {
 			err := a.Jira.IssueSetStatusTransition(issue.Key, jira.StatusCloseLastTask)
@@ -156,11 +159,19 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 		case issue.Fields.Status.Name == jira.StatusDesignReview:
 			designMessage += issue.String()
 		case issue.Fields.Status.Name != jira.StatusReadyForDemo:
-			msgBody += issue.String()
+			generalMessage += issue.String()
 		}
 	}
-	msgBody = msgBody + "cc " + a.Slack.Employees.ProjectManager + "\n\n" + designMessage + "cc " + a.Slack.Employees.ArtDirector
-	a.Slack.SendMessage(msgBody, channel)
+	var msgBody string
+	if generalMessage != "" {
+		msgBody += generalMessage + "cc " + a.Slack.Employees.ProjectManager + "\n\n"
+	}
+	if designMessage != "" {
+		msgBody += designMessage + "cc " + a.Slack.Employees.ArtDirector
+	}
+	if msgBody != "" {
+		a.Slack.SendMessage("*Issues have all closed subtasks:*\n\n"+msgBody, channel)
+	}
 }
 
 // ReportEmployeesHaveExceededTasks create report about employees that have exceeded tasks
@@ -175,37 +186,54 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 		return
 	}
 
-	msgBody := "Employees have exceeded tasks:\n"
-	var developers = make(map[string][]jira.Issue)
+	var developerEmails = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		developer := issue.DeveloperMap(jira.TagDeveloperName)
-		if developer == "" {
-			developer = jira.NoDeveloper
+		var ignoreDeveloper bool
+		for _, dev := range a.Slack.IgnoreList {
+			if dev == issue.DeveloperMap(jira.TagDeveloperName) {
+				ignoreDeveloper = true
+				break
+			}
 		}
-		developers[developer] = append(developers[developer], issue)
+		if ignoreDeveloper {
+			continue
+		}
+		developerEmail := issue.DeveloperMap(jira.TagDeveloperEmail)
+		if developerEmail == "" {
+			developerEmail = jira.NoDeveloper
+		}
+		developerEmails[developerEmail] = append(developerEmails[developerEmail], issue)
 	}
-	for _, dev := range a.Slack.IgnoreList {
-		delete(developers, dev)
-	}
-	var messageNoDeveloper string
-	for developer, issues := range developers {
+	var (
+		msgBody            string
+		messageNoDeveloper string
+	)
+	for developerEmail, issues := range developerEmails {
 		var message string
 		for _, issue := range issues {
-			if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds && issue.Fields.TimeTracking.RemainingEstimateSeconds > 0 {
+			if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds && issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
 				worklogString := fmt.Sprintf(" time spent is %s instead %s", issue.Fields.TimeTracking.TimeSpent, issue.Fields.TimeTracking.OriginalEstimate)
 				message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_%[4]s\n",
 					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, worklogString)
 			}
 		}
 		switch {
-		case developer == jira.NoDeveloper && message != "":
+		case developerEmail == jira.NoDeveloper && message != "":
 			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
 		case message != "":
-			msgBody += fmt.Sprintf("\n" + developer + "\n" + message)
+			userId, err := a.Slack.UserIdByEmail(developerEmail)
+			if err != nil {
+				msgBody += fmt.Sprintf("\n" + developerEmail + "\n" + message)
+				continue
+			}
+			msgBody += fmt.Sprintf("\n<@%s> "+"\n"+message, userId)
 		}
 	}
+	if msgBody == "" && messageNoDeveloper == "" {
+		return
+	}
 	msgBody += messageNoDeveloper
-	a.Slack.SendMessage(msgBody, channel)
+	a.Slack.SendMessage("Employees have exceeded tasks:\n"+msgBody+"\n\ncc "+a.Slack.Employees.ProjectManager, channel)
 }
 
 // ReportIssuesAfterSecondReview create report about issues after second review round
@@ -951,6 +979,27 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 	}
 }
 
+// CheckAmplifyMessage check message from amplify and resend
+func (a *App) CheckAmplifyMessage(channelID string, attachments []types.PostChannelMessageAttachment) {
+	if channelID != a.Config.Amplify.NotifyChannelID {
+		return
+	}
+	for _, attachment := range attachments {
+		switch {
+		case strings.Contains(attachment.Fallback, "Host: Staging"):
+			a.Slack.SendMessageWithAttachments("", a.Config.Amplify.ChannelStag, attachments)
+			return
+		case strings.Contains(attachment.Fallback, "Host: Production"):
+			var usersMention string
+			for _, mention := range a.Config.Amplify.Mention {
+				usersMention += "<@" + mention + "> "
+			}
+			a.Slack.SendMessageWithAttachments(usersMention, a.Config.Amplify.ChannelProd, attachments)
+			return
+		}
+	}
+}
+
 // MessageIssueAfterSecondTLReview send message about issue after second tl review round
 func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	if issue.Fields.Assignee == nil {
@@ -1239,7 +1288,7 @@ func (a *App) ReportEpicsWithClosedIssues(channel string) {
 		a.Slack.SendMessage("There are no epics with all closed issues", channel)
 		return
 	}
-	msgBody := "\n*Epics have all closed issues:*\n\n"
+	var msgBody string
 	for _, epic := range epics {
 		if epic.Fields.Status.Name != jira.StatusInArtDirectorReview {
 			err := a.Jira.IssueSetStatusTransition(epic.Key, jira.StatusInArtDirectorReview)
@@ -1249,8 +1298,11 @@ func (a *App) ReportEpicsWithClosedIssues(channel string) {
 		}
 		msgBody += epic.String()
 	}
-	msgBody += "cc " + a.Slack.Employees.ArtDirector
-	a.Slack.SendMessage(msgBody, channel)
+
+	if msgBody != "" {
+		msgBody = "\n*Epics have all closed issues:*\n\n" + msgBody + "cc " + a.Slack.Employees.ArtDirector
+		a.Slack.SendMessage(msgBody, channel)
+	}
 }
 
 // MoveJiraStatuses move jira issues statuses
