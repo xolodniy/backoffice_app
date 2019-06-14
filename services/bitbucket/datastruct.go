@@ -306,3 +306,9 @@ type RepoPushPayload struct {
 		} `json:"changes"`
 	} `json:"push"`
 }
+
+type PullRequestMergedPayload struct {
+	Actor       owner       `json:"actor"`
+	PullRequest pullRequest `json:"pullrequest"`
+	Repository  repository  `json:"repository"`
+}
