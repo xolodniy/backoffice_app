@@ -929,7 +929,7 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 				logrus.WithError(err).Errorf("can't take information about user name from slask with id: %v", id)
 				userName = "This user"
 			}
-			a.Slack.SendToThread(fmt.Sprintf("%s will return in %.0f minutes", userName, duration.Minutes()), channel, threadId)
+			a.Slack.SendToThread(fmt.Sprintf("*%s* will return in %s", userName, common.FmtDuration(duration)), channel, threadId)
 		}
 	}
 
