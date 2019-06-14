@@ -98,7 +98,7 @@ func (c *Controller) afkCommand(ctx *gin.Context) {
 		c.App.AfkTimer.Lock()
 		c.App.AfkTimer.UserDurationMap[request.UserId] += duration
 		c.App.AfkTimer.Unlock()
-		ctx.JSON(http.StatusOK, fmt.Sprintf("You are now AFK for %s",
+		ctx.JSON(http.StatusOK, fmt.Sprintf("Timer increased. You are now AFK for %s",
 			common.FmtDuration(c.App.AfkTimer.UserDurationMap[request.UserId])))
 		return
 	}
