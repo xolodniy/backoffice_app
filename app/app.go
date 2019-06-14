@@ -1330,20 +1330,20 @@ func (a *App) MoveJiraStatuses(issue jira.Issue) {
 }
 
 func (a *App) CheckPullRequestsConflicts(pullRequestPayload bitbucket.PullRequestMergedPayload) {
-	pullRequests, err := a.Bitbucket.PullRequestsList("cdto_platform")
+	pullRequests, err := a.Bitbucket.PullRequestsList(pullRequestPayload.Repository.Slug)
 	if err != nil {
 		logrus.WithError(err).Errorf("Can't get pull requests list")
 		return
 	}
 	var authorPullRequests = make(map[string][]string)
 	for _, pullRequest := range pullRequests {
-		diff, err := a.Bitbucket.PullRequestDiff("cdto_platform", pullRequest.ID)
+		diff, err := a.Bitbucket.PullRequestDiff(pullRequestPayload.Repository.Slug, pullRequest.ID)
 		if err != nil {
 			logrus.WithError(err).Errorf("Can't get pull request diff")
 			return
 		}
 		if strings.Contains(diff, "<<<<<<< destination") {
-			authorPullRequests[pullRequest.Author.DisplayName] = append(authorPullRequests[pullRequest.Author.DisplayName], pullRequest.Title)
+			authorPullRequests[pullRequest.Author.DisplayName] = append(authorPullRequests[pullRequest.Author.DisplayName], "<"+pullRequest.Links.HTML.Href+"|"+pullRequest.Title+">")
 		}
 	}
 	for author, pullRequestsTitles := range authorPullRequests {
