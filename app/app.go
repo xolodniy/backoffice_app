@@ -1328,3 +1328,29 @@ func (a *App) MoveJiraStatuses(issue jira.Issue) {
 		}
 	}
 }
+
+func (a *App) CheckPullRequestsConflicts(pullRequestPayload bitbucket.PullRequestMergedPayload) {
+	pullRequests, err := a.Bitbucket.PullRequestsList("cdto_platform")
+	if err != nil {
+		logrus.WithError(err).Errorf("Can't get pull requests list")
+		return
+	}
+	var authorPullRequests = make(map[string][]string)
+	for _, pullRequest := range pullRequests {
+		diff, err := a.Bitbucket.PullRequestDiff("cdto_platform", pullRequest.ID)
+		if err != nil {
+			logrus.WithError(err).Errorf("Can't get pull request diff")
+			return
+		}
+		if strings.Contains(diff, "<<<<<<< destination") {
+			authorPullRequests[pullRequest.Author.DisplayName] = append(authorPullRequests[pullRequest.Author.DisplayName], pullRequest.Title)
+		}
+	}
+	for author, pullRequestsTitles := range authorPullRequests {
+		msg := "*Pull requests with conflicts:*\n\n"
+		for _, title := range pullRequestsTitles {
+			msg += title + "\n"
+		}
+		a.Slack.SendMessage(msg, author)
+	}
+}
