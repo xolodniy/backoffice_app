@@ -1,8 +1,6 @@
 package controller
 
 import (
-	"bytes"
-	"io/ioutil"
 	"net/http"
 
 	"backoffice_app/services/bitbucket"
@@ -24,21 +22,11 @@ func (c *Controller) commitPushed(ctx *gin.Context) {
 }
 
 func (c *Controller) pullRequestMerged(ctx *gin.Context) {
-	body, err := ioutil.ReadAll(ctx.Request.Body)
-	if err != nil {
-		ctx.JSON(http.StatusForbidden, gin.H{
-			"error": "Fail to authorize",
-		})
-		ctx.Abort()
-		return
-	}
-	ctx.Request.Body = ioutil.NopCloser(bytes.NewBuffer([]byte(body))) //return response body back
-	logrus.Debug(string(body))
 	pullRequestMergedPayload := bitbucket.PullRequestMergedPayload{}
-	err = ctx.ShouldBindJSON(&pullRequestMergedPayload)
+	err := ctx.ShouldBindJSON(&pullRequestMergedPayload)
 	if err != nil {
 		ctx.String(http.StatusBadRequest, "error")
-		logrus.WithError(err).Error("can't bind json from bitnucket webhook")
+		logrus.WithError(err).Error("can't bind json from bitbucket webhook")
 		return
 	}
 	logrus.Debug(pullRequestMergedPayload)
