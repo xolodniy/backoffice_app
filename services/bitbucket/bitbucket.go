@@ -219,8 +219,7 @@ func (b *Bitbucket) PullRequestDiff(repoSlug string, pullRequestID int64) (strin
 	if err != nil {
 		return "", err
 	}
-	file := string(res)
-	return file, nil
+	return string(res), nil
 }
 
 // SrcFile returns files diff of commits by repository slug and commit hash
