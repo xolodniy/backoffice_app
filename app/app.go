@@ -1359,6 +1359,7 @@ func (a *App) MoveJiraStatuses(issue jira.Issue) {
 	}
 }
 
+// CheckPullRequestsConflicts checks pull requests on containing conflict
 func (a *App) CheckPullRequestsConflicts(pullRequestPayload bitbucket.PullRequestMergedPayload) {
 	pullRequests, err := a.Bitbucket.PullRequestsList(pullRequestPayload.Repository.Slug)
 	if err != nil {
