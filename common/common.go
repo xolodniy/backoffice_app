@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// FmtDuration retrive duration in string format by day, hour, minutes
 func FmtDuration(duration time.Duration) string {
 	d := duration / (24 * time.Hour)
 	duration -= d * (24 * time.Hour)
