@@ -29,7 +29,6 @@ func (c *Controller) pullRequestMerged(ctx *gin.Context) {
 		logrus.WithError(err).Error("can't bind json from bitbucket webhook")
 		return
 	}
-	logrus.Debug(pullRequestMergedPayload)
 	go c.App.CheckPullRequestsConflicts(pullRequestMergedPayload)
 	ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
 }
