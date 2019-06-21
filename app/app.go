@@ -1361,14 +1361,14 @@ func (a *App) MoveJiraStatuses(issue jira.Issue) {
 
 // CheckPullRequestsConflicts checks pull requests on containing conflict
 func (a *App) CheckPullRequestsConflicts(pullRequestPayload bitbucket.PullRequestMergedPayload) {
-	pullRequests, err := a.Bitbucket.PullRequestsList(pullRequestPayload.Repository.Slug)
+	pullRequests, err := a.Bitbucket.PullRequestsList(pullRequestPayload.Repository.Name)
 	if err != nil {
 		logrus.WithError(err).Errorf("Can't get pull requests list")
 		return
 	}
 	var authorPullRequests = make(map[string][]string)
 	for _, pullRequest := range pullRequests {
-		diff, err := a.Bitbucket.PullRequestDiff(pullRequestPayload.Repository.Slug, pullRequest.ID)
+		diff, err := a.Bitbucket.PullRequestDiff(pullRequestPayload.Repository.Name, pullRequest.ID)
 		if err != nil {
 			logrus.WithError(err).Errorf("Can't get pull request diff")
 			return
