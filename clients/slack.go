@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 
 	"backoffice_app/types"
 
 	"github.com/sirupsen/logrus"
-	"net/url"
 )
 
 // Slack is main Slack client app implementation

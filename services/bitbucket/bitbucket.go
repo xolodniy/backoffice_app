@@ -212,6 +212,16 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 	return diff.Values, nil
 }
 
+// PullRequestDiff returns pull request diff of repository
+func (b *Bitbucket) PullRequestDiff(repoSlug string, pullRequestID int64) (string, error) {
+	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + strconv.FormatInt(pullRequestID, 10) + "/diff"
+	res, err := b.get(urlStr)
+	if err != nil {
+		return "", err
+	}
+	return string(res), nil
+}
+
 // SrcFile returns files diff of commits by repository slug and commit hash
 func (b *Bitbucket) SrcFile(repoSlug, spec, path string) (string, error) {
 	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/src/" + spec + "/" + path

@@ -306,3 +306,11 @@ type RepoPushPayload struct {
 		} `json:"changes"`
 	} `json:"push"`
 }
+
+// PullRequestMergedPayload struct for webhook about pull request merge
+// https://confluence.atlassian.com/bitbucket/event-payloads-740262817.html#EventPayloads-Merged (Pull Request -> Merged)
+type PullRequestMergedPayload struct {
+	Actor       owner       `json:"actor"`
+	PullRequest pullRequest `json:"pullrequest"`
+	Repository  repository  `json:"repository"`
+}

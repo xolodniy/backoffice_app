@@ -956,7 +956,7 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 				logrus.WithError(err).Errorf("can't take information about user name from slask with id: %v", id)
 				userName = "This user"
 			}
-			a.Slack.SendToThread(fmt.Sprintf("%s will return in %.0f minutes", userName, duration.Minutes()), channel, threadId)
+			a.Slack.SendToThread(fmt.Sprintf("*%s* will return in %s", userName, common.FmtDuration(duration)), channel, threadId)
 		}
 	}
 
@@ -1356,5 +1356,32 @@ func (a *App) MoveJiraStatuses(issue jira.Issue) {
 				return
 			}
 		}
+	}
+}
+
+// CheckPullRequestsConflicts checks pull requests on containing conflict
+func (a *App) CheckPullRequestsConflicts(pullRequestPayload bitbucket.PullRequestMergedPayload) {
+	pullRequests, err := a.Bitbucket.PullRequestsList(pullRequestPayload.Repository.Name)
+	if err != nil {
+		logrus.WithError(err).Errorf("Can't get pull requests list")
+		return
+	}
+	var authorPullRequests = make(map[string][]string)
+	for _, pullRequest := range pullRequests {
+		diff, err := a.Bitbucket.PullRequestDiff(pullRequestPayload.Repository.Name, pullRequest.ID)
+		if err != nil {
+			logrus.WithError(err).Errorf("Can't get pull request diff")
+			return
+		}
+		if strings.Contains(diff, "<<<<<<< destination") {
+			authorPullRequests[pullRequest.Author.DisplayName] = append(authorPullRequests[pullRequest.Author.DisplayName], "<"+pullRequest.Links.HTML.Href+"|"+pullRequest.Title+">")
+		}
+	}
+	for author, pullRequestsTitles := range authorPullRequests {
+		msg := "*Pull requests with conflicts:*\n\n"
+		for _, title := range pullRequestsTitles {
+			msg += title + "\n"
+		}
+		a.Slack.SendMessage(msg, author)
 	}
 }

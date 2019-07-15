@@ -20,3 +20,15 @@ func (c *Controller) commitPushed(ctx *gin.Context) {
 	go c.App.CreateBranchPullRequest(repoPushPayload)
 	ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
 }
+
+func (c *Controller) pullRequestMerged(ctx *gin.Context) {
+	pullRequestMergedPayload := bitbucket.PullRequestMergedPayload{}
+	err := ctx.ShouldBindJSON(&pullRequestMergedPayload)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, "error")
+		logrus.WithError(err).Error("can't bind json from bitbucket webhook")
+		return
+	}
+	go c.App.CheckPullRequestsConflicts(pullRequestMergedPayload)
+	ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
+}

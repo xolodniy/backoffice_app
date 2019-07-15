@@ -67,6 +67,7 @@ func (c *Controller) initRoutes() {
 
 	bitbucket := c.Gin.Group("")
 	bitbucket.POST("/api/v1/bitbucket/webhooks/commit/pushed", c.commitPushed)
+	bitbucket.POST("/api/v1/bitbucket/webhooks/pullrequest/merged", c.pullRequestMerged)
 
 	slack := c.Gin.Group("")
 	slack.Use(c.checkSignature)
