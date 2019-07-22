@@ -61,7 +61,7 @@ bitbucket:
   owner: theflowglobal
   auth:
     username: {{ jira_login }}
-    password: {{ jira_password }}
+    token: {{ jira_password }}
 
 slack:
   apiurl: https://slack.com/api
