@@ -393,48 +393,6 @@ func (s *Slack) usersSlice() ([]Member, error) {
 	return allUsers, nil
 }
 
-// UserIdByEmail retrieves user id by email
-func (s *Slack) UserIdByEmail(email string) (string, error) {
-	allMembers, err := s.usersSlice()
-	if err != nil {
-		return "", err
-	}
-	for _, member := range allMembers {
-		if member.Profile.Email == email {
-			return member.Id, nil
-		}
-	}
-	return "", fmt.Errorf("User was not found ")
-}
-
-// UserInfoByName retrieve user info by his name
-func (s *Slack) UserInfoByName(username string) (Member, error) {
-	allMembers, err := s.usersSlice()
-	if err != nil {
-		return Member{}, err
-	}
-	for _, member := range allMembers {
-		if member.Name == username {
-			return member, nil
-		}
-	}
-	return Member{}, fmt.Errorf("User was not found in Slask ")
-}
-
-// UserNameById retrieve user name by his id
-func (s *Slack) UserNameById(userId string) (string, error) {
-	allMembers, err := s.usersSlice()
-	if err != nil {
-		return "", err
-	}
-	for _, member := range allMembers {
-		if member.Id == userId {
-			return member.Profile.RealName, nil
-		}
-	}
-	return "", fmt.Errorf("User was not found in Slask ")
-}
-
 // checkChannelOnUserRealName retrieve channel with user id if it user real name
 func (s *Slack) checkChannelOnUserRealName(channel string) (string, error) {
 	userNameSlice := strings.Split(channel, " ")
