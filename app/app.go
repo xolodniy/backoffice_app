@@ -1385,3 +1385,12 @@ func (a *App) CheckPullRequestsConflicts(pullRequestPayload bitbucket.PullReques
 		a.Slack.SendMessage(msg, author)
 	}
 }
+
+func (a *App) GetJiraAccountEmailByID(accountID string) string {
+	for _, a := range a.Config.JiraAccounts {
+		if a[accountID] != "" {
+			return a[accountID]
+		}
+	}
+	return ""
+}
