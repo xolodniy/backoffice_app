@@ -760,7 +760,7 @@ func (a *App) ReportClarificationIssues() {
 
 // PersonActivityByDate create report about user activity and send messange about it
 func (a *App) PersonActivityByDate(userName, date, channel string) error {
-	userInfo := a.GetUserInfoByTagValue(TagUserSlackID, strings.TrimPrefix(userName, "@"))
+	userInfo := a.GetUserInfoByTagValue(TagUserSlackName, strings.TrimPrefix(userName, "@"))
 	if userInfo[TagUserEmail] == "" {
 		return fmt.Errorf("Данные пользователя не были найдены в словаре")
 	}
