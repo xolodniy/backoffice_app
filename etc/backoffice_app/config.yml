@@ -54,7 +54,7 @@ jira:
   apiurl: https://theflow.atlassian.net
   auth:
     username: stepan.morozov@theflow.global
-    password: 123123123
+    token: GaQ1oimS8bWXNdqcFyRG492D
 
 bitbucket:
   apiurl: https://api.bitbucket.org/2.0

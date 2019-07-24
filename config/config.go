@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 
-	"github.com/andygrunwald/go-jira"
 	"github.com/jinzhu/configor"
 )
 
@@ -42,7 +41,10 @@ type Main struct {
 
 // Jira is template to storing jira configuration
 type Jira struct {
-	Auth   jira.BasicAuthTransport
+	Auth struct {
+		Username string
+		Token    string
+	}
 	APIUrl string
 }
 
@@ -140,8 +142,8 @@ func (config *Main) checkConfig() error {
 	if config.Jira.Auth.Username == "" {
 		return fmt.Errorf("Jira Username configuration field is not set. Please set it in configuration file «config/config.yml»")
 	}
-	if config.Jira.Auth.Password == "" {
-		return fmt.Errorf("Jira Password configuration field is not set. Please set it in configuration file «config/config.yml»")
+	if config.Jira.Auth.Token == "" {
+		return fmt.Errorf("Jira Token configuration field is not set. Please set it in configuration file «config/config.yml»")
 	}
 
 	if config.Slack.InToken == "" {

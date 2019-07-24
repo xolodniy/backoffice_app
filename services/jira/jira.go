@@ -23,7 +23,8 @@ type Issue struct {
 
 // New creates new jira
 func New(config *config.Jira) Jira {
-	jiraClient, err := jira.NewClient(config.Auth.Client(), config.APIUrl)
+	auth := jira.BasicAuthTransport{Username: config.Auth.Username, Password: config.Auth.Token}
+	jiraClient, err := jira.NewClient(auth.Client(), config.APIUrl)
 	if err != nil {
 		panic(err)
 	}
