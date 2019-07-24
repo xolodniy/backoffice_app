@@ -198,8 +198,11 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 		if ignoreDeveloper {
 			continue
 		}
-		developerEmail := issue.DeveloperMap(jira.TagDeveloperEmail)
-		if developerEmail == "" {
+		var developerEmail string
+		developerID := issue.DeveloperMap(jira.TagDeveloperID)
+		if developerID != "" && a.GetJiraAccountEmailByID(developerID) != "" {
+			developerEmail = a.GetJiraAccountEmailByID(developerID)
+		} else {
 			developerEmail = jira.NoDeveloper
 		}
 		developerEmails[developerEmail] = append(developerEmails[developerEmail], issue)
@@ -1013,16 +1016,16 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	if reviewCount < 2 {
 		return
 	}
-	developerEmail := issue.DeveloperMap(jira.TagDeveloperEmail)
+	developerID := issue.DeveloperMap(jira.TagDeveloperID)
 	var userId string
-	switch developerEmail {
-	case "":
+	switch {
+	case developerID == "" || a.GetJiraAccountEmailByID(developerID) == "":
 		userId = jira.NoDeveloper
 	default:
-		userId, err = a.Slack.UserIdByEmail(developerEmail)
+		userId, err = a.Slack.UserIdByEmail(a.GetJiraAccountEmailByID(developerID))
 		if err != nil {
 			logrus.WithError(err).Error("can't take user id by email from slack")
-			userId = developerEmail
+			userId = a.GetJiraAccountEmailByID(developerID)
 			break
 		}
 		userId = "<@" + userId + ">"
