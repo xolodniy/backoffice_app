@@ -115,3 +115,25 @@ amplify:
   channelprod: '#test-backoffice-bot'
   mention:
     - UFNGKAYDC
+
+jiraaccounts:
+  - 5a2575776a747c0e71ab2972: andrey.solovyov@theflow.global
+  - 5acf07e953a71a2a7cd8657f: artem.efremov@theflow.global
+  - "557058:00cb683a-68e2-49a8-a727-96e2494e5160": arthur.danilevskiy@theflow.global
+  - 5cf3b6d098b1560e85996fae: denis.kolosov@theflow.global
+  - 5cde6cc64326200dc972393a: denis.yudin@theflow.global
+  - 5d2355de4b35f80c5764359b: dmitrii.kishchik@theflow.global
+  - 5bbfa4db57736d0c18e318b3: galinaluppa@gmail.com
+  - 5cc0cad796f23e0e77176afd: gleb.dmitriev@theflow.global
+  - 5cfd562c515e2c0c5cfb40cc: irina.glebova@theflow.global
+  - "557058:f48a92cd-bcb3-443e-ae4f-74e986e02d18": tiabc.work@gmail.com
+  - 5c625e3cff6a2e4d3d1460a1: muzafar.muradov@theflow.global
+  - 5c667d34f8bb515c2c454660: mary.yadykina@theflow.global
+  - "557058:0eed2b63-6426-46c4-bae1-38d9acc022e9": oleg.raev@theflow.global
+  - 5cab83cd1608c412138781c3: olga.grigoruk@theflow.global
+  - 5a3e2ac8a847e93dd0bf8ebd: pp@theflow.global
+  - "557058:36da39a7-f13b-4285-a658-90e3eeeea4b8": rg@theflow.global
+  - "557058:9cca305d-28f2-41c6-af4d-393b33527316": roman.vlasenko@theflow.global
+  - 5b27461fedacc156e2f37052: stepan.morozov@theflow.global
+  - 5cfd562a8186a70c604243c5: vadim.zaripov@theflow.global
+  - 5d313cbbec90090d00f4653d: anastas.baranovskaya@gmail.com
