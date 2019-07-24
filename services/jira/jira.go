@@ -64,7 +64,7 @@ var (
 	TransitionDone                     = "Done"
 	TransitionApprove                  = "Approve"
 	TagDeveloperName                   = "displayName"
-	TagDeveloperEmail                  = "emailAddress"
+	TagDeveloperID                     = "accountId"
 	NoDeveloper                        = "No developer"
 )
 
