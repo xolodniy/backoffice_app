@@ -84,7 +84,7 @@ slack:
       - 'Muzafar Muradov'
     feteam:
       - 'Andrey Solovyov'
-      - 'Elena Parkacheva'
+      - 'Denis Kolosov'
   ignorelist:
     - 'Pavel Palenin'
     - 'Oleg Raev'
@@ -117,3 +117,118 @@ amplify:
     - U97DJLL11
     - UG47GFL92
     - U9FDU5W4D
+
+users:
+  - jiraaccountid: 5a2575776a747c0e71ab2972
+    email: andrey.solovyov@theflow.global
+    slackid: U8990009Z
+    slackname: tinymail8
+    slackrealname: "Andrey Solovyov"
+
+  - jiraaccountid: 5acf07e953a71a2a7cd8657f
+    email: artem.efremov@theflow.global
+    slackid: U9FDU5W4D
+    slackname: drmroll
+    slackrealname: "Artem Efremov"
+
+  - jiraaccountid: "557058:00cb683a-68e2-49a8-a727-96e2494e5160"
+    email: arthur.danilevskiy@theflow.global
+    slackid: U9ALLBG5S
+    slackname: arthurdanilevsky
+    slackrealname: "Arthur Danilevskiy"
+
+  - jiraaccountid: 5cf3b6d098b1560e85996fae
+    email: denis.kolosov@theflow.global
+    slackid: UK2CKC7SQ
+    slackname: denis.kolosov
+    slackrealname: "Denis Kolosov"
+
+  - jiraaccountid: 5cde6cc64326200dc972393a
+    email: denis.yudin@theflow.global
+    slackid: UJR90H205
+    slackname: denis.yudin
+    slackrealname: "Denis Yudin"
+
+  - jiraaccountid: 5d2355de4b35f80c5764359b
+    email: dmitrii.kishchik@theflow.global
+    slackid: UKU6CBDLJ
+    slackname: dmitrii.kishchik
+    slackrealname: "Dmitrii Kishchik"
+
+  - jiraaccountid: 5bbfa4db57736d0c18e318b3
+    email: galinaluppa@gmail.com
+
+  - jiraaccountid: 5cc0cad796f23e0e77176afd
+    email: gleb.dmitriev@theflow.global
+    slackid: UJ3JDHKPA
+    slackname: gleb.dmitriev
+    slackrealname: Gleb
+
+  - jiraaccountid: 5cfd562c515e2c0c5cfb40cc
+    email: irina.glebova@theflow.global
+    slackid: UK9C07RB6
+    slackname: irina.glebova
+    slackrealname: "Irina Glebova"
+
+  - jiraaccountid: "557058:f48a92cd-bcb3-443e-ae4f-74e986e02d18"
+    email: tiabc.work@gmail.com
+    slackid: U891K2Z2P
+    slackname: tiabc.work
+    slackrealname: "Ivan Tomilov"
+
+  - jiraaccountid: 5c625e3cff6a2e4d3d1460a1
+    email: muzafar.muradov@theflow.global
+    slackid: UG47GFL92
+    slackname: muzafar.muradov
+    slackrealname: "Muzafar Muradov"
+
+  - jiraaccountid: 5c667d34f8bb515c2c454660
+    email: mary.yadykina@theflow.global
+    slackid: UFQ0NSFPZ
+    slackname: mary.yadykina
+    slackrealname: "Mary Yadykina"
+
+  - jiraaccountid: "557058:0eed2b63-6426-46c4-bae1-38d9acc022e9"
+    email: oleg.raev@theflow.global
+    slackid: U97DJLL11
+    slackname: ovel87
+    slackrealname: "Oleg Raev"
+
+  - jiraaccountid: 5cab83cd1608c412138781c3
+    email: olga.grigoruk@theflow.global
+    slackid: UHSG2NQT1
+    slackname: olga.grigoruk
+    slackrealname: "Olga Grigoruk"
+
+  - jiraaccountid: 5a3e2ac8a847e93dd0bf8ebd
+    email: pp@theflow.global
+    slackid: U89802W2Z
+    slackname: torium0
+    slackrealname: "Pavel Palenin"
+
+  - jiraaccountid: "557058:36da39a7-f13b-4285-a658-90e3eeeea4b8"
+    email: rg@theflow.global
+    slackid: U88K5BQAD
+    slackname: hard.rese7
+    slackrealname: "Rodion Golovushkin"
+
+  - jiraaccountid: "557058:9cca305d-28f2-41c6-af4d-393b33527316"
+    email: roman.vlasenko@theflow.global
+    slackid: UFNGKAYDC
+    slackname: bamp94
+    slackrealname: "Roman Vlasenko"
+
+  - jiraaccountid: 5b27461fedacc156e2f37052
+    email: stepan.morozov@theflow.global
+    slackid: U8A004WK0
+    slackname: smorozovki0911
+    slackrealname: "Stepan Morozov"
+
+  - jiraaccountid: 5cfd562a8186a70c604243c5
+    email: vadim.zaripov@theflow.global
+    slackid: UK15STKC3
+    slackname: vadim.zaripov
+    slackrealname: "Vadim Zaripov"
+
+  - jiraaccountid: 5d313cbbec90090d00f4653d
+    email: anastas.baranovskaya@gmail.com
