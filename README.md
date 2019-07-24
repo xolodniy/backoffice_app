@@ -262,6 +262,15 @@ User id you can find in slack:
 2. Open the "..." menu.
 3. Click button "Copy Member-ID ..."
 
+#### Config.yml variables for user info 
+
+    users:                                       - users information of services
+      - jiraaccountid: 5a2575776a747c0e71ab2972  - jira account id
+        email: andrey.solovyov@theflow.global    - user email
+        slackid: U8990009Z                       - user slack id
+        slackname: tinymail8                     - user slack nick name
+        slackrealname: "Andrey Solovyov"         - user slack real name
+
 ### API Description
 
 Please see [Postman API documentation](https://lively-water-8721.postman.co/collections/4828556-aa316412-299a-4ab1-8608-670e4ac7e591)
