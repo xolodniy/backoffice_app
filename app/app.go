@@ -210,7 +210,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 		var developerEmail string
 		developerID := issue.DeveloperMap(jira.TagDeveloperID)
 		userInfo := a.GetUserInfoByTagValue(TagUserJiraAccountID, developerID)
-		if developerID != "" && userInfo[TagUserEmail] != "" {
+		if userInfo[TagUserEmail] != "" {
 			developerEmail = userInfo[TagUserEmail]
 		} else {
 			developerEmail = jira.NoDeveloper
@@ -1030,7 +1030,7 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	userInfo := a.GetUserInfoByTagValue(TagUserJiraAccountID, developerID)
 	var userId string
 	switch {
-	case developerID == "" || userInfo[TagUserSlackID] == "":
+	case userInfo[TagUserSlackID] == "":
 		userId = jira.NoDeveloper
 	default:
 		userId = "<@" + userInfo[TagUserSlackID] + ">"
