@@ -749,7 +749,7 @@ func (a *App) ReportClarificationIssues() {
 		if message != "" {
 			userInfo := a.GetUserInfoByTagValue(TagUserEmail, issues[0].Fields.Assignee.EmailAddress)
 			if userInfo[TagUserSlackID] == "" {
-				logrus.WithError(err).Error("can't take user id by email from vocabulary")
+				logrus.WithError(err).WithField("email", issues[0].Fields.Assignee.EmailAddress).Error("can't take user id by email from vocabulary")
 				continue
 			}
 			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+message, userInfo[TagUserSlackID])
@@ -808,7 +808,7 @@ func (a *App) Report24HoursReviewIssues() {
 		if message != "" {
 			userInfo := a.GetUserInfoByTagValue(TagUserEmail, issues[0].Fields.Assignee.EmailAddress)
 			if userInfo[TagUserSlackID] == "" {
-				logrus.WithError(err).Error("can't take user id by email from vocabulary")
+				logrus.WithError(err).WithField("email", issues[0].Fields.Assignee.EmailAddress).Error("can't take user id by email from vocabulary")
 				continue
 			}
 			a.Slack.SendMessage("Issues on review more than 24 hours assigned to you:\n\n"+message, userInfo[TagUserSlackID])
@@ -908,7 +908,7 @@ func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.
 	for name, email := range users {
 		userInfo := a.GetUserInfoByTagValue(TagUserEmail, email)
 		if userInfo[TagUserSlackID] == "" {
-			logrus.WithError(err).Error("can't take user id by email from vocabulary")
+			logrus.WithError(err).WithField("email", email).Error("can't take user id by email from vocabulary")
 			userInfo[TagUserSlackID] = name
 		}
 
