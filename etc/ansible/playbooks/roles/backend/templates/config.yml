@@ -54,14 +54,14 @@ jira:
   apiurl: https://theflow.atlassian.net
   auth:
     username: {{ jira_login }}
-    password: {{ jira_password }}
+    token: {{ jira_token }}
 
 bitbucket:
   apiurl: https://api.bitbucket.org/2.0
   owner: theflowglobal
   auth:
     username: {{ jira_login }}
-    token: {{ jira_password }}
+    token: {{ jira_token }}
 
 slack:
   apiurl: https://slack.com/api
