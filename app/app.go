@@ -741,15 +741,18 @@ func (a *App) ReportClarificationIssues() {
 	for _, issue := range issues {
 		assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
 	}
-	for _, issues := range assignees {
+	for name, issues := range assignees {
 		var message string
 		for _, issue := range issues {
 			message += issue.String()
 		}
 		if message != "" {
-			userInfo := a.GetUserInfoByTagValue(TagUserEmail, issues[0].Fields.Assignee.EmailAddress)
+			userInfo := a.GetUserInfoByTagValue(TagUserSlackName, name)
 			if userInfo[TagUserSlackID] == "" {
-				logrus.WithError(err).WithField("email", issues[0].Fields.Assignee.EmailAddress).Error("can't take user id by email from vocabulary")
+				logrus.WithError(err).WithField("slackName", name).Error("can't take user id by slack name from vocabulary")
+				continue
+			}
+			if userInfo[TagUserSlackID] == "" {
 				continue
 			}
 			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+message, userInfo[TagUserSlackID])
