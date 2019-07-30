@@ -102,6 +102,7 @@ func (b *Bitbucket) post(urlStr string, jsonBody []byte) ([]byte, error) {
 
 // RepositoriesList returns list of all repositories
 func (b *Bitbucket) RepositoriesList() ([]repository, error) {
+	fmt.Println("Get repository list")
 	type repositories struct {
 		Next   string       `json:"next"`
 		Values []repository `json:"values"`
@@ -110,11 +111,13 @@ func (b *Bitbucket) RepositoriesList() ([]repository, error) {
 	for {
 		res, err := b.get(repos.Next)
 		if err != nil {
+			fmt.Println(string(res))
 			return []repository{}, err
 		}
 		var nextRepositories repositories
 		err = json.Unmarshal(res, &nextRepositories)
 		if err != nil {
+			fmt.Println(string(res))
 			return []repository{}, err
 		}
 		for _, repository := range nextRepositories.Values {
