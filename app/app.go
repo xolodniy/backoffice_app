@@ -964,7 +964,7 @@ func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
 func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 	for id, duration := range a.AfkTimer.UserDurationMap {
 		if strings.Contains(message, id) && duration > 0 {
-			userInfo := a.GetUserInfoByTagValue(TagUserSlackRealName, id)
+			userInfo := a.GetUserInfoByTagValue(TagUserSlackID, id)
 			if userInfo[TagUserSlackRealName] == "" {
 				logrus.Errorf("can't take information about user name from vocabulary with id: %v", id)
 				userInfo[TagUserSlackRealName] = "This user"
@@ -982,7 +982,7 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 	}
 	for _, vacation := range vacations {
 		if strings.Contains(message, vacation.UserId) {
-			userInfo := a.GetUserInfoByTagValue(TagUserSlackRealName, vacation.UserId)
+			userInfo := a.GetUserInfoByTagValue(TagUserSlackID, vacation.UserId)
 			if userInfo[TagUserSlackRealName] == "" {
 				logrus.Errorf("can't take information about user name from vocabulary with id: %v", vacation.UserId)
 				userInfo[TagUserSlackRealName] = "This user"
