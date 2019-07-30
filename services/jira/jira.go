@@ -178,7 +178,7 @@ func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
 
 // IssuesAfterSecondReview retrieves issues that have 2 or more reviews
 func (j *Jira) IssuesAfterSecondReview(typeNames []string) ([]Issue, error) {
-	request := fmt.Sprintf(`status NOT IN ("%s") AND (status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s")`,
+	request := fmt.Sprintf(`status NOT IN ("%s") AND (status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s")`,
 		StatusClosed, StatusTlReview, StatusPeerReview, StatusDesignReview, StatusCTOReview, StatusFEReview)
 	if len(typeNames) != 0 {
 		// format of jql statuses `("FE Task")` or `("FE Sub-Task","FE Task")`
@@ -355,7 +355,7 @@ func (j *Jira) ClarificationIssuesOfOpenSprints() ([]Issue, error) {
 
 // IssuesOnReview searches all issues with review statuses and retrieves it with changelog history
 func (j *Jira) IssuesOnReview() ([]Issue, error) {
-	request := fmt.Sprintf(`assignee != %s AND status IN ("%s","%s","%s","%s","%s","%s")`,
+	request := fmt.Sprintf(`assignee != %s AND status IN ("%s","%s","%s","%s","%s")`,
 		StatusEmptyAssignee, StatusPeerReview, StatusTlReview, StatusDesignReview, StatusCTOReview, StatusFEReview)
 	issues, err := j.issues(request)
 	if err != nil {
