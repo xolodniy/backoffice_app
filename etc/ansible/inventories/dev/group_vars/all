@@ -14,6 +14,9 @@ bitbucket_private_token: c3RlcGFuLm1vcm96b3ZAdGhlZmxvdy5nbG9iYWw6MTIzMTIzMTIz # 
 jira_login: 123
 jira_token: 123
 
+bitbucket_login: 123
+bitbucket_token: 123
+
 hubstaff_token: 123
 hubstaff_app_token: 123
 
