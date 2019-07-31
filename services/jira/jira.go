@@ -533,7 +533,7 @@ func (j *Jira) AddRemoveIssueFixVersion(issueKey, fromFixVersion, toFixVersion s
 	}
 	res, err := j.Issue.UpdateIssue(issueKey, dat)
 	if err != nil {
-		logrus.WithError(err).WithField("response", fmt.Sprintf("%+q", res)).Error("can't update issue fix version")
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", res)).Error("can't update issue fix version")
 		return err
 	}
 	return nil
@@ -549,7 +549,7 @@ func (j *Jira) SetIssuePriority(issueKey, priority string) error {
 	}
 	res, err := j.Issue.UpdateIssue(issueKey, dat)
 	if err != nil {
-		logrus.WithError(err).WithField("response", fmt.Sprintf("%+q", res)).Error("can't set issue priority")
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", res)).Error("can't set issue priority")
 		return err
 	}
 	return nil
