@@ -21,6 +21,12 @@ type Issue struct {
 	jira.Issue
 }
 
+// Changelog struct don't let go-jira dependency on Controller level
+type Changelog struct {
+	ID    string                `json:"id"`
+	Items []jira.ChangelogItems `json:"items"`
+}
+
 // New creates new jira
 func New(config *config.Jira) Jira {
 	jiraClient, err := jira.NewClient(config.Auth.Client(), config.APIUrl)
