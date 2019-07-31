@@ -1385,3 +1385,27 @@ func (a *App) CheckPullRequestsConflicts(pullRequestPayload bitbucket.PullReques
 		a.Slack.SendMessage(msg, author)
 	}
 }
+
+// ChangeJiraSubtasksInfo change fix versions and priority of subtasks
+func (a *App) ChangeJiraSubtasksInfo(issue jira.Issue, changelog jira.Changelog) {
+	if len(issue.Fields.Subtasks) == 0 {
+		return
+	}
+	for _, changelogItem := range changelog.Items {
+		switch changelogItem.Field {
+		case jira.ChangelogFieldFixVersion:
+			for _, subtask := range issue.Fields.Subtasks {
+				if err := a.Jira.AddRemoveIssueFixVersion(subtask.Key, changelogItem.FromString, changelogItem.ToString); err != nil {
+					return
+				}
+			}
+		case jira.ChangelogFieldPrioriy:
+			for _, subtask := range issue.Fields.Subtasks {
+				if err := a.Jira.SetIssuePriority(subtask.Key, changelogItem.ToString); err != nil {
+					return
+				}
+			}
+		}
+
+	}
+}
