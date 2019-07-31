@@ -11,16 +11,17 @@ import (
 
 func (c *Controller) issueUpdated(ctx *gin.Context) {
 	webHookBody := struct {
-		Issue jira.Issue `json:"issue"`
+		Issue     jira.Issue     `json:"issue"`
+		Changelog jira.Changelog `json:"changelog"`
 	}{}
-	err := ctx.ShouldBindJSON(&webHookBody)
-	if err != nil {
+	if err := ctx.ShouldBindJSON(&webHookBody); err != nil {
 		ctx.String(http.StatusBadRequest, "error")
 		logrus.WithError(err).Error("can't bind json answer from jira")
 		return
 	}
 	go c.App.MessageIssueAfterSecondTLReview(webHookBody.Issue)
 	go c.App.MoveJiraStatuses(webHookBody.Issue)
+	go c.App.ChangeJiraSubtasksInfo(webHookBody.Issue, webHookBody.Changelog)
 	ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
 }
 
