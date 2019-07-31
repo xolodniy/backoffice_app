@@ -739,17 +739,17 @@ func (a *App) ReportClarificationIssues() {
 	}
 	var assignees = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
+		assignees[issue.Fields.Assignee.AccountID] = append(assignees[issue.Fields.Assignee.AccountID], issue)
 	}
-	for name, issues := range assignees {
+	for accountID, issues := range assignees {
 		var message string
 		for _, issue := range issues {
 			message += issue.String()
 		}
 		if message != "" {
-			userInfo := a.GetUserInfoByTagValue(TagUserSlackName, name)
+			userInfo := a.GetUserInfoByTagValue(TagUserJiraAccountID, accountID)
 			if userInfo[TagUserSlackID] == "" {
-				logrus.WithError(err).WithField("slackName", name).Error("can't take user id by slack name from vocabulary")
+				logrus.WithError(err).WithField("accountID", accountID).Error("can't take user id by accountID from vocabulary")
 				continue
 			}
 			if userInfo[TagUserSlackID] == "" {
@@ -800,18 +800,18 @@ func (a *App) Report24HoursReviewIssues() {
 			continue
 		}
 		if (time.Now().Unix() - t.Unix()) > 3600*24 {
-			assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
+			assignees[issue.Fields.Assignee.AccountID] = append(assignees[issue.Fields.Assignee.AccountID], issue)
 		}
 	}
-	for _, issues := range assignees {
+	for accountID, issues := range assignees {
 		var message string
 		for _, issue := range issues {
 			message += issue.String()
 		}
 		if message != "" {
-			userInfo := a.GetUserInfoByTagValue(TagUserEmail, issues[0].Fields.Assignee.EmailAddress)
+			userInfo := a.GetUserInfoByTagValue(TagUserJiraAccountID, accountID)
 			if userInfo[TagUserSlackID] == "" {
-				logrus.WithError(err).WithField("email", issues[0].Fields.Assignee.EmailAddress).Error("can't take user id by email from vocabulary")
+				logrus.WithError(err).WithField("accountID", accountID).Error("can't take user id by accountID from vocabulary")
 				continue
 			}
 			a.Slack.SendMessage("Issues on review more than 24 hours assigned to you:\n\n"+message, userInfo[TagUserSlackID])
