@@ -255,7 +255,7 @@ You may use one of several pre-defined schedules in place of a cron expression.
       apiurl: https://theflow.atlassian.net  - url of jira cloud
       auth:
         username: {{ jira_login }}           - user login
-        password: {{ jira_token }}        - user token for app https://id.atlassian.com/manage/api-tokens?_ga=2.197139692.2116077052.1563351418-1201316844.1557426941
+        token: {{ jira_token }}        - user token for app https://id.atlassian.com/manage/api-tokens?_ga=2.197139692.2116077052.1563351418-1201316844.1557426941
 
 User id you can find in slack: 
 1. Click on the users name and choose "Show Profile".
