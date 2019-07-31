@@ -1,6 +1,7 @@
 package jira
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -72,6 +73,8 @@ var (
 	TagDeveloperName                   = "displayName"
 	TagDeveloperEmail                  = "emailAddress"
 	NoDeveloper                        = "No developer"
+	ChangelogFieldFixVersion           = "Fix Version"
+	ChangelogFieldPrioriy              = "priority"
 )
 
 func (i Issue) String() string {
@@ -512,4 +515,42 @@ func (j *Jira) EpicIssuesClosed(epicKey string) bool {
 		}
 	}
 	return true
+}
+
+// AddRemoveIssueFixVersion update issue fix version by issue key
+func (j *Jira) AddRemoveIssueFixVersion(issueKey, fromFixVersion, toFixVersion string) error {
+	var byt []byte
+	switch {
+	case toFixVersion == "":
+		byt = []byte(fmt.Sprintf(`{"update":{"fixVersions":[{"remove": {"name":"%s"} }]}}`, fromFixVersion))
+	case fromFixVersion == "":
+		byt = []byte(fmt.Sprintf(`{"update":{"fixVersions":[{"add": {"name":"%s"} }]}}`, toFixVersion))
+	}
+	var dat map[string]interface{}
+	if err := json.Unmarshal(byt, &dat); err != nil {
+		logrus.WithError(err).Error("can't unmarshal byte data for update fix version")
+		return err
+	}
+	res, err := j.Issue.UpdateIssue(issueKey, dat)
+	if err != nil {
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+q", res)).Error("can't update issue fix version")
+		return err
+	}
+	return nil
+}
+
+// SetIssuePriority set issue priority by issue key
+func (j *Jira) SetIssuePriority(issueKey, priority string) error {
+	byt := []byte(fmt.Sprintf(`{"update":{"priority":[{"set":{"name" : "%s"}}]}}`, priority))
+	var dat map[string]interface{}
+	if err := json.Unmarshal(byt, &dat); err != nil {
+		logrus.WithError(err).Error("can't unmarshal byte data for set priority")
+		return err
+	}
+	res, err := j.Issue.UpdateIssue(issueKey, dat)
+	if err != nil {
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+q", res)).Error("can't set issue priority")
+		return err
+	}
+	return nil
 }
