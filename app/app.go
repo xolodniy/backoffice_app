@@ -58,6 +58,7 @@ var (
 	TagUserSlackID       = "slackid"
 	TagUserSlackName     = "slackname"
 	TagUserSlackRealName = "slackrealname"
+	EmptyTagValue        = "empty"
 )
 
 // AfkTimer struct for cache of user's AFK duration with mutex defend
@@ -748,6 +749,9 @@ func (a *App) ReportClarificationIssues() {
 		}
 		if message != "" {
 			userInfo := a.GetUserInfoByTagValue(TagUserJiraAccountID, accountID)
+			if userInfo[TagUserSlackID] == EmptyTagValue {
+				continue
+			}
 			if userInfo[TagUserSlackID] == "" {
 				logrus.WithError(err).WithField("accountID", accountID).Error("can't take user id by accountID from vocabulary")
 				continue
@@ -807,6 +811,9 @@ func (a *App) Report24HoursReviewIssues() {
 		}
 		if message != "" {
 			userInfo := a.GetUserInfoByTagValue(TagUserJiraAccountID, accountID)
+			if userInfo[TagUserSlackID] == EmptyTagValue {
+				continue
+			}
 			if userInfo[TagUserSlackID] == "" {
 				logrus.WithError(err).WithField("accountID", accountID).Error("can't take user id by accountID from vocabulary")
 				continue
@@ -907,6 +914,9 @@ func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.
 	)
 	for name, email := range users {
 		userInfo := a.GetUserInfoByTagValue(TagUserEmail, email)
+		if userInfo[TagUserSlackID] == EmptyTagValue {
+			userInfo[TagUserSlackID] = name
+		}
 		if userInfo[TagUserSlackID] == "" {
 			logrus.WithError(err).WithField("email", email).Error("can't take user id by email from vocabulary")
 			userInfo[TagUserSlackID] = name
@@ -965,7 +975,7 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 	for id, duration := range a.AfkTimer.UserDurationMap {
 		if strings.Contains(message, id) && duration > 0 {
 			userInfo := a.GetUserInfoByTagValue(TagUserSlackID, id)
-			if userInfo[TagUserSlackRealName] == "" {
+			if userInfo[TagUserSlackRealName] == "" || userInfo[TagUserSlackRealName] == EmptyTagValue {
 				logrus.Errorf("can't take information about user name from vocabulary with id: %v", id)
 				userInfo[TagUserSlackRealName] = "This user"
 			}
@@ -983,7 +993,7 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 	for _, vacation := range vacations {
 		if strings.Contains(message, vacation.UserId) {
 			userInfo := a.GetUserInfoByTagValue(TagUserSlackID, vacation.UserId)
-			if userInfo[TagUserSlackRealName] == "" {
+			if userInfo[TagUserSlackRealName] == "" || userInfo[TagUserSlackRealName] == EmptyTagValue {
 				logrus.Errorf("can't take information about user name from vocabulary with id: %v", vacation.UserId)
 				userInfo[TagUserSlackRealName] = "This user"
 			}
@@ -1030,6 +1040,8 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	userInfo := a.GetUserInfoByTagValue(TagUserJiraAccountID, developerID)
 	var userId string
 	switch {
+	case userInfo[TagUserSlackID] == EmptyTagValue:
+		userId = userInfo[TagUserEmail]
 	case userInfo[TagUserSlackID] == "":
 		userId = jira.NoDeveloper
 	default:

@@ -157,6 +157,9 @@ users:
 
   - jiraaccountid: 5bbfa4db57736d0c18e318b3
     email: galinaluppa@gmail.com
+    slackid: empty
+    slackname: empty
+    slackrealname: empty
 
   - jiraaccountid: 5cc0cad796f23e0e77176afd
     email: gleb.dmitriev@theflow.global
@@ -232,3 +235,6 @@ users:
 
   - jiraaccountid: 5d313cbbec90090d00f4653d
     email: anastas.baranovskaya@gmail.com
+    slackid: empty
+    slackname: empty
+    slackrealname: empty
