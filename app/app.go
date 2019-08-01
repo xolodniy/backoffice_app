@@ -752,9 +752,6 @@ func (a *App) ReportClarificationIssues() {
 				logrus.WithError(err).WithField("accountID", accountID).Error("can't take user id by accountID from vocabulary")
 				continue
 			}
-			if userInfo[TagUserSlackID] == "" {
-				continue
-			}
 			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+message, userInfo[TagUserSlackID])
 		}
 	}
