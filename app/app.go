@@ -1269,7 +1269,7 @@ func (a *App) CreateBranchPullRequest(repoPushPayload bitbucket.RepoPushPayload)
 	issuesKey := strings.Split(repoPushPayload.Push.Changes[0].New.Name, ">")
 	if len(issuesKey) != 2 {
 		logrus.WithField("branchName", fmt.Sprintf("%+v", repoPushPayload.Push.Changes[0].New.Name)).
-			Error("can't take issue key from branch name, format must be KEY-1/KEY-2")
+			Error("can't take issue key from branch name, format must be KEY-1>KEY-2")
 		return
 	}
 	err := a.Bitbucket.CreatePullRequestIfNotExist(repoPushPayload.Repository.Name, repoPushPayload.Push.Changes[0].New.Name, issuesKey[0])
