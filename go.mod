@@ -3,7 +3,7 @@ module backoffice_app
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/GuiaBolso/darwin v0.0.0-20170210191649-86919dfcf808
-	github.com/andygrunwald/go-jira v1.6.0
+	github.com/andygrunwald/go-jira v1.10.0
 	github.com/banzaicloud/logrus-runtime-formatter v0.0.0-20180617171254-12df4a18567f
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/gin-contrib/sse v0.0.0-20170109093832-22d885f9ecc7 // indirect

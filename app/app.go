@@ -51,6 +51,16 @@ type App struct {
 	model     model.Model
 }
 
+// Tags for user map of account info
+var (
+	TagUserJiraAccountID = "jiraaccountid"
+	TagUserEmail         = "email"
+	TagUserSlackID       = "slackid"
+	TagUserSlackName     = "slackname"
+	TagUserSlackRealName = "slackrealname"
+	EmptyTagValue        = "empty"
+)
+
 // AfkTimer struct for cache of user's AFK duration with mutex defend
 type AfkTimer struct {
 	*sync.Mutex
@@ -198,8 +208,12 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 		if ignoreDeveloper {
 			continue
 		}
-		developerEmail := issue.DeveloperMap(jira.TagDeveloperEmail)
-		if developerEmail == "" {
+		var developerEmail string
+		developerID := issue.DeveloperMap(jira.TagDeveloperID)
+		userInfo := a.GetUserInfoByTagValue(TagUserJiraAccountID, developerID)
+		if userInfo[TagUserEmail] != "" {
+			developerEmail = userInfo[TagUserEmail]
+		} else {
 			developerEmail = jira.NoDeveloper
 		}
 		developerEmails[developerEmail] = append(developerEmails[developerEmail], issue)
@@ -221,12 +235,12 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 		case developerEmail == jira.NoDeveloper && message != "":
 			messageNoDeveloper += "\nAssigned issues without developer:\n" + message
 		case message != "":
-			userId, err := a.Slack.UserIdByEmail(developerEmail)
-			if err != nil {
+			userInfo := a.GetUserInfoByTagValue(TagUserEmail, developerEmail)
+			if userInfo[TagUserSlackID] == "" {
 				msgBody += fmt.Sprintf("\n" + developerEmail + "\n" + message)
 				continue
 			}
-			msgBody += fmt.Sprintf("\n<@%s> "+"\n"+message, userId)
+			msgBody += fmt.Sprintf("\n<@%s> "+"\n"+message, userInfo[TagUserSlackID])
 		}
 	}
 	if msgBody == "" && messageNoDeveloper == "" {
@@ -726,20 +740,23 @@ func (a *App) ReportClarificationIssues() {
 	}
 	var assignees = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
+		assignees[issue.Fields.Assignee.AccountID] = append(assignees[issue.Fields.Assignee.AccountID], issue)
 	}
-	for _, issues := range assignees {
+	for accountID, issues := range assignees {
 		var message string
 		for _, issue := range issues {
 			message += issue.String()
 		}
 		if message != "" {
-			userId, err := a.Slack.UserIdByEmail(issues[0].Fields.Assignee.EmailAddress)
-			if err != nil {
-				logrus.WithError(err).Error("can't take user id by email from slack")
+			userInfo := a.GetUserInfoByTagValue(TagUserJiraAccountID, accountID)
+			if userInfo[TagUserSlackID] == EmptyTagValue {
 				continue
 			}
-			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+message, userId)
+			if userInfo[TagUserSlackID] == "" {
+				logrus.WithError(err).WithField("accountID", accountID).Error("can't take user id by accountID from vocabulary")
+				continue
+			}
+			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+message, userInfo[TagUserSlackID])
 		}
 	}
 
@@ -747,22 +764,22 @@ func (a *App) ReportClarificationIssues() {
 
 // PersonActivityByDate create report about user activity and send messange about it
 func (a *App) PersonActivityByDate(userName, date, channel string) error {
-	userInfo, err := a.Slack.UserInfoByName(strings.TrimPrefix(userName, "@"))
-	if err != nil {
-		return err
+	userInfo := a.GetUserInfoByTagValue(TagUserSlackName, strings.TrimPrefix(userName, "@"))
+	if userInfo[TagUserEmail] == "" {
+		return fmt.Errorf("Данные пользователя не были найдены в словаре")
 	}
 	layout := "2006-01-02"
 	t, err := time.Parse(layout, date)
 	if err != nil {
 		return err
 	}
-	userReport, err := a.Hubstaff.UserWorkTimeByDate(t, t, userInfo.Profile.Email)
+	userReport, err := a.Hubstaff.UserWorkTimeByDate(t, t, userInfo[TagUserEmail])
 	if err != nil {
 		return err
 	}
 	report := userReport.String()
 	if report == "" {
-		report += fmt.Sprintf("%s\n\n*%s*\n\nHas not worked", date, "<@"+userInfo.Id+">")
+		report += fmt.Sprintf("%s\n\n*%s*\n\nHas not worked", date, "<@"+userInfo[TagUserSlackID]+">")
 	}
 	a.Slack.SendMessage(report, channel)
 	return nil
@@ -784,21 +801,24 @@ func (a *App) Report24HoursReviewIssues() {
 			continue
 		}
 		if (time.Now().Unix() - t.Unix()) > 3600*24 {
-			assignees[issue.Fields.Assignee.Name] = append(assignees[issue.Fields.Assignee.Name], issue)
+			assignees[issue.Fields.Assignee.AccountID] = append(assignees[issue.Fields.Assignee.AccountID], issue)
 		}
 	}
-	for _, issues := range assignees {
+	for accountID, issues := range assignees {
 		var message string
 		for _, issue := range issues {
 			message += issue.String()
 		}
 		if message != "" {
-			userId, err := a.Slack.UserIdByEmail(issues[0].Fields.Assignee.EmailAddress)
-			if err != nil {
-				logrus.WithError(err).Error("can't take user id by email from slack")
+			userInfo := a.GetUserInfoByTagValue(TagUserJiraAccountID, accountID)
+			if userInfo[TagUserSlackID] == EmptyTagValue {
 				continue
 			}
-			a.Slack.SendMessage("Issues on review more than 24 hours assigned to you:\n\n"+message, userId)
+			if userInfo[TagUserSlackID] == "" {
+				logrus.WithError(err).WithField("accountID", accountID).Error("can't take user id by accountID from vocabulary")
+				continue
+			}
+			a.Slack.SendMessage("Issues on review more than 24 hours assigned to you:\n\n"+message, userInfo[TagUserSlackID])
 		}
 	}
 }
@@ -893,22 +913,25 @@ func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.
 		feTeamList string
 	)
 	for name, email := range users {
-		userId, err := a.Slack.UserIdByEmail(email)
-		if err != nil {
-			logrus.WithError(err).Error("can't get user id by email from slack")
-			userId = name
+		userInfo := a.GetUserInfoByTagValue(TagUserEmail, email)
+		if userInfo[TagUserSlackID] == EmptyTagValue {
+			userInfo[TagUserSlackID] = name
+		}
+		if userInfo[TagUserSlackID] == "" {
+			logrus.WithError(err).WithField("email", email).Error("can't take user id by email from vocabulary")
+			userInfo[TagUserSlackID] = name
 		}
 
 		for _, developerName := range a.Slack.Employees.BeTeam {
 			if developerName == name {
-				beTeamList += fmt.Sprintf("<@%s> ", userId)
+				beTeamList += fmt.Sprintf("<@%s> ", userInfo[TagUserSlackID])
 				break
 			}
 		}
 
 		for _, developerName := range a.Slack.Employees.FeTeam {
 			if developerName == name {
-				feTeamList += fmt.Sprintf("<@%s> ", userId)
+				feTeamList += fmt.Sprintf("<@%s> ", userInfo[TagUserSlackID])
 				break
 			}
 		}
@@ -951,12 +974,12 @@ func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
 func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 	for id, duration := range a.AfkTimer.UserDurationMap {
 		if strings.Contains(message, id) && duration > 0 {
-			userName, err := a.Slack.UserNameById(id)
-			if err != nil {
-				logrus.WithError(err).Errorf("can't take information about user name from slask with id: %v", id)
-				userName = "This user"
+			userInfo := a.GetUserInfoByTagValue(TagUserSlackID, id)
+			if userInfo[TagUserSlackRealName] == "" || userInfo[TagUserSlackRealName] == EmptyTagValue {
+				logrus.Errorf("can't take information about user name from vocabulary with id: %v", id)
+				userInfo[TagUserSlackRealName] = "This user"
 			}
-			a.Slack.SendToThread(fmt.Sprintf("*%s* will return in %s", userName, common.FmtDuration(duration)), channel, threadId)
+			a.Slack.SendToThread(fmt.Sprintf("*%s* will return in %s", userInfo[TagUserSlackRealName], common.FmtDuration(duration)), channel, threadId)
 		}
 	}
 
@@ -969,12 +992,12 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 	}
 	for _, vacation := range vacations {
 		if strings.Contains(message, vacation.UserId) {
-			userName, err := a.Slack.UserNameById(vacation.UserId)
-			if err != nil {
-				logrus.WithError(err).Errorf("can't take information about user name from slask with id: %v", vacation.UserId)
-				userName = "This user"
+			userInfo := a.GetUserInfoByTagValue(TagUserSlackID, vacation.UserId)
+			if userInfo[TagUserSlackRealName] == "" || userInfo[TagUserSlackRealName] == EmptyTagValue {
+				logrus.Errorf("can't take information about user name from vocabulary with id: %v", vacation.UserId)
+				userInfo[TagUserSlackRealName] = "This user"
 			}
-			a.Slack.SendToThread(fmt.Sprintf("*%s* is on vacation, his message is: \n\n'%s'", userName, vacation.Message), channel, threadId)
+			a.Slack.SendToThread(fmt.Sprintf("*%s* is on vacation, his message is: \n\n'%s'", userInfo[TagUserSlackRealName], vacation.Message), channel, threadId)
 		}
 	}
 }
@@ -1013,19 +1036,16 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	if reviewCount < 2 {
 		return
 	}
-	developerEmail := issue.DeveloperMap(jira.TagDeveloperEmail)
+	developerID := issue.DeveloperMap(jira.TagDeveloperID)
+	userInfo := a.GetUserInfoByTagValue(TagUserJiraAccountID, developerID)
 	var userId string
-	switch developerEmail {
-	case "":
+	switch {
+	case userInfo[TagUserSlackID] == EmptyTagValue:
+		userId = userInfo[TagUserEmail]
+	case userInfo[TagUserSlackID] == "":
 		userId = jira.NoDeveloper
 	default:
-		userId, err = a.Slack.UserIdByEmail(developerEmail)
-		if err != nil {
-			logrus.WithError(err).Error("can't take user id by email from slack")
-			userId = developerEmail
-			break
-		}
-		userId = "<@" + userId + ">"
+		userId = "<@" + userInfo[TagUserSlackID] + ">"
 	}
 
 	msgBody := fmt.Sprintf("The issue %s has been rejected after %v reviews\n\n", issue.Key, reviewCount)
@@ -1390,4 +1410,14 @@ func (a *App) CheckPullRequestsConflicts(pullRequestPayload bitbucket.PullReques
 		}
 		a.Slack.SendMessage(msg, author)
 	}
+}
+
+// GetUserInfoByTagValue retrieve user info by value of tag in map
+func (a *App) GetUserInfoByTagValue(tag, value string) config.User {
+	for _, a := range a.Config.Users {
+		if a[tag] != "" && a[tag] == value {
+			return a
+		}
+	}
+	return make(config.User, 0)
 }
