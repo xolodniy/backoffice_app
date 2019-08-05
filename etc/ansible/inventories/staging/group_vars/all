@@ -12,7 +12,10 @@ nginx_hosts: ["back-office-app.demo.theflow.global"]
 bitbucket_private_token: c3RlcGFuLm1vcm96b3ZAdGhlZmxvdy5nbG9iYWw6MTIzMTIzMTIz # login:password in base64 TODO: Encrypt it.
 
 jira_login: stepan.morozov@theflow.global # TODO: special account with full read access
-jira_password: 123123123
+jira_token: GaQ1oimS8bWXNdqcFyRG492D
+
+bitbucket_login: stepan.morozov@theflow.global
+bitbucket_password: 123123123
 
 hubstaff_token: 9omAc5EjhHp7wKXfqBCunHri6jkOsn_FFCcPC8XOqZo # TODO: check token valid after 11.03.2019
 hubstaff_app_token: yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ
