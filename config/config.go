@@ -36,6 +36,7 @@ type Main struct {
 	}
 	Database
 	Amplify
+	Users []User
 }
 
 // Jira is template to storing jira configuration
@@ -116,6 +117,8 @@ type Amplify struct {
 	ChannelProd     string
 	Mention         []string
 }
+
+type User map[string]string
 
 // GetConfig return config parsed from config/config.yml
 func GetConfig(skipFieldsFilledCheck bool, path string) *Main {
