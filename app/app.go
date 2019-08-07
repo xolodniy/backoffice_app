@@ -1395,7 +1395,7 @@ func (a *App) ChangeJiraSubtasksInfo(issue jira.Issue, changelog jira.Changelog)
 		switch changelogItem.Field {
 		case jira.ChangelogFieldFixVersion:
 			for _, subtask := range issue.Fields.Subtasks {
-				if err := a.Jira.AddRemoveIssueFixVersion(subtask.Key, changelogItem.FromString, changelogItem.ToString); err != nil {
+				if err := a.Jira.UpdateIssueFixVersion(subtask.Key, changelogItem.FromString, changelogItem.ToString); err != nil {
 					return
 				}
 			}

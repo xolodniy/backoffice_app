@@ -517,8 +517,8 @@ func (j *Jira) EpicIssuesClosed(epicKey string) bool {
 	return true
 }
 
-// AddRemoveIssueFixVersion update issue fix version by issue key
-func (j *Jira) AddRemoveIssueFixVersion(issueKey, fromFixVersion, toFixVersion string) error {
+// UpdateIssueFixVersion update issue fix version by issue key
+func (j *Jira) UpdateIssueFixVersion(issueKey, fromFixVersion, toFixVersion string) error {
 	var byt []byte
 	switch {
 	case toFixVersion == "":
