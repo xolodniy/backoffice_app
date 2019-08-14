@@ -53,14 +53,14 @@ reports:
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
-    username: stepan.morozov@theflow.global
+    username: stepan.morozov@atnr.pro
     token: GaQ1oimS8bWXNdqcFyRG492D
 
 bitbucket:
   apiurl: https://api.bitbucket.org/2.0
   owner: theflowglobal
   auth:
-    username: stepan.morozov@theflow.global
+    username: stepan.morozov@atnr.pro
     password: 123123123
 
 slack:
@@ -220,7 +220,7 @@ users:
     slackrealname: "Roman Vlasenko"
 
   - jiraaccountid: 5b27461fedacc156e2f37052
-    email: stepan.morozov@theflow.global
+    email: stepan.morozov@atnr.pro
     slackid: U8A004WK0
     slackname: smorozovki0911
     slackrealname: "Stepan Morozov"
