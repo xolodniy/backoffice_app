@@ -30,7 +30,8 @@ type Changelog struct {
 
 // New creates new jira
 func New(config *config.Jira) Jira {
-	jiraClient, err := jira.NewClient(config.Auth.Client(), config.APIUrl)
+	auth := jira.BasicAuthTransport{Username: config.Auth.Username, Password: config.Auth.Token}
+	jiraClient, err := jira.NewClient(auth.Client(), config.APIUrl)
 	if err != nil {
 		panic(err)
 	}
@@ -49,7 +50,6 @@ var (
 	StatusDesignReview                 = "in Design review"
 	StatusCTOReview                    = "In CTO review"
 	StatusFEReview                     = "In FE review"
-	StatusPMReview                     = "In PM Review"
 	StatusCloseLastTask                = "Close last task"
 	StatusReadyForDemo                 = "Ready for demo"
 	StatusEmptyAssignee                = "empty"
@@ -71,7 +71,7 @@ var (
 	TransitionDone                     = "Done"
 	TransitionApprove                  = "Approve"
 	TagDeveloperName                   = "displayName"
-	TagDeveloperEmail                  = "emailAddress"
+	TagDeveloperID                     = "accountId"
 	NoDeveloper                        = "No developer"
 	ChangelogFieldFixVersion           = "Fix Version"
 	ChangelogFieldPrioriy              = "priority"
@@ -187,8 +187,8 @@ func (j *Jira) IssuesWithClosedSubtasks() ([]Issue, error) {
 
 // IssuesAfterSecondReview retrieves issues that have 2 or more reviews
 func (j *Jira) IssuesAfterSecondReview(typeNames []string) ([]Issue, error) {
-	request := fmt.Sprintf(`status NOT IN ("%s") AND (status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s")`,
-		StatusClosed, StatusTlReview, StatusPeerReview, StatusDesignReview, StatusPMReview, StatusCTOReview, StatusFEReview)
+	request := fmt.Sprintf(`status NOT IN ("%s") AND (status was "%s" OR status was "%s" OR status was "%s" OR status was "%s" OR status was "%s")`,
+		StatusClosed, StatusTlReview, StatusPeerReview, StatusDesignReview, StatusCTOReview, StatusFEReview)
 	if len(typeNames) != 0 {
 		// format of jql statuses `("FE Task")` or `("FE Sub-Task","FE Task")`
 		request += ` AND type IN ("` + strings.Join(typeNames, `","`) + `")`
@@ -364,8 +364,8 @@ func (j *Jira) ClarificationIssuesOfOpenSprints() ([]Issue, error) {
 
 // IssuesOnReview searches all issues with review statuses and retrieves it with changelog history
 func (j *Jira) IssuesOnReview() ([]Issue, error) {
-	request := fmt.Sprintf(`assignee != %s AND status IN ("%s","%s","%s","%s","%s","%s")`,
-		StatusEmptyAssignee, StatusPeerReview, StatusTlReview, StatusDesignReview, StatusPMReview, StatusCTOReview, StatusFEReview)
+	request := fmt.Sprintf(`assignee != %s AND status IN ("%s","%s","%s","%s","%s")`,
+		StatusEmptyAssignee, StatusPeerReview, StatusTlReview, StatusDesignReview, StatusCTOReview, StatusFEReview)
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, fmt.Errorf("can't take jira not closed issues: %s", err)

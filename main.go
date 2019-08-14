@@ -93,6 +93,7 @@ func main() {
 			{
 				Name:  "remove-all-slack-attachments",
 				Usage: "Removes ABSOLUTELY ALL Slack attachments",
+				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
 					cfg := config.GetConfig(true, c.String("config"))
 					application := app.New(cfg)
@@ -309,6 +310,7 @@ func main() {
 			{
 				Name:  "send-clarification-report-now",
 				Usage: "Send clarification issues report right now",
+				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
 					cfg := config.GetConfig(true, c.String("config"))
 					application := app.New(cfg)
@@ -318,6 +320,7 @@ func main() {
 			{
 				Name:  "send-long-review-time-report-now",
 				Usage: "Send long review time report right now",
+				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
 					cfg := config.GetConfig(true, c.String("config"))
 					application := app.New(cfg)
