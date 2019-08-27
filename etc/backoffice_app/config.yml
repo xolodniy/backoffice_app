@@ -58,7 +58,7 @@ jira:
 
 bitbucket:
   apiurl: https://api.bitbucket.org/2.0
-  owner: theflowglobal
+  owner: atnrpro
   auth:
     username: stepan.morozov@atnr.pro
     password: 123123123

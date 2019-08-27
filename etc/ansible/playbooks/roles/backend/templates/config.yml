@@ -58,7 +58,7 @@ jira:
 
 bitbucket:
   apiurl: https://api.bitbucket.org/2.0
-  owner: theflowglobal
+  owner: atnrpro
   auth:
     username: {{ bitbucket_login }}
     password: {{ bitbucket_password }}
