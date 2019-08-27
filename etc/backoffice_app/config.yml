@@ -53,14 +53,14 @@ reports:
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
-    username: stepan.morozov@theflow.global
+    username: stepan.morozov@atnr.pro
     token: GaQ1oimS8bWXNdqcFyRG492D
 
 bitbucket:
   apiurl: https://api.bitbucket.org/2.0
   owner: theflowglobal
   auth:
-    username: stepan.morozov@theflow.global
+    username: stepan.morozov@atnr.pro
     password: 123123123
 
 slack:
@@ -118,37 +118,37 @@ amplify:
 
 users:
   - jiraaccountid: 5a2575776a747c0e71ab2972
-    email: andrey.solovyov@theflow.global
+    email: andrey.solovyov@atnr.pro
     slackid: U8990009Z
     slackname: tinymail8
     slackrealname: "Andrey Solovyov"
 
   - jiraaccountid: 5acf07e953a71a2a7cd8657f
-    email: artem.efremov@theflow.global
+    email: artem.efremov@atnr.pro
     slackid: U9FDU5W4D
     slackname: drmroll
     slackrealname: "Artem Efremov"
 
   - jiraaccountid: "557058:00cb683a-68e2-49a8-a727-96e2494e5160"
-    email: arthur.danilevskiy@theflow.global
+    email: arthur.danilevskiy@atnr.pro
     slackid: U9ALLBG5S
     slackname: arthurdanilevsky
     slackrealname: "Arthur Danilevskiy"
 
   - jiraaccountid: 5cf3b6d098b1560e85996fae
-    email: denis.kolosov@theflow.global
+    email: denis.kolosov@atnr.pro
     slackid: UK2CKC7SQ
     slackname: denis.kolosov
     slackrealname: "Denis Kolosov"
 
   - jiraaccountid: 5cde6cc64326200dc972393a
-    email: denis.yudin@theflow.global
+    email: denis.yudin@atnr.pro
     slackid: UJR90H205
     slackname: denis.yudin
     slackrealname: "Denis Yudin"
 
   - jiraaccountid: 5d2355de4b35f80c5764359b
-    email: dmitrii.kishchik@theflow.global
+    email: dmitrii.kishchik@atnr.pro
     slackid: UKU6CBDLJ
     slackname: dmitrii.kishchik
     slackrealname: "Dmitrii Kishchik"
@@ -160,13 +160,13 @@ users:
     slackrealname: empty
 
   - jiraaccountid: 5cc0cad796f23e0e77176afd
-    email: gleb.dmitriev@theflow.global
+    email: gleb.dmitriev@atnr.pro
     slackid: UJ3JDHKPA
     slackname: gleb.dmitriev
     slackrealname: Gleb
 
   - jiraaccountid: 5cfd562c515e2c0c5cfb40cc
-    email: irina.glebova@theflow.global
+    email: irina.glebova@atnr.pro
     slackid: UK9C07RB6
     slackname: irina.glebova
     slackrealname: "Irina Glebova"
@@ -178,55 +178,55 @@ users:
     slackrealname: "Ivan Tomilov"
 
   - jiraaccountid: 5c625e3cff6a2e4d3d1460a1
-    email: muzafar.muradov@theflow.global
+    email: muzafar.muradov@atnr.pro
     slackid: UG47GFL92
     slackname: muzafar.muradov
     slackrealname: "Muzafar Muradov"
 
   - jiraaccountid: 5c667d34f8bb515c2c454660
-    email: mary.yadykina@theflow.global
+    email: mary.yadykina@atnr.pro
     slackid: UFQ0NSFPZ
     slackname: mary.yadykina
     slackrealname: "Mary Yadykina"
 
   - jiraaccountid: "557058:0eed2b63-6426-46c4-bae1-38d9acc022e9"
-    email: oleg.raev@theflow.global
+    email: oleg.raev@atnr.pro
     slackid: U97DJLL11
     slackname: ovel87
     slackrealname: "Oleg Raev"
 
   - jiraaccountid: 5cab83cd1608c412138781c3
-    email: olga.grigoruk@theflow.global
+    email: olga.grigoruk@atnr.pro
     slackid: UHSG2NQT1
     slackname: olga.grigoruk
     slackrealname: "Olga Grigoruk"
 
   - jiraaccountid: 5a3e2ac8a847e93dd0bf8ebd
-    email: pp@theflow.global
+    email: pp@atnr.pro
     slackid: U89802W2Z
     slackname: torium0
     slackrealname: "Pavel Palenin"
 
   - jiraaccountid: "557058:36da39a7-f13b-4285-a658-90e3eeeea4b8"
-    email: rg@theflow.global
+    email: rg@atnr.pro
     slackid: U88K5BQAD
     slackname: hard.rese7
     slackrealname: "Rodion Golovushkin"
 
   - jiraaccountid: "557058:9cca305d-28f2-41c6-af4d-393b33527316"
-    email: roman.vlasenko@theflow.global
+    email: roman.vlasenko@atnr.pro
     slackid: UFNGKAYDC
     slackname: bamp94
     slackrealname: "Roman Vlasenko"
 
   - jiraaccountid: 5b27461fedacc156e2f37052
-    email: stepan.morozov@theflow.global
+    email: stepan.morozov@atnr.pro
     slackid: U8A004WK0
     slackname: smorozovki0911
     slackrealname: "Stepan Morozov"
 
   - jiraaccountid: 5cfd562a8186a70c604243c5
-    email: vadim.zaripov@theflow.global
+    email: vadim.zaripov@atnr.pro
     slackid: UK15STKC3
     slackname: vadim.zaripov
     slackrealname: "Vadim Zaripov"
