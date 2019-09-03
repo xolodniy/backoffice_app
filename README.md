@@ -55,7 +55,7 @@ Now you can clone the application and prepare it for running:
 
 1. Clone repository
 
-        $ git clone git@bitbucket.org:theflowglobal/backoffice_app.git
+        $ git clone git@bitbucket.org:atnrpro/backoffice_app.git
     
 1. Go to app directory
 
