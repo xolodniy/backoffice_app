@@ -1446,7 +1446,7 @@ func (a *App) ChangeJiraSubtasksInfo(issue jira.Issue, changelog jira.Changelog)
 	}
 }
 
-// ReportLowPriorityIssuesStarted checks if developer start task with low priority and send message about it
+// ReportLowPriorityIssuesStarted checks if developer start issue with low priority and send report about it
 func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 	// get all opened and started issues with one last worklog activity, sorted by priority from highest
 	issues, err := a.Jira.OpenedIssuesWithLastWorklogActivity()
@@ -1498,7 +1498,7 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 			continue
 		}
 		user := a.GetUserInfoByTagValue(TagUserJiraAccountID, developer)
-		// check people in ignore list
+		// check developers in ignore list
 		var isIgnore bool
 		for _, name := range a.Config.IgnoreList {
 			if user[TagUserSlackRealName] == name {
