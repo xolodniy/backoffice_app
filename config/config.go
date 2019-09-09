@@ -17,22 +17,23 @@ type Main struct {
 	Slack
 	Bitbucket
 	Reports struct {
-		DailyWorkersWorkedTime        Report
-		WeeklyWorkersWorkedTime       Report
-		ReportClosedSubtasks          Report
-		ReportAfterSecondReviewAll    Report
-		ReportAfterSecondReviewBE     Report
-		ReportAfterSecondReviewFE     Report
-		EmployeesExceededTasks        Report
-		ReportSlackSpaceEnding        Report
-		ReportGitMigrations           Report
-		ReportSprintStatus            Report
-		ReportClarificationIssues     Report
-		Report24HoursReviewIssues     Report
-		ReportGitAnsibleChanges       Report
-		DailyWorkersLessWorkedMessage Report
-		WeeklyReportOverworkedIssues  Report
-		ReportEpicClosedIssues        Report
+		DailyWorkersWorkedTime         Report
+		WeeklyWorkersWorkedTime        Report
+		ReportClosedSubtasks           Report
+		ReportAfterSecondReviewAll     Report
+		ReportAfterSecondReviewBE      Report
+		ReportAfterSecondReviewFE      Report
+		EmployeesExceededTasks         Report
+		ReportSlackSpaceEnding         Report
+		ReportGitMigrations            Report
+		ReportSprintStatus             Report
+		ReportClarificationIssues      Report
+		Report24HoursReviewIssues      Report
+		ReportGitAnsibleChanges        Report
+		DailyWorkersLessWorkedMessage  Report
+		WeeklyReportOverworkedIssues   Report
+		ReportEpicClosedIssues         Report
+		ReportLowPriorityIssuesStarted Report
 	}
 	Database
 	Amplify

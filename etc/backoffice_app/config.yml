@@ -28,7 +28,7 @@ reports:
     schedule: "@yearly"
     channel: "#back-office-app"
   reportgitmigrations:
-    schedule: "@hourly"
+    schedule: "@yearly"
     channel: "#migrations"
   reportsprintstatus:
     schedule: "@yearly"
@@ -47,6 +47,9 @@ reports:
     schedule: "@yearly"
     channel: "Artem Efremov"
   reportepicclosedissues:
+    schedule: "@yearly"
+    channel: "#back-office-app"
+  reportlowpriorityissuesstarted:
     schedule: "@yearly"
     channel: "#back-office-app"
 
