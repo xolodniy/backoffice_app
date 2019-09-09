@@ -1445,3 +1445,70 @@ func (a *App) ChangeJiraSubtasksInfo(issue jira.Issue, changelog jira.Changelog)
 
 	}
 }
+
+// ReportLowPriorityIssuesStarted checks if developer start task with low priority and send message about it
+func (a *App) ReportLowPriorityIssuesStarted(channel string) {
+	// get all opened and started issues with one last worklog activity, sorted by priority from highest
+	issues, err := a.Jira.OpenedIssuesWithLastWorklogActivity()
+	if err != nil {
+		logrus.WithError(err).Errorf("Can't get issue from Jira with last worklog activity")
+		return
+	}
+	// sort by developers
+	developerIssues := make(map[string][]jira.Issue)
+	for _, issue := range issues {
+		developerIssues[issue.DeveloperMap(jira.TagDeveloperID)] = append(developerIssues[issue.DeveloperMap(jira.TagDeveloperID)], issue)
+	}
+	for developer, issues := range developerIssues {
+		var priorityIssue, activeIssue jira.Issue
+		// find priority and active tasks to check, if active task not priority, send message
+		for _, issue := range issues {
+			// set first issue with the highest priority if variables are empty
+			if priorityIssue.Fields == nil {
+				activeIssue = issue
+				priorityIssue = issue
+				continue
+			}
+			//check active issues for last our, because hubstaff updates time estimate one time in hour
+			if len(issue.Fields.Worklog.Worklogs) != 0 && time.Time(*issue.Fields.Worklog.Worklogs[0].Started).UTC().After(time.Now().UTC().Add(-1*time.Hour)) {
+				// check if issue has activity, but not started and start it
+				if issue.Fields.Status.Name == jira.StatusOpen {
+					if err := a.Jira.IssueSetStatusTransition(issue.Key, jira.TransitionStart); err != nil {
+						logrus.WithError(err).WithField("issueKey", issue.Key).Errorf("Can't set start transition for issue")
+					}
+				}
+				if len(activeIssue.Fields.Worklog.Worklogs) != 0 {
+					if time.Time(*issue.Fields.Worklog.Worklogs[0].Started).After(time.Time(*activeIssue.Fields.Worklog.Worklogs[0].Started)) {
+						activeIssue = issue
+					}
+				} else {
+					activeIssue = issue
+				}
+			}
+			// if active issue changed, but priorities are similar, set priorityIssue as activeIssue
+			if activeIssue.Fields.Priority.ID == priorityIssue.Fields.Priority.ID {
+				priorityIssue = activeIssue
+			}
+			// the highest priority has minimal id
+			if issue.Fields.Priority.ID < priorityIssue.Fields.Priority.ID {
+				priorityIssue = issue
+			}
+		}
+		if activeIssue.Key == priorityIssue.Key {
+			continue
+		}
+		user := a.GetUserInfoByTagValue(TagUserJiraAccountID, developer)
+		// check people in ignore list
+		var isIgnore bool
+		for _, name := range a.Config.IgnoreList {
+			if user[TagUserSlackRealName] == name {
+				isIgnore = true
+				break
+			}
+		}
+		if !isIgnore {
+			a.Slack.SendMessage(fmt.Sprintf("<@%s> начал работать над %s вперед %s",
+				user[TagUserSlackID], activeIssue.Link(), priorityIssue.Link()), channel)
+		}
+	}
+}
