@@ -1465,11 +1465,8 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 			if issue.Fields.Priority.ID < priorityIssue.Fields.Priority.ID {
 				priorityIssue = issue
 			}
-			if len(issue.Fields.Worklog.Worklogs) == 0 {
-				continue
-			}
 			//check active issues for last our, because hubstaff updates time estimate one time in hour
-			if time.Time(*issue.Fields.Worklog.Worklogs[0].Started).UTC().Before(hourAgoUTC) {
+			if len(issue.Fields.Worklog.Worklogs) == 0 || time.Time(*issue.Fields.Worklog.Worklogs[0].Started).UTC().Before(hourAgoUTC) {
 				continue
 			}
 			if len(activeIssue.Fields.Worklog.Worklogs) == 0 || time.Time(*issue.Fields.Worklog.Worklogs[0].Started).After(time.Time(*activeIssue.Fields.Worklog.Worklogs[0].Started)) {
