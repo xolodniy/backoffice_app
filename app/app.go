@@ -1100,7 +1100,7 @@ func (a *App) ReportOverworkedIssues(channel string) {
 	}
 	// sort by overwork %
 	sort.SliceStable(issues, func(i, j int) bool {
-		if issues[i].Fields.TimeTracking.OriginalEstimateSeconds == 0 || issues[j].Fields.TimeTracking.OriginalEstimateSeconds == 0 {
+		if issues[i].Fields.TimeTracking.OriginalEstimateSeconds/100 == 0 || issues[j].Fields.TimeTracking.OriginalEstimateSeconds/100 == 0 {
 			return false
 		}
 		return (issues[i].Fields.TimeTracking.TimeSpentSeconds-issues[i].Fields.TimeTracking.OriginalEstimateSeconds)/(issues[i].Fields.TimeTracking.OriginalEstimateSeconds/100) <
@@ -1118,7 +1118,8 @@ func (a *App) ReportOverworkedIssues(channel string) {
 		overWorkedDuration := issue.Fields.TimeTracking.TimeSpentSeconds - issue.Fields.TimeTracking.OriginalEstimateSeconds
 		if overWorkedDuration < issue.Fields.TimeTracking.OriginalEstimateSeconds/10 ||
 			issue.Fields.TimeTracking.RemainingEstimateSeconds != 0 ||
-			issue.Fields.TimeTracking.OriginalEstimateSeconds == 0 || overWorkedDuration < 60*60 {
+			issue.Fields.TimeTracking.OriginalEstimateSeconds == 0 || overWorkedDuration < 60*60 ||
+			issue.Fields.TimeTracking.OriginalEstimateSeconds/100 == 0 {
 			continue
 		}
 		msgBody += "\n" + developer + "\n" + issue.String()
