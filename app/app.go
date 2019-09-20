@@ -198,14 +198,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 
 	var developerEmails = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		var ignoreDeveloper bool
-		for _, dev := range a.Slack.IgnoreList {
-			if dev == issue.DeveloperMap(jira.TagDeveloperName) {
-				ignoreDeveloper = true
-				break
-			}
-		}
-		if ignoreDeveloper {
+		if common.ValueIn(issue.DeveloperMap(jira.TagDeveloperName), a.Slack.IgnoreList...) {
 			continue
 		}
 		var developerEmail string
@@ -1119,11 +1112,8 @@ func (a *App) ReportOverworkedIssues(channel string) {
 		if developer == "" {
 			developer = jira.NoDeveloper
 		}
-	Loop:
-		for _, dev := range a.Slack.IgnoreList {
-			if developer == dev {
-				continue Loop
-			}
+		if common.ValueIn(developer, a.Slack.IgnoreList...) {
+			continue
 		}
 		overWorkedDuration := issue.Fields.TimeTracking.TimeSpentSeconds - issue.Fields.TimeTracking.OriginalEstimateSeconds
 		if overWorkedDuration < issue.Fields.TimeTracking.OriginalEstimateSeconds/10 ||
@@ -1499,12 +1489,8 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 		}
 		user := a.GetUserInfoByTagValue(TagUserJiraAccountID, developer)
 		// check developers in ignore list
-		var isIgnore bool
-		for _, name := range a.Config.IgnoreList {
-			if user[TagUserSlackRealName] == name {
-				isIgnore = true
-				break
-			}
+		if common.ValueIn(user[TagUserSlackRealName], a.Config.IgnoreList...) {
+			continue
 		}
 		if !isIgnore {
 			a.Slack.SendMessage(fmt.Sprintf("<@%s> начал работать над %s вперед %s",
