@@ -1449,6 +1449,7 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 	for _, issue := range issues {
 		developerIssues[issue.DeveloperMap(jira.TagDeveloperID)] = append(developerIssues[issue.DeveloperMap(jira.TagDeveloperID)], issue)
 	}
+	hourAgoUTC := time.Now().UTC().Add(-1 * time.Hour)
 	for developer, issues := range developerIssues {
 		var priorityIssue, activeIssue jira.Issue
 		// find priority and active tasks to check, if active task not priority, send message
@@ -1459,29 +1460,30 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 				priorityIssue = issue
 				continue
 			}
+			// the highest priority has minimal id
+			if issue.Fields.Priority.ID < priorityIssue.Fields.Priority.ID {
+				priorityIssue = issue
+			}
+			if len(issue.Fields.Worklog.Worklogs) == 0 {
+				continue
+			}
 			//check active issues for last our, because hubstaff updates time estimate one time in hour
-			if len(issue.Fields.Worklog.Worklogs) != 0 && time.Time(*issue.Fields.Worklog.Worklogs[0].Started).UTC().After(time.Now().UTC().Add(-1*time.Hour)) {
-				// check if issue has activity, but not started and start it
-				if issue.Fields.Status.Name == jira.StatusOpen {
-					if err := a.Jira.IssueSetStatusTransition(issue.Key, jira.TransitionStart); err != nil {
-						logrus.WithError(err).WithField("issueKey", issue.Key).Errorf("Can't set start transition for issue")
-					}
-				}
-				if len(activeIssue.Fields.Worklog.Worklogs) != 0 {
-					if time.Time(*issue.Fields.Worklog.Worklogs[0].Started).After(time.Time(*activeIssue.Fields.Worklog.Worklogs[0].Started)) {
-						activeIssue = issue
-					}
-				} else {
-					activeIssue = issue
-				}
+			if time.Time(*issue.Fields.Worklog.Worklogs[0].Started).UTC().Before(hourAgoUTC) {
+				continue
+			}
+			if len(activeIssue.Fields.Worklog.Worklogs) == 0 || time.Time(*issue.Fields.Worklog.Worklogs[0].Started).After(time.Time(*activeIssue.Fields.Worklog.Worklogs[0].Started)) {
+				activeIssue = issue
 			}
 			// if active issue changed, but priorities are similar, set priorityIssue as activeIssue
 			if activeIssue.Fields.Priority.ID == priorityIssue.Fields.Priority.ID {
 				priorityIssue = activeIssue
 			}
-			// the highest priority has minimal id
-			if issue.Fields.Priority.ID < priorityIssue.Fields.Priority.ID {
-				priorityIssue = issue
+			// check if issue has activity, but not started and start it
+			if issue.Fields.Status.Name != jira.StatusOpen {
+				continue
+			}
+			if err := a.Jira.IssueSetStatusTransition(issue.Key, jira.TransitionStart); err != nil {
+				logrus.WithError(err).WithField("issueKey", issue.Key).Errorf("Can't set start transition for issue")
 			}
 		}
 		if activeIssue.Key == priorityIssue.Key {
@@ -1492,9 +1494,7 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 		if common.ValueIn(user[TagUserSlackRealName], a.Config.IgnoreList...) {
 			continue
 		}
-		if !isIgnore {
-			a.Slack.SendMessage(fmt.Sprintf("<@%s> начал работать над %s вперед %s",
-				user[TagUserSlackID], activeIssue.Link(), priorityIssue.Link()), channel)
-		}
+		a.Slack.SendMessage(fmt.Sprintf("<@%s> начал работать над %s вперед %s",
+			user[TagUserSlackID], activeIssue.Link(), priorityIssue.Link()), channel)
 	}
 }
