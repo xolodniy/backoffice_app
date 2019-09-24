@@ -1452,39 +1452,35 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 	}
 	hourAgoUTC := time.Now().UTC().Add(-1 * time.Hour)
 	for developer, issues := range developerIssues {
-		var priorityIssue, activeIssue jira.Issue
+		var activeIssue jira.Issue
+		// set first issue with the highest priority
+		priorityIssue := issues[0]
 		// find priority and active tasks to check, if active task not priority, send message
 		for _, issue := range issues {
-			// set first issue with the highest priority if variables are empty
-			if priorityIssue.Fields == nil {
-				activeIssue = issue
-				priorityIssue = issue
+			if len(issue.Fields.Worklog.Worklogs) == 0 {
 				continue
-			}
-			// the highest priority has minimal id
-			if issue.Fields.Priority.ID < priorityIssue.Fields.Priority.ID {
-				priorityIssue = issue
-			}
-			//check active issues for last our, because hubstaff updates time estimate one time in hour
-			if len(issue.Fields.Worklog.Worklogs) == 0 || time.Time(*issue.Fields.Worklog.Worklogs[0].Started).UTC().Before(hourAgoUTC) {
-				continue
-			}
-			if len(activeIssue.Fields.Worklog.Worklogs) == 0 || time.Time(*issue.Fields.Worklog.Worklogs[0].Started).After(time.Time(*activeIssue.Fields.Worklog.Worklogs[0].Started)) {
-				activeIssue = issue
-			}
-			// if active issue changed, but priorities are similar, set priorityIssue as activeIssue
-			if activeIssue.Fields.Priority.ID == priorityIssue.Fields.Priority.ID {
-				priorityIssue = activeIssue
 			}
 			// check if issue has activity, but not started and start it
-			if issue.Fields.Status.Name != jira.StatusOpen {
+			if issue.Fields.Status.Name == jira.StatusOpen {
+				a.Jira.IssueSetStatusTransition(issue.Key, jira.TransitionStart)
+			}
+
+			if activeIssue.Fields == nil || len(activeIssue.Fields.Worklog.Worklogs) == 0 {
+				activeIssue = issue
 				continue
 			}
-			if err := a.Jira.IssueSetStatusTransition(issue.Key, jira.TransitionStart); err != nil {
-				logrus.WithError(err).WithField("issueKey", issue.Key).Errorf("Can't set start transition for issue")
+			issueTimeStarted := *issue.Fields.Worklog.Worklogs[0].Started
+			activeIssueTimeStarted := *activeIssue.Fields.Worklog.Worklogs[0].Started
+			if time.Time(issueTimeStarted).After(time.Time(activeIssueTimeStarted)) {
+				activeIssue = issue
 			}
 		}
-		if activeIssue.Key == priorityIssue.Key {
+		if activeIssue.Fields == nil || activeIssue.Fields.Priority == priorityIssue.Fields.Priority {
+			continue
+		}
+		//check active issues for last our, because hubstaff updates time estimate one time in hour
+		activeIssueTimeStarted := *activeIssue.Fields.Worklog.Worklogs[0].Started
+		if len(activeIssue.Fields.Worklog.Worklogs) == 0 || time.Time(activeIssueTimeStarted).UTC().Before(hourAgoUTC) {
 			continue
 		}
 		user := a.GetUserInfoByTagValue(TagUserJiraAccountID, developer)
