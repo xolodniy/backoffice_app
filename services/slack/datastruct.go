@@ -70,7 +70,8 @@ type Member struct {
 
 // https://api.slack.com/methods/conversations.history
 type MessagesHistory struct {
-	OK               string    `json:"ok"`
+	Ok               bool      `json:"ok"`
+	Error            string    `json:"error"`
 	Oldest           string    `json:"oldest"`
 	Messages         []Message `json:"messages"`
 	HasMore          bool      `json:"has_more"`
@@ -97,4 +98,19 @@ type Message struct {
 		User string `json:"user"`
 		Ts   string `json:"ts"`
 	} `json:"replies"`
+	Reactions []struct {
+		Name  string   `json:"name"`
+		Users []string `json:"users"`
+		Count int      `json:"count"`
+	}
+}
+
+// https://api.slack.com/methods/conversations.members
+type MemberList struct {
+	Ok               bool     `json:"ok"`
+	Error            string   `json:"error"`
+	Members          []string `json:"members"`
+	ResponseMetadata struct {
+		NextCursor string `json:"next_cursor"`
+	} `json:"response_metadata"`
 }
