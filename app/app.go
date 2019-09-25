@@ -1422,6 +1422,17 @@ func (a *App) GetUserInfoByTagValue(tag, value string) config.User {
 	return make(config.User, 0)
 }
 
+// GetAllUsersValuesByTag retrieve user values by tag from map
+func (a *App) GetAllUsersValuesByTag(tag string) []string {
+	var values []string
+	for _, a := range a.Config.Users {
+		if a[tag] != "" {
+			values = append(values, a[tag])
+		}
+	}
+	return values
+}
+
 // ChangeJiraSubtasksInfo change fix versions and priority of subtasks
 func (a *App) ChangeJiraSubtasksInfo(issue jira.Issue, changelog jira.Changelog) {
 	if len(issue.Fields.Subtasks) == 0 {
