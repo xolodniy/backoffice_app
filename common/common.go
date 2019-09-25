@@ -22,3 +22,23 @@ func FmtDuration(duration time.Duration) string {
 		return fmt.Sprintf("%dm", m)
 	}
 }
+
+// ValueIn returns true if `in` contains `value`
+func ValueIn(value string, in ...string) bool {
+	for _, el := range in {
+		if el == value {
+			return true
+		}
+	}
+	return false
+}
+
+// ElementNumber returns element number
+func ElementNumber(value string, in ...string) int {
+	for i, el := range in {
+		if el == value {
+			return i
+		}
+	}
+	return 0
+}
