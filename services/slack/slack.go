@@ -341,3 +341,118 @@ func (s *Slack) checkChannelOnUserRealName(channel string) (string, error) {
 	}
 	return channel, nil
 }
+
+// ChannelMessageHistory retrieves slice of all slack channel messages by time
+func (s *Slack) ChannelMessageHistory(channelID, latest, oldest string) ([]Message, error) {
+	var (
+		channelMessages []Message
+		cursor          string
+	)
+	for i := 0; ; i++ {
+		urlStr := fmt.Sprintf("%s/conversations.history?token=%s&inclusive=true&channel=%s&cursor=%s&latest=%v&oldest=%v&pretty=1",
+			s.APIURL, s.InToken, channelID, cursor, latest, oldest)
+		fmt.Println(urlStr)
+
+		req, err := http.NewRequest("GET", urlStr, nil)
+		if err != nil {
+			return []Message{}, err
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		res := MessagesHistory{}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return []Message{}, err
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return []Message{}, err
+		}
+		if err := json.Unmarshal(body, &res); err != nil {
+			return []Message{}, err
+		}
+		if !res.Ok {
+			return []Message{}, fmt.Errorf(res.Error)
+		}
+		channelMessages = append(channelMessages, res.Messages...)
+		if !res.HasMore {
+			break
+		}
+		cursor = res.ResponseMetadata.NextCursor
+	}
+	return channelMessages, nil
+}
+
+// ChannelMessage retrieves slack channel message by ts
+func (s *Slack) ChannelMessage(channelID, ts string) (Message, error) {
+	urlStr := fmt.Sprintf("%s/channels.history?token=%s&inclusive=true&channel=%s&latest=%v&pretty=1&count=1",
+		s.APIURL, s.InToken, channelID, ts)
+	fmt.Println(urlStr)
+
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return Message{}, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	res := MessagesHistory{}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return Message{}, err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return Message{}, err
+	}
+	if err := json.Unmarshal(body, &res); err != nil {
+		return Message{}, err
+	}
+	if !res.Ok {
+		return Message{}, fmt.Errorf(res.Error)
+	}
+	if len(res.Messages) == 0 {
+		return Message{}, nil
+	}
+	return res.Messages[0], nil
+}
+
+// ChannelMessageHistory retrieves slice of all slack channel messages by time
+func (s *Slack) ChannelMembers(channelID string) ([]string, error) {
+	var (
+		members []string
+		cursor  string
+	)
+	for i := 0; ; i++ {
+		urlStr := fmt.Sprintf("%s/conversations.members?token=%s&channel=%s&cursor=%s&pretty=1",
+			s.APIURL, s.InToken, channelID, cursor)
+		fmt.Println(urlStr)
+
+		req, err := http.NewRequest("GET", urlStr, nil)
+		if err != nil {
+			return []string{}, err
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		res := MemberList{}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return []string{}, err
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return []string{}, err
+		}
+		if err := json.Unmarshal(body, &res); err != nil {
+			return []string{}, err
+		}
+		if !res.Ok {
+			return []string{}, fmt.Errorf(res.Error)
+		}
+		members = append(members, res.Members...)
+		if res.ResponseMetadata.NextCursor == "" {
+			break
+		}
+		cursor = res.ResponseMetadata.NextCursor
+	}
+	return members, nil
+}
