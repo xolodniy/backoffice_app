@@ -1456,3 +1456,95 @@ func (a *App) ChangeJiraSubtasksInfo(issue jira.Issue, changelog jira.Changelog)
 
 	}
 }
+
+// TODO for all channels, add ignore back office report bot id, check users id from channel, not from config
+func (a *App) CheckNeedReplyMessages() {
+	latestUnix := time.Now().Add(-13 * time.Hour).Unix()
+	oldestUnix := time.Now().Add(0 * time.Hour).Unix()
+	fmt.Println(latestUnix)
+	fmt.Println(oldestUnix)
+	channelMessages, err := a.Slack.ChannelMessageHistory("CNR1HMXPA", fmt.Sprintf("%v", oldestUnix), fmt.Sprintf("%v", latestUnix))
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{"channelID": "CNR1HMXPA", "latestUnix": latestUnix, "oldestUnix": oldestUnix}).Error("Can not get messages from channel")
+		return
+	}
+	usersSlackIDs := a.GetAllUsersValuesByTag(TagUserSlackID)
+	for _, channelMessage := range channelMessages {
+		if strings.Contains(channelMessage.Text, "<!channel>") {
+			channelMembers, err := a.Slack.ChannelMembers("CNR1HMXPA")
+			if err != nil {
+				logrus.WithError(err).WithField("channelID", "CNR1HMXPA").Error("Can not get channel members")
+				return
+			}
+			fmt.Println(channelMembers)
+			var reactedUsers []string
+			for _, rection := range channelMessage.Reactions {
+				reactedUsers = append(reactedUsers, rection.Users...)
+			}
+			var notReactedUsers []string
+			for _, member := range channelMembers {
+				if !common.ValueIn(member, reactedUsers...) {
+					notReactedUsers = append(notReactedUsers, member)
+				}
+			}
+			if len(notReactedUsers) == 0 {
+				continue
+			}
+			var message string
+			for _, userID := range notReactedUsers {
+				message = "<@" + userID + "> "
+			}
+			a.Slack.SendToThread(message+" ^", "CNR1HMXPA", channelMessage.Ts)
+		}
+		var mentionedUsers []string
+	Loop:
+		for _, userSlackID := range usersSlackIDs {
+			if channelMessage.Subtype != "" {
+				break Loop
+			}
+			if strings.Contains(channelMessage.Text, userSlackID) {
+				mentionedUsers = append(mentionedUsers, userSlackID)
+			}
+		}
+		var message string
+		if channelMessage.ReplyCount == 0 && len(mentionedUsers) != 0 {
+			for _, userID := range mentionedUsers {
+				message = "<@" + userID + "> "
+			}
+			a.Slack.SendToThread(message+" ^", "CNR1HMXPA", channelMessage.Ts)
+			continue
+		}
+		for _, reply := range channelMessage.Replies {
+			if common.ValueIn(reply.User, mentionedUsers...) {
+				mentionedUsers[common.ElementNumber(reply.User)] = mentionedUsers[len(mentionedUsers)-1]
+				mentionedUsers = mentionedUsers[:len(mentionedUsers)-1]
+			}
+			replyMessage, err := a.Slack.ChannelMessage("CNR1HMXPA", reply.Ts)
+			if err != nil {
+				logrus.WithError(err).WithFields(logrus.Fields{"channelID": "CNR1HMXPA", "ts": reply.Ts}).Error("Can not get reply for message from channel")
+				return
+			}
+			if replyMessage.Subtype != "" {
+				continue
+			}
+			for _, userSlackID := range usersSlackIDs {
+				if strings.Contains(replyMessage.Text, userSlackID) && !common.ValueIn(userSlackID, mentionedUsers...) {
+					mentionedUsers = append(mentionedUsers, userSlackID)
+				}
+			}
+		}
+		fmt.Println(mentionedUsers)
+		if len(mentionedUsers) == 0 {
+			continue
+		}
+		for _, userID := range mentionedUsers {
+			message = "<@" + userID + "> "
+		}
+		a.Slack.SendToThread(message+" ^", "CNR1HMXPA", channelMessage.Ts)
+	}
+	fmt.Println(len(channelMessages))
+	//for _, message := range channelMessages {
+	//	fmt.Println(message.ThreadTs)
+	//	fmt.Println(message)
+	//}
+}
