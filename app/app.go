@@ -1456,6 +1456,11 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 	}
 	hourAgoUTC := time.Now().UTC().Add(-1 * time.Hour)
 	for developer, issues := range developerIssues {
+		user := a.GetUserInfoByTagValue(TagUserJiraAccountID, developer)
+		// check developers in ignore list
+		if common.ValueIn(user[TagUserSlackRealName], a.Config.IgnoreList...) {
+			continue
+		}
 		var activeIssue jira.Issue
 		// set first issue with the highest priority
 		priorityIssue := issues[0]
@@ -1485,11 +1490,6 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 		//check active issues for last our, because hubstaff updates time estimate one time in hour
 		activeIssueTimeStarted := *activeIssue.Fields.Worklog.Worklogs[0].Started
 		if len(activeIssue.Fields.Worklog.Worklogs) == 0 || time.Time(activeIssueTimeStarted).UTC().Before(hourAgoUTC) {
-			continue
-		}
-		user := a.GetUserInfoByTagValue(TagUserJiraAccountID, developer)
-		// check developers in ignore list
-		if common.ValueIn(user[TagUserSlackRealName], a.Config.IgnoreList...) {
 			continue
 		}
 		a.Slack.SendMessage(fmt.Sprintf("<@%s> начал работать над %s вперед %s",
