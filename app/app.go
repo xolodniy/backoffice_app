@@ -1446,7 +1446,7 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 	// get all opened and started issues with one last worklog activity, sorted by priority from highest
 	issues, err := a.Jira.OpenedIssuesWithLastWorklogActivity()
 	if err != nil {
-		logrus.WithError(err).Errorf("Can't get issue from Jira with last worklog activity")
+		logrus.WithError(err).Error("Can't get issue from Jira with last worklog activity")
 		return
 	}
 	// sort by developers
