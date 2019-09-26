@@ -456,3 +456,37 @@ func (s *Slack) ChannelMembers(channelID string) ([]string, error) {
 	}
 	return members, nil
 }
+
+// MessagePermalink retrieves slack channel message permalink by ts
+func (s *Slack) MessagePermalink(channelID, ts string) (string, error) {
+	urlStr := fmt.Sprintf("%s/chat.getPermalink?token=%s&channel=%s&message_ts=%v&pretty=1",
+		s.APIURL, s.InToken, channelID, ts)
+	fmt.Println(urlStr)
+
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	var res struct {
+		Ok        bool   `json:"ok"`
+		Error     string `json:"error"`
+		Permalink string `json:"permalink"`
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	if err := json.Unmarshal(body, &res); err != nil {
+		return "", err
+	}
+	if !res.Ok {
+		return "", fmt.Errorf(res.Error)
+	}
+	return res.Permalink, nil
+}
