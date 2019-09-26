@@ -1100,11 +1100,15 @@ func (a *App) ReportOverworkedIssues(channel string) {
 	}
 	// sort by overwork %
 	sort.SliceStable(issues, func(i, j int) bool {
-		if issues[i].Fields.TimeTracking.OriginalEstimateSeconds/100 == 0 || issues[j].Fields.TimeTracking.OriginalEstimateSeconds/100 == 0 {
+		iEstimate := issues[i].Fields.TimeTracking.OriginalEstimateSeconds
+		jEstimate := issues[j].Fields.TimeTracking.OriginalEstimateSeconds
+		if iEstimate/100 == 0 || jEstimate/100 == 0 {
 			return false
 		}
-		return (issues[i].Fields.TimeTracking.TimeSpentSeconds-issues[i].Fields.TimeTracking.OriginalEstimateSeconds)/(issues[i].Fields.TimeTracking.OriginalEstimateSeconds/100) <
-			(issues[j].Fields.TimeTracking.TimeSpentSeconds-issues[j].Fields.TimeTracking.OriginalEstimateSeconds)/(issues[j].Fields.TimeTracking.OriginalEstimateSeconds/100)
+		iTimeSpent := issues[i].Fields.TimeTracking.TimeSpentSeconds
+		jTimeSpent := issues[j].Fields.TimeTracking.TimeSpentSeconds
+		return (iTimeSpent-iEstimate)/(iEstimate/100) <
+			(jTimeSpent - jEstimate/(jEstimate/100))
 	})
 	var msgBody string
 	for _, issue := range issues {
