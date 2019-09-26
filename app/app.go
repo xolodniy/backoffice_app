@@ -1483,16 +1483,17 @@ func (a *App) CheckNeedReplyMessages() {
 			}
 			var notReactedUsers []string
 			for _, member := range channelMembers {
-				if !common.ValueIn(member, reactedUsers...) {
+				if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, a.Config.BotIDs...) && member != channelMessage.User {
 					notReactedUsers = append(notReactedUsers, member)
 				}
 			}
+			fmt.Println(notReactedUsers)
 			if len(notReactedUsers) == 0 {
 				continue
 			}
 			var message string
 			for _, userID := range notReactedUsers {
-				message = "<@" + userID + "> "
+				message += "<@" + userID + "> "
 			}
 			a.Slack.SendToThread(message+" ^", "CNR1HMXPA", channelMessage.Ts)
 		}
@@ -1506,12 +1507,17 @@ func (a *App) CheckNeedReplyMessages() {
 				mentionedUsers = append(mentionedUsers, userSlackID)
 			}
 		}
+		messagePermalink, err := a.Slack.MessagePermalink("CNR1HMXPA", channelMessage.Ts)
+		if err != nil {
+			logrus.WithError(err).WithFields(logrus.Fields{"channelID": "CNR1HMXPA", "ts": channelMessage.Ts}).Error("Can not get permalink for message from channel")
+			return
+		}
 		var message string
 		if channelMessage.ReplyCount == 0 && len(mentionedUsers) != 0 {
 			for _, userID := range mentionedUsers {
-				message = "<@" + userID + "> "
+				message += "<@" + userID + "> "
 			}
-			a.Slack.SendToThread(message+" ^", "CNR1HMXPA", channelMessage.Ts)
+			a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), "CNR1HMXPA", channelMessage.Ts)
 			continue
 		}
 		for _, reply := range channelMessage.Replies {
@@ -1528,7 +1534,8 @@ func (a *App) CheckNeedReplyMessages() {
 				continue
 			}
 			for _, userSlackID := range usersSlackIDs {
-				if strings.Contains(replyMessage.Text, userSlackID) && !common.ValueIn(userSlackID, mentionedUsers...) {
+				//TODO add map with permalink for message
+				if strings.Contains(replyMessage.Text, userSlackID) && !common.ValueIn(userSlackID, mentionedUsers...) && !common.ValueIn(userSlackID, a.Config.BotIDs...) {
 					mentionedUsers = append(mentionedUsers, userSlackID)
 				}
 			}
@@ -1538,9 +1545,9 @@ func (a *App) CheckNeedReplyMessages() {
 			continue
 		}
 		for _, userID := range mentionedUsers {
-			message = "<@" + userID + "> "
+			message += "<@" + userID + "> "
 		}
-		a.Slack.SendToThread(message+" ^", "CNR1HMXPA", channelMessage.Ts)
+		a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), "CNR1HMXPA", channelMessage.Ts)
 	}
 	fmt.Println(len(channelMessages))
 	//for _, message := range channelMessages {
