@@ -49,6 +49,9 @@ reports:
   reportepicclosedissues:
     schedule: "00 00 07 * * *"
     channel: "#back-office-app"
+  reportlowpriorityissuesstarted:
+    schedule: "@hourly"
+    channel: "#back-office-app"
 
 jira:
   apiurl: https://theflow.atlassian.net

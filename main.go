@@ -372,6 +372,21 @@ func main() {
 					application.ReportEpicsWithClosedIssues(channel)
 				},
 			},
+			{
+				Name:  "get-low-priority-issues-started",
+				Usage: "Gets jira low priority issues started by developer",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
+					application := app.New(cfg)
+					application.ReportLowPriorityIssuesStarted(channel)
+				},
+			},
 		}
 
 		if err := cliApp.Run(os.Args); err != nil {
@@ -491,6 +506,13 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 
 	err = tm.AddTask(cfg.Reports.ReportEpicClosedIssues.Schedule, func() {
 		application.ReportEpicsWithClosedIssues(cfg.Reports.ReportEpicClosedIssues.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.ReportLowPriorityIssuesStarted.Schedule, func() {
+		application.ReportEpicsWithClosedIssues(cfg.Reports.ReportLowPriorityIssuesStarted.Channel)
 	})
 	if err != nil {
 		panic(err)

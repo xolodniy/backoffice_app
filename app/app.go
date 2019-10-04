@@ -198,14 +198,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 
 	var developerEmails = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		var ignoreDeveloper bool
-		for _, dev := range a.Slack.IgnoreList {
-			if dev == issue.DeveloperMap(jira.TagDeveloperName) {
-				ignoreDeveloper = true
-				break
-			}
-		}
-		if ignoreDeveloper {
+		if common.ValueIn(issue.DeveloperMap(jira.TagDeveloperName), a.Slack.IgnoreList...) {
 			continue
 		}
 		var developerEmail string
@@ -1107,11 +1100,15 @@ func (a *App) ReportOverworkedIssues(channel string) {
 	}
 	// sort by overwork %
 	sort.SliceStable(issues, func(i, j int) bool {
-		if issues[i].Fields.TimeTracking.OriginalEstimateSeconds == 0 || issues[j].Fields.TimeTracking.OriginalEstimateSeconds == 0 {
+		iEstimate := issues[i].Fields.TimeTracking.OriginalEstimateSeconds
+		jEstimate := issues[j].Fields.TimeTracking.OriginalEstimateSeconds
+		if iEstimate/100 == 0 || jEstimate/100 == 0 {
 			return false
 		}
-		return (issues[i].Fields.TimeTracking.TimeSpentSeconds-issues[i].Fields.TimeTracking.OriginalEstimateSeconds)/(issues[i].Fields.TimeTracking.OriginalEstimateSeconds/100) <
-			(issues[j].Fields.TimeTracking.TimeSpentSeconds-issues[j].Fields.TimeTracking.OriginalEstimateSeconds)/(issues[j].Fields.TimeTracking.OriginalEstimateSeconds/100)
+		iTimeSpent := issues[i].Fields.TimeTracking.TimeSpentSeconds
+		jTimeSpent := issues[j].Fields.TimeTracking.TimeSpentSeconds
+		return (iTimeSpent-iEstimate)/(iEstimate/100) <
+			(jTimeSpent - jEstimate/(jEstimate/100))
 	})
 	var msgBody string
 	for _, issue := range issues {
@@ -1119,16 +1116,14 @@ func (a *App) ReportOverworkedIssues(channel string) {
 		if developer == "" {
 			developer = jira.NoDeveloper
 		}
-	Loop:
-		for _, dev := range a.Slack.IgnoreList {
-			if developer == dev {
-				continue Loop
-			}
+		if common.ValueIn(developer, a.Slack.IgnoreList...) {
+			continue
 		}
 		overWorkedDuration := issue.Fields.TimeTracking.TimeSpentSeconds - issue.Fields.TimeTracking.OriginalEstimateSeconds
 		if overWorkedDuration < issue.Fields.TimeTracking.OriginalEstimateSeconds/10 ||
 			issue.Fields.TimeTracking.RemainingEstimateSeconds != 0 ||
-			issue.Fields.TimeTracking.OriginalEstimateSeconds == 0 || overWorkedDuration < 60*60 {
+			issue.Fields.TimeTracking.OriginalEstimateSeconds == 0 || overWorkedDuration < 60*60 ||
+			issue.Fields.TimeTracking.OriginalEstimateSeconds/100 == 0 {
 			continue
 		}
 		msgBody += "\n" + developer + "\n" + issue.String()
@@ -1443,5 +1438,61 @@ func (a *App) ChangeJiraSubtasksInfo(issue jira.Issue, changelog jira.Changelog)
 			}
 		}
 
+	}
+}
+
+// ReportLowPriorityIssuesStarted checks if developer start issue with low priority and send report about it
+func (a *App) ReportLowPriorityIssuesStarted(channel string) {
+	// get all opened and started issues with one last worklog activity, sorted by priority from highest
+	issues, err := a.Jira.OpenedIssuesWithLastWorklogActivity()
+	if err != nil {
+		logrus.WithError(err).Error("Can't get issue from Jira with last worklog activity")
+		return
+	}
+	// sort by developers
+	developerIssues := make(map[string][]jira.Issue)
+	for _, issue := range issues {
+		developerIssues[issue.DeveloperMap(jira.TagDeveloperID)] = append(developerIssues[issue.DeveloperMap(jira.TagDeveloperID)], issue)
+	}
+	hourAgoUTC := time.Now().UTC().Add(-1 * time.Hour)
+	for developer, issues := range developerIssues {
+		user := a.GetUserInfoByTagValue(TagUserJiraAccountID, developer)
+		// check developers in ignore list
+		if common.ValueIn(user[TagUserSlackRealName], a.Config.IgnoreList...) {
+			continue
+		}
+		var activeIssue jira.Issue
+		// set first issue with the highest priority
+		priorityIssue := issues[0]
+		// find priority and active tasks to check, if active task not priority, send message
+		for _, issue := range issues {
+			if len(issue.Fields.Worklog.Worklogs) == 0 {
+				continue
+			}
+			// check if issue has activity, but not started and start it
+			if issue.Fields.Status.Name == jira.StatusOpen {
+				a.Jira.IssueSetStatusTransition(issue.Key, jira.TransitionStart)
+			}
+
+			if activeIssue.Fields == nil || len(activeIssue.Fields.Worklog.Worklogs) == 0 {
+				activeIssue = issue
+				continue
+			}
+			issueTimeStarted := *issue.Fields.Worklog.Worklogs[0].Started
+			activeIssueTimeStarted := *activeIssue.Fields.Worklog.Worklogs[0].Started
+			if time.Time(issueTimeStarted).After(time.Time(activeIssueTimeStarted)) {
+				activeIssue = issue
+			}
+		}
+		if activeIssue.Fields == nil || activeIssue.Fields.Priority == priorityIssue.Fields.Priority {
+			continue
+		}
+		//check active issues for last our, because hubstaff updates time estimate one time in hour
+		activeIssueTimeStarted := *activeIssue.Fields.Worklog.Worklogs[0].Started
+		if len(activeIssue.Fields.Worklog.Worklogs) == 0 || time.Time(activeIssueTimeStarted).UTC().Before(hourAgoUTC) {
+			continue
+		}
+		a.Slack.SendMessage(fmt.Sprintf("<@%s> начал работать над %s вперед %s",
+			user[TagUserSlackID], activeIssue.Link(), priorityIssue.Link()), channel)
 	}
 }

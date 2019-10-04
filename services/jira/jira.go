@@ -45,7 +45,7 @@ var (
 	StatusStarted                      = "Started"
 	StatusClosed                       = "Closed"
 	StatusOpen                         = "Open"
-	StatusTlReview                     = "TL review"
+	StatusTlReview                     = "In TL review"
 	StatusPeerReview                   = "In peer review"
 	StatusDesignReview                 = "in Design review"
 	StatusCTOReview                    = "In CTO review"
@@ -80,6 +80,11 @@ var (
 func (i Issue) String() string {
 	message := fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 		i.Key, i.Fields.Summary, i.Fields.Status.Name)
+	return message
+}
+
+func (i Issue) Link() string {
+	message := fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s>", i.Key)
 	return message
 }
 
@@ -127,6 +132,8 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 					"subtasks",
 					"assignee",
 					"parent",
+					"worklog",
+					"priority",
 				},
 			},
 		)
@@ -553,4 +560,39 @@ func (j *Jira) SetIssuePriority(issueKey, priority string) error {
 		return err
 	}
 	return nil
+}
+
+// OpenedIssuesWithDeveloper searches Issues in all sprints which opened or started with developer sorted by priority
+func (j *Jira) OpenedIssuesWithLastWorklogActivity() ([]Issue, error) {
+	request := fmt.Sprintf(`status in (%s, %s) AND Developer is not EMPTY ORDER BY priority DESC`, StatusOpen, StatusStarted)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't take open jira issues type in subtasks of open sprints: %s", err)
+	}
+	for _, issue := range issues {
+		lastWorklog, err := j.getIssueLastWorkLogActivity(issue.Key, issue.Fields.Worklog.Total)
+		if err != nil {
+			return issues, err
+		}
+		issue.Fields.Worklog = &lastWorklog
+	}
+	return issues, nil
+}
+
+// getIssueLastWorkLogActivity retrieves last worklog activity
+func (j *Jira) getIssueLastWorkLogActivity(issueKey string, totalCount int) (jira.Worklog, error) {
+	workLog := &jira.Worklog{}
+	url := fmt.Sprintf("/rest/api/2/issue/%s/worklog?startAt=%v", issueKey, totalCount-1)
+	req, err := j.NewRequest("GET", url, nil)
+	if err != nil {
+		return *workLog, fmt.Errorf("can't create request of worklog enpoint: %s", err)
+	}
+	_, err = j.Do(req, workLog)
+	if err != nil {
+		return *workLog, fmt.Errorf("can't take jira worklog of issue: %s", err)
+	}
+	if len(workLog.Worklogs) == 0 {
+		return *workLog, nil
+	}
+	return *workLog, nil
 }
