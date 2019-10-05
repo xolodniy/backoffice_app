@@ -1494,7 +1494,7 @@ func (a *App) CheckNeedReplyMessages() {
 			var mentionedUsers = make(map[string]string)
 		Loop:
 			for _, userSlackID := range channel.Members {
-				if channelMessage.Subtype != "" {
+				if channelMessage.Subtype != "" || common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
 					break Loop
 				}
 				if strings.Contains(channelMessage.Text, userSlackID) {
