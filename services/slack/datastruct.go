@@ -105,12 +105,22 @@ type Message struct {
 	}
 }
 
-// https://api.slack.com/methods/conversations.members
-type MemberList struct {
-	Ok               bool     `json:"ok"`
-	Error            string   `json:"error"`
-	Members          []string `json:"members"`
+// https://api.slack.com/methods/channels.list
+type ChannelList struct {
+	Ok               bool      `json:"ok"`
+	Error            string    `json:"error"`
+	Channels         []Channel `json:"channels"`
 	ResponseMetadata struct {
 		NextCursor string `json:"next_cursor"`
 	} `json:"response_metadata"`
+}
+
+type Channel struct {
+	ID         string   `json:"id"`
+	Name       string   `json:"name"`
+	IsChannel  bool     `json:"is_channel"`
+	IsArchived bool     `json:"is_archived"`
+	IsPrivate  bool     `json:"is_private"`
+	NumMembers int      `json:"num_members"`
+	Members    []string `json:"members"`
 }
