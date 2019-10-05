@@ -49,6 +49,9 @@ reports:
   reportepicclosedissues:
     schedule: "@yearly"
     channel: "#back-office-app"
+  checkneedreplymessages:
+    schedule: "@yearly"
+
 
 jira:
   apiurl: https://theflow.atlassian.net
@@ -64,7 +67,6 @@ bitbucket:
     password: 123123123
 
 slack:
-  url:
   apiurl: https://slack.com/api
   botname: Back Office Bot
   intoken: xoxp-281270780213-532563372454-545645521588-6e70abc49c386bb1ad94465d19866188

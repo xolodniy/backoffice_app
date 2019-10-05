@@ -33,6 +33,7 @@ type Main struct {
 		DailyWorkersLessWorkedMessage Report
 		WeeklyReportOverworkedIssues  Report
 		ReportEpicClosedIssues        Report
+		CheckNeedReplyMessages        Report
 	}
 	Database
 	Amplify

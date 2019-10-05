@@ -506,6 +506,13 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 		panic(err)
 	}
 
+	err = tm.AddTask(cfg.Reports.CheckNeedReplyMessages.Schedule, func() {
+		application.CheckNeedReplyMessages()
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	tm.Start()
 	log.Println("Task scheduler started.")
 

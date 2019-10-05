@@ -218,6 +218,8 @@ You may use one of several pre-defined schedules in place of a cron expression.
       reportepicclosedissues:           — preference to send report about all closed issues of epic
         schedule: "00 00 07 * * *"
         channel: "#back-office-app"
+      checkneedreplymessages:           — preference to send mention if user must reply on old mention
+        schedule: "@yearly"
     
 #### Config.yml variables for slack users id
 
