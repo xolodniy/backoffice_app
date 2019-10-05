@@ -351,7 +351,6 @@ func (s *Slack) ChannelMessageHistory(channelID, latest, oldest string) ([]Messa
 	for i := 0; ; i++ {
 		urlStr := fmt.Sprintf("%s/conversations.history?token=%s&inclusive=true&channel=%s&cursor=%s&latest=%v&oldest=%v&pretty=1",
 			s.APIURL, s.InToken, channelID, cursor, latest, oldest)
-		fmt.Println(urlStr)
 
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
@@ -387,7 +386,6 @@ func (s *Slack) ChannelMessageHistory(channelID, latest, oldest string) ([]Messa
 func (s *Slack) ChannelMessage(channelID, ts string) (Message, error) {
 	urlStr := fmt.Sprintf("%s/channels.history?token=%s&inclusive=true&channel=%s&latest=%v&pretty=1&count=1",
 		s.APIURL, s.InToken, channelID, ts)
-	fmt.Println(urlStr)
 
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
@@ -420,7 +418,6 @@ func (s *Slack) ChannelMessage(channelID, ts string) (Message, error) {
 func (s *Slack) MessagePermalink(channelID, ts string) (string, error) {
 	urlStr := fmt.Sprintf("%s/chat.getPermalink?token=%s&channel=%s&message_ts=%v&pretty=1",
 		s.APIURL, s.InToken, channelID, ts)
-	fmt.Println(urlStr)
 
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
@@ -459,7 +456,6 @@ func (s *Slack) ChannelsList() ([]Channel, error) {
 	for i := 0; ; i++ {
 		urlStr := fmt.Sprintf("%s/channels.list?token=%s&cursor=%s&pretty=1",
 			s.APIURL, s.InToken, cursor)
-		fmt.Println(urlStr)
 
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
