@@ -1422,17 +1422,6 @@ func (a *App) GetUserInfoByTagValue(tag, value string) config.User {
 	return make(config.User, 0)
 }
 
-// GetAllUsersValuesByTag retrieve user values by tag from map
-func (a *App) GetAllUsersValuesByTag(tag string) []string {
-	var values []string
-	for _, a := range a.Config.Users {
-		if a[tag] != "" {
-			values = append(values, a[tag])
-		}
-	}
-	return values
-}
-
 // ChangeJiraSubtasksInfo change fix versions and priority of subtasks
 func (a *App) ChangeJiraSubtasksInfo(issue jira.Issue, changelog jira.Changelog) {
 	if len(issue.Fields.Subtasks) == 0 {
@@ -1457,101 +1446,99 @@ func (a *App) ChangeJiraSubtasksInfo(issue jira.Issue, changelog jira.Changelog)
 	}
 }
 
-// TODO for all channels, add ignore back office report bot id, check users id from channel, not from config
+// CheckNeedReplyMessages check messages in all channels for need to reply on it if user was mentioned
 func (a *App) CheckNeedReplyMessages() {
-	latestUnix := time.Now().Add(-13 * time.Hour).Unix()
-	oldestUnix := time.Now().Add(0 * time.Hour).Unix()
-	fmt.Println(latestUnix)
-	fmt.Println(oldestUnix)
-	channelMessages, err := a.Slack.ChannelMessageHistory("CNR1HMXPA", fmt.Sprintf("%v", oldestUnix), fmt.Sprintf("%v", latestUnix))
+	latestUnix := time.Now().Add(-12 * time.Hour).Unix()
+	oldestUnix := time.Now().Add(-11 * time.Hour).Unix()
+	channelsList, err := a.Slack.ChannelsList()
 	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"channelID": "CNR1HMXPA", "latestUnix": latestUnix, "oldestUnix": oldestUnix}).Error("Can not get messages from channel")
+		logrus.WithError(err).Error("Can not get channels list")
 		return
 	}
-	usersSlackIDs := a.GetAllUsersValuesByTag(TagUserSlackID)
-	for _, channelMessage := range channelMessages {
-		if strings.Contains(channelMessage.Text, "<!channel>") {
-			channelMembers, err := a.Slack.ChannelMembers("CNR1HMXPA")
-			if err != nil {
-				logrus.WithError(err).WithField("channelID", "CNR1HMXPA").Error("Can not get channel members")
-				return
-			}
-			fmt.Println(channelMembers)
-			var reactedUsers []string
-			for _, rection := range channelMessage.Reactions {
-				reactedUsers = append(reactedUsers, rection.Users...)
-			}
-			var notReactedUsers []string
-			for _, member := range channelMembers {
-				if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, a.Config.BotIDs...) && member != channelMessage.User {
-					notReactedUsers = append(notReactedUsers, member)
-				}
-			}
-			fmt.Println(notReactedUsers)
-			if len(notReactedUsers) == 0 {
-				continue
-			}
-			var message string
-			for _, userID := range notReactedUsers {
-				message += "<@" + userID + "> "
-			}
-			a.Slack.SendToThread(message+" ^", "CNR1HMXPA", channelMessage.Ts)
+	for _, channel := range channelsList {
+		if channel.IsArchived || !channel.IsChannel || channel.NumMembers == 0 {
+			continue
 		}
-		var mentionedUsers []string
-	Loop:
-		for _, userSlackID := range usersSlackIDs {
-			if channelMessage.Subtype != "" {
-				break Loop
-			}
-			if strings.Contains(channelMessage.Text, userSlackID) {
-				mentionedUsers = append(mentionedUsers, userSlackID)
-			}
-		}
-		messagePermalink, err := a.Slack.MessagePermalink("CNR1HMXPA", channelMessage.Ts)
+		channelMessages, err := a.Slack.ChannelMessageHistory(channel.ID, fmt.Sprintf("%v", oldestUnix), fmt.Sprintf("%v", latestUnix))
 		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{"channelID": "CNR1HMXPA", "ts": channelMessage.Ts}).Error("Can not get permalink for message from channel")
+			logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "latestUnix": latestUnix, "oldestUnix": oldestUnix}).Error("Can not get messages from channel")
 			return
 		}
-		var message string
-		if channelMessage.ReplyCount == 0 && len(mentionedUsers) != 0 {
-			for _, userID := range mentionedUsers {
-				message += "<@" + userID + "> "
+		for _, channelMessage := range channelMessages {
+			// check reactions of channel members on message if it contains @channel
+			if strings.Contains(channelMessage.Text, "<!channel>") {
+				var reactedUsers []string
+				for _, rection := range channelMessage.Reactions {
+					reactedUsers = append(reactedUsers, rection.Users...)
+				}
+				var notReactedUsers []string
+				for _, member := range channel.Members {
+					if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, a.Config.BotIDs...) && member != channelMessage.User {
+						notReactedUsers = append(notReactedUsers, member)
+					}
+				}
+				if len(notReactedUsers) == 0 {
+					continue
+				}
+				var message string
+				for _, userID := range notReactedUsers {
+					message += "<@" + userID + "> "
+				}
+				a.Slack.SendToThread(message+" ^", channel.ID, channelMessage.Ts)
 			}
-			a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), "CNR1HMXPA", channelMessage.Ts)
-			continue
-		}
-		for _, reply := range channelMessage.Replies {
-			if common.ValueIn(reply.User, mentionedUsers...) {
-				mentionedUsers[common.ElementNumber(reply.User)] = mentionedUsers[len(mentionedUsers)-1]
-				mentionedUsers = mentionedUsers[:len(mentionedUsers)-1]
-			}
-			replyMessage, err := a.Slack.ChannelMessage("CNR1HMXPA", reply.Ts)
+			messagePermalink, err := a.Slack.MessagePermalink(channel.ID, channelMessage.Ts)
 			if err != nil {
-				logrus.WithError(err).WithFields(logrus.Fields{"channelID": "CNR1HMXPA", "ts": reply.Ts}).Error("Can not get reply for message from channel")
+				logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": channelMessage.Ts}).Error("Can not get permalink for message from channel")
 				return
 			}
-			if replyMessage.Subtype != "" {
-				continue
-			}
-			for _, userSlackID := range usersSlackIDs {
-				//TODO add map with permalink for message
-				if strings.Contains(replyMessage.Text, userSlackID) && !common.ValueIn(userSlackID, mentionedUsers...) && !common.ValueIn(userSlackID, a.Config.BotIDs...) {
-					mentionedUsers = append(mentionedUsers, userSlackID)
+			var mentionedUsers = make(map[string]string)
+		Loop:
+			for _, userSlackID := range channel.Members {
+				if channelMessage.Subtype != "" {
+					break Loop
+				}
+				if strings.Contains(channelMessage.Text, userSlackID) {
+					mentionedUsers[userSlackID] = messagePermalink
 				}
 			}
+			// send mention if ReplyCount = 0
+			var message string
+			if channelMessage.ReplyCount == 0 && len(mentionedUsers) != 0 {
+				for _, userID := range mentionedUsers {
+					message += "<@" + userID + "> "
+				}
+				a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
+				continue
+			}
+			// check replies for message and new nemtions in replies
+			for _, reply := range channelMessage.Replies {
+				delete(mentionedUsers, reply.User)
+				replyMessage, err := a.Slack.ChannelMessage(channel.ID, reply.Ts)
+				if err != nil {
+					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": reply.Ts}).Error("Can not get reply for message from channel")
+					return
+				}
+				if replyMessage.Subtype != "" {
+					continue
+				}
+				replyPermalink, err := a.Slack.MessagePermalink(channel.ID, reply.Ts)
+				if err != nil {
+					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": reply.Ts}).Error("Can not get permalink for message from channel")
+					return
+				}
+				for _, userSlackID := range channel.Members {
+					if strings.Contains(replyMessage.Text, userSlackID) && mentionedUsers[userSlackID] == "" && !common.ValueIn(userSlackID, a.Config.BotIDs...) {
+						mentionedUsers[userSlackID] = replyPermalink
+					}
+				}
+			}
+			if len(mentionedUsers) == 0 {
+				continue
+			}
+			for userID, permaLink := range mentionedUsers {
+				message += "<@" + userID + "> "
+				a.Slack.SendToThread(fmt.Sprintf("%s %s", message, permaLink), channel.ID, channelMessage.Ts)
+			}
 		}
-		fmt.Println(mentionedUsers)
-		if len(mentionedUsers) == 0 {
-			continue
-		}
-		for _, userID := range mentionedUsers {
-			message += "<@" + userID + "> "
-		}
-		a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), "CNR1HMXPA", channelMessage.Ts)
 	}
-	fmt.Println(len(channelMessages))
-	//for _, message := range channelMessages {
-	//	fmt.Println(message.ThreadTs)
-	//	fmt.Println(message)
-	//}
 }
