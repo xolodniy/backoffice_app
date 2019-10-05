@@ -512,7 +512,7 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 	}
 
 	err = tm.AddTask(cfg.Reports.ReportLowPriorityIssuesStarted.Schedule, func() {
-		application.ReportEpicsWithClosedIssues(cfg.Reports.ReportLowPriorityIssuesStarted.Channel)
+		application.ReportLowPriorityIssuesStarted(cfg.Reports.ReportLowPriorityIssuesStarted.Channel)
 	})
 	if err != nil {
 		panic(err)
