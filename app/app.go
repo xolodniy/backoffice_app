@@ -1504,7 +1504,7 @@ func (a *App) CheckNeedReplyMessages() {
 			// send mention if ReplyCount = 0
 			var message string
 			if channelMessage.ReplyCount == 0 && len(mentionedUsers) != 0 {
-				for _, userID := range mentionedUsers {
+				for userID := range mentionedUsers {
 					message += "<@" + userID + "> "
 				}
 				a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
