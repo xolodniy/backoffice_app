@@ -416,47 +416,6 @@ func (s *Slack) ChannelMessage(channelID, ts string) (Message, error) {
 	return res.Messages[0], nil
 }
 
-// ChannelMessageHistory retrieves slice of all slack channel messages by time
-func (s *Slack) ChannelMembers(channelID string) ([]string, error) {
-	var (
-		members []string
-		cursor  string
-	)
-	for i := 0; ; i++ {
-		urlStr := fmt.Sprintf("%s/conversations.members?token=%s&channel=%s&cursor=%s&pretty=1",
-			s.APIURL, s.InToken, channelID, cursor)
-		fmt.Println(urlStr)
-
-		req, err := http.NewRequest("GET", urlStr, nil)
-		if err != nil {
-			return []string{}, err
-		}
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		res := MemberList{}
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return []string{}, err
-		}
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return []string{}, err
-		}
-		if err := json.Unmarshal(body, &res); err != nil {
-			return []string{}, err
-		}
-		if !res.Ok {
-			return []string{}, fmt.Errorf(res.Error)
-		}
-		members = append(members, res.Members...)
-		if res.ResponseMetadata.NextCursor == "" {
-			break
-		}
-		cursor = res.ResponseMetadata.NextCursor
-	}
-	return members, nil
-}
-
 // MessagePermalink retrieves slack channel message permalink by ts
 func (s *Slack) MessagePermalink(channelID, ts string) (string, error) {
 	urlStr := fmt.Sprintf("%s/chat.getPermalink?token=%s&channel=%s&message_ts=%v&pretty=1",
@@ -489,4 +448,45 @@ func (s *Slack) MessagePermalink(channelID, ts string) (string, error) {
 		return "", fmt.Errorf(res.Error)
 	}
 	return res.Permalink, nil
+}
+
+// ChannelMessageHistory retrieves slice of all slack channel messages by time
+func (s *Slack) ChannelsList() ([]Channel, error) {
+	var (
+		channels []Channel
+		cursor   string
+	)
+	for i := 0; ; i++ {
+		urlStr := fmt.Sprintf("%s/channels.list?token=%s&cursor=%s&pretty=1",
+			s.APIURL, s.InToken, cursor)
+		fmt.Println(urlStr)
+
+		req, err := http.NewRequest("GET", urlStr, nil)
+		if err != nil {
+			return []Channel{}, err
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		res := ChannelList{}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return []Channel{}, err
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return []Channel{}, err
+		}
+		if err := json.Unmarshal(body, &res); err != nil {
+			return []Channel{}, err
+		}
+		if !res.Ok {
+			return []Channel{}, fmt.Errorf(res.Error)
+		}
+		channels = append(channels, res.Channels...)
+		if res.ResponseMetadata.NextCursor == "" {
+			break
+		}
+		cursor = res.ResponseMetadata.NextCursor
+	}
+	return channels, nil
 }
