@@ -68,7 +68,7 @@ type Member struct {
 	} `json:"profile"`
 }
 
-// https://api.slack.com/methods/conversations.history
+// MessagesHistory is message object containts information about messages https://api.slack.com/methods/conversations.history
 type MessagesHistory struct {
 	Ok               bool      `json:"ok"`
 	Error            string    `json:"error"`
@@ -81,7 +81,7 @@ type MessagesHistory struct {
 	} `json:"response_metadata"`
 }
 
-// https://api.slack.com/events/message
+// Message is object that contains message info https://api.slack.com/events/message
 type Message struct {
 	Type            string   `json:"type"`
 	Channel         string   `json:"channel"`
@@ -105,7 +105,7 @@ type Message struct {
 	}
 }
 
-// https://api.slack.com/methods/channels.list
+// ChannelList is chanel list object that contains channels https://api.slack.com/methods/channels.list
 type ChannelList struct {
 	Ok               bool      `json:"ok"`
 	Error            string    `json:"error"`
@@ -115,6 +115,7 @@ type ChannelList struct {
 	} `json:"response_metadata"`
 }
 
+// Channel contains channel info
 type Channel struct {
 	ID         string   `json:"id"`
 	Name       string   `json:"name"`
