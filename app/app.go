@@ -1449,23 +1449,29 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 		logrus.WithError(err).Error("Can't get issue from Jira with last worklog activity")
 		return
 	}
-	// sort by developers
-	developerIssues := make(map[string][]jira.Issue)
+	// sort by assignee
+	assigneeIssues := make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		developerIssues[issue.DeveloperMap(jira.TagDeveloperID)] = append(developerIssues[issue.DeveloperMap(jira.TagDeveloperID)], issue)
+		if issue.Fields.Assignee == nil {
+			continue
+		}
+		assigneeIssues[issue.Fields.Assignee.AccountID] = append(assigneeIssues[issue.Fields.Assignee.AccountID], issue)
 	}
 	hourAgoUTC := time.Now().UTC().Add(-1 * time.Hour)
-	for developer, issues := range developerIssues {
+	for developer, issues := range assigneeIssues {
 		user := a.GetUserInfoByTagValue(TagUserJiraAccountID, developer)
 		// check developers in ignore list
 		if common.ValueIn(user[TagUserSlackRealName], a.Config.IgnoreList...) {
 			continue
 		}
 		var activeIssue jira.Issue
-		// set first issue with the highest priority
+		// set first issue as priority
 		priorityIssue := issues[0]
 		// find priority and active tasks to check, if active task not priority, send message
 		for _, issue := range issues {
+			if issue.Fields.Priority.ID < priorityIssue.Fields.Priority.ID {
+				priorityIssue = issue
+			}
 			if len(issue.Fields.Worklog.Worklogs) == 0 {
 				continue
 			}
@@ -1484,15 +1490,55 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 				activeIssue = issue
 			}
 		}
-		if activeIssue.Fields == nil || activeIssue.Fields.Priority == priorityIssue.Fields.Priority {
+		if activeIssue.Fields == nil || activeIssue.Fields.Worklog == nil || len(activeIssue.Fields.Worklog.Worklogs) == 0 {
 			continue
+		}
+		if activeIssue.Fields.Priority.ID == priorityIssue.Fields.Priority.ID {
+			activeReleaseDate := a.getNearestFixVersionDate(activeIssue)
+			priorityReleaseDate := a.getNearestFixVersionDate(priorityIssue)
+			if (activeIssue.Fields.Duedate == priorityIssue.Fields.Duedate) && (activeReleaseDate == priorityReleaseDate) ||
+				(time.Time(activeIssue.Fields.Duedate).Before(time.Time(priorityIssue.Fields.Duedate)) || time.Time(priorityIssue.Fields.Duedate).IsZero()) &&
+					(activeReleaseDate.Before(priorityReleaseDate) || len(priorityIssue.Fields.FixVersions) == 0) {
+				continue
+			}
 		}
 		//check active issues for last our, because hubstaff updates time estimate one time in hour
 		activeIssueTimeStarted := *activeIssue.Fields.Worklog.Worklogs[0].Started
-		if len(activeIssue.Fields.Worklog.Worklogs) == 0 || time.Time(activeIssueTimeStarted).UTC().Before(hourAgoUTC) {
+		if time.Time(activeIssueTimeStarted).UTC().Before(hourAgoUTC) {
 			continue
 		}
-		a.Slack.SendMessage(fmt.Sprintf("<@%s> начал работать над %s вперед %s",
-			user[TagUserSlackID], activeIssue.Link(), priorityIssue.Link()), channel)
+		var tl string
+		switch {
+		case common.ValueIn(user[TagUserSlackRealName], a.Slack.Employees.BeTeam...):
+			tl = a.Slack.Employees.TeamLeaderBE
+		case common.ValueIn(user[TagUserSlackRealName], a.Slack.Employees.FeTeam...):
+			tl = a.Slack.Employees.TeamLeaderFE
+		case common.ValueIn(user[TagUserSlackRealName], a.Slack.Employees.Design...):
+			tl = a.Slack.Employees.ArtDirector
+		}
+		a.Slack.SendMessage(fmt.Sprintf("<@%s> начал работать над %s вперед %s \nfyi %s %s",
+			user[TagUserSlackID], activeIssue.Link(), priorityIssue.Link(), a.Slack.Employees.ProjectManager, tl), channel)
 	}
+}
+
+func (a *App) getNearestFixVersionDate(issue jira.Issue) time.Time {
+	var releaseDate time.Time
+	for _, version := range issue.Fields.FixVersions {
+		if version.Name == "" {
+			continue
+		}
+		slice := strings.Split(version.Name, "/")
+		if len(slice) != 2 {
+			continue
+		}
+		date, err := time.Parse("20060102", slice[1])
+		if err != nil {
+			logrus.WithError(err).Error("can't parse issue fix version start date")
+			return time.Time{}
+		}
+		if releaseDate.IsZero() || date.Before(releaseDate) {
+			releaseDate = date
+		}
+	}
+	return releaseDate
 }
