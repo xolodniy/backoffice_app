@@ -134,6 +134,7 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 					"parent",
 					"worklog",
 					"priority",
+					"fixVersions",
 				},
 			},
 		)

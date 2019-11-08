@@ -37,6 +37,7 @@ type Employees struct {
 	TeamLeaderFE      string
 	BeTeam            []string
 	FeTeam            []string
+	Design            []string
 }
 
 // FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
@@ -102,6 +103,7 @@ func New(config *config.Slack) Slack {
 			TeamLeaderFE:      "<@" + config.Employees.TeamLeaderFE + ">",
 			BeTeam:            config.Employees.BeTeam,
 			FeTeam:            config.Employees.FeTeam,
+			Design:            config.Employees.Design,
 		},
 	}
 }
