@@ -347,7 +347,7 @@ func (s *Slack) ChannelMessageHistory(channelID string, latest, oldest int64) ([
 		channelMessages []Message
 		cursor          string
 	)
-	for i := 0; ; i++ {
+	for i := 0; i <= 500; i++ {
 		urlStr := fmt.Sprintf("%s/conversations.history?token=%s&inclusive=true&channel=%s&cursor=%s&latest=%v&oldest=%v&pretty=1",
 			s.APIURL, s.InToken, channelID, cursor, latest, oldest)
 
@@ -377,6 +377,10 @@ func (s *Slack) ChannelMessageHistory(channelID string, latest, oldest int64) ([
 			break
 		}
 		cursor = res.ResponseMetadata.NextCursor
+		// warning message about big history or endless cycle
+		if i == 500 {
+			logrus.Warn("Message history exceed count of 500")
+		}
 	}
 	return channelMessages, nil
 }
