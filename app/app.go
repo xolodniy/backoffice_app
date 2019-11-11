@@ -1492,13 +1492,11 @@ func (a *App) CheckNeedReplyMessages() {
 				return
 			}
 			var mentionedUsers = make(map[string]string)
-		Loop:
-			for _, userSlackID := range channel.Members {
-				if channelMessage.Subtype != "" || common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
-					break Loop
-				}
-				if strings.Contains(channelMessage.Text, userSlackID) {
-					mentionedUsers[userSlackID] = messagePermalink
+			if channelMessage.Subtype == "" || !common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
+				for _, userSlackID := range channel.Members {
+					if strings.Contains(channelMessage.Text, userSlackID) {
+						mentionedUsers[userSlackID] = messagePermalink
+					}
 				}
 			}
 			// send mention if ReplyCount = 0
@@ -1518,7 +1516,7 @@ func (a *App) CheckNeedReplyMessages() {
 					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": reply.Ts}).Error("Can not get reply for message from channel")
 					return
 				}
-				if replyMessage.Subtype != "" {
+				if replyMessage.Subtype != "" || common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
 					continue
 				}
 				replyPermalink, err := a.Slack.MessagePermalink(channel.ID, reply.Ts)
