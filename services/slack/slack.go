@@ -1,6 +1,8 @@
 package slack
 
 import (
+	"backoffice_app/config"
+	"backoffice_app/types"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -8,9 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-
-	"backoffice_app/config"
-	"backoffice_app/types"
 
 	"github.com/sirupsen/logrus"
 )
@@ -343,7 +342,7 @@ func (s *Slack) checkChannelOnUserRealName(channel string) (string, error) {
 }
 
 // ChannelMessageHistory retrieves slice of all slack channel messages by time
-func (s *Slack) ChannelMessageHistory(channelID, latest, oldest string) ([]Message, error) {
+func (s *Slack) ChannelMessageHistory(channelID string, latest, oldest int64) ([]Message, error) {
 	var (
 		channelMessages []Message
 		cursor          string

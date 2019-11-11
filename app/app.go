@@ -1459,7 +1459,7 @@ func (a *App) CheckNeedReplyMessages() {
 		if channel.IsArchived || !channel.IsChannel || channel.NumMembers == 0 {
 			continue
 		}
-		channelMessages, err := a.Slack.ChannelMessageHistory(channel.ID, fmt.Sprintf("%v", oldestUnix), fmt.Sprintf("%v", latestUnix))
+		channelMessages, err := a.Slack.ChannelMessageHistory(channel.ID, oldestUnix, latestUnix)
 		if err != nil {
 			logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "latestUnix": latestUnix, "oldestUnix": oldestUnix}).Error("Can not get messages from channel")
 			return
