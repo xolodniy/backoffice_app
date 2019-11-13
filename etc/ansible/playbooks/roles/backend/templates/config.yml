@@ -14,19 +14,19 @@ reports:
     channel: "#back-office-app"
   reportaftersecondreviewall:
     schedule: "@yearly"
-    channel: "Ivan Tomilov"
+    channel: "#backoffice-bot-test"
   reportaftersecondreviewbe:
     schedule: "@yearly"
-    channel: "Oleg Raev"
+    channel: "#backoffice-bot-test"
   reportaftersecondreviewfe:
     schedule: "@yearly"
-    channel: "Rodion Golovushkin"
+    channel: "#backoffice-bot-test"
   employeesexceededtasks:
-    schedule: "00 00 07 * * *"
-    channel: "#back-office-app"
+    schedule: "@yearly"
+    channel: "#backoffice-bot-test"
   reportslackspaceending:
     schedule: "@yearly"
-    channel: "#back-office-app"
+    channel: "#backoffice-bot-test"
   reportgitmigrations:
     schedule: "@hourly"
     channel: "#migrations"
