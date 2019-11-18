@@ -1465,15 +1465,29 @@ func (a *App) CheckNeedReplyMessages() {
 			return
 		}
 		for _, channelMessage := range channelMessages {
-			// check reactions of channel members on message if it contains @channel
+			var replyMessages []slack.Message
+			// check reactions or replies of channel members on message if it contains @channel
 			if strings.Contains(channelMessage.Text, "<!channel>") {
-				var reactedUsers []string
+				var reactedUsers, replyUsers []string
 				for _, rection := range channelMessage.Reactions {
 					reactedUsers = append(reactedUsers, rection.Users...)
 				}
+				for _, reply := range channelMessage.Replies {
+					replyMessage, err := a.Slack.ChannelMessage(channel.ID, reply.Ts)
+					if err != nil {
+						logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": reply.Ts}).Error("Can not get reply for message from channel")
+						return
+					}
+					if replyMessage.Subtype != "" || common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
+						continue
+					}
+					replyMessages = append(replyMessages, replyMessage)
+					replyUsers = append(replyUsers, reply.User)
+				}
 				var notReactedUsers []string
 				for _, member := range channel.Members {
-					if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, a.Config.BotIDs...) && member != channelMessage.User {
+					if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, a.Config.BotIDs...) &&
+						!common.ValueIn(member, replyUsers...) && member != channelMessage.User {
 						notReactedUsers = append(notReactedUsers, member)
 					}
 				}
@@ -1486,56 +1500,55 @@ func (a *App) CheckNeedReplyMessages() {
 				}
 				a.Slack.SendToThread(message+" ^", channel.ID, channelMessage.Ts)
 			}
-			messagePermalink, err := a.Slack.MessagePermalink(channel.ID, channelMessage.Ts)
-			if err != nil {
-				logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": channelMessage.Ts}).Error("Can not get permalink for message from channel")
-				return
-			}
 			var mentionedUsers = make(map[string]string)
 			if channelMessage.Subtype == "" || !common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
 				for _, userSlackID := range channel.Members {
 					if strings.Contains(channelMessage.Text, userSlackID) {
-						mentionedUsers[userSlackID] = messagePermalink
+						mentionedUsers[userSlackID] = channelMessage.Ts
 					}
 				}
 			}
 			// send mention if ReplyCount = 0
 			var message string
-			if channelMessage.ReplyCount == 0 && len(mentionedUsers) != 0 {
-				for userID := range mentionedUsers {
-					message += "<@" + userID + "> "
+			if channelMessage.ReplyCount == 0 {
+				if len(mentionedUsers) != 0 {
+					for userID := range mentionedUsers {
+						message += "<@" + userID + "> "
+					}
+					messagePermalink, err := a.Slack.MessagePermalink(channel.ID, channelMessage.Ts)
+					if err != nil {
+						logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": channelMessage.Ts}).Error("Can not get permalink for message from channel")
+						return
+					}
+					a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
 				}
-				a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
 				continue
 			}
 			// check replies for message and new nemtions in replies
-			for _, reply := range channelMessage.Replies {
-				delete(mentionedUsers, reply.User)
-				replyMessage, err := a.Slack.ChannelMessage(channel.ID, reply.Ts)
-				if err != nil {
-					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": reply.Ts}).Error("Can not get reply for message from channel")
-					return
-				}
+			for _, replyMessage := range replyMessages {
+				delete(mentionedUsers, replyMessage.User)
 				if replyMessage.Subtype != "" || common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
 					continue
 				}
-				replyPermalink, err := a.Slack.MessagePermalink(channel.ID, reply.Ts)
-				if err != nil {
-					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": reply.Ts}).Error("Can not get permalink for message from channel")
-					return
+				// if users reacted we don't send message
+				var reactedUsers []string
+				for _, rection := range replyMessage.Reactions {
+					reactedUsers = append(reactedUsers, rection.Users...)
 				}
 				for _, userSlackID := range channel.Members {
-					if strings.Contains(replyMessage.Text, userSlackID) && mentionedUsers[userSlackID] == "" && !common.ValueIn(userSlackID, a.Config.BotIDs...) {
-						mentionedUsers[userSlackID] = replyPermalink
+					if strings.Contains(replyMessage.Text, userSlackID) && mentionedUsers[userSlackID] == "" &&
+						!common.ValueIn(userSlackID, a.Config.BotIDs...) && !common.ValueIn(userSlackID, reactedUsers...) {
+						mentionedUsers[userSlackID] = replyMessage.Ts
 					}
 				}
 			}
-			if len(mentionedUsers) == 0 {
-				continue
-			}
-			for userID, permaLink := range mentionedUsers {
-				message += "<@" + userID + "> "
-				a.Slack.SendToThread(fmt.Sprintf("%s %s", message, permaLink), channel.ID, channelMessage.Ts)
+			for userID, replyTs := range mentionedUsers {
+				replyPermalink, err := a.Slack.MessagePermalink(channel.ID, replyTs)
+				if err != nil {
+					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": replyTs}).Error("Can not get permalink for message from channel")
+					return
+				}
+				a.Slack.SendToThread(fmt.Sprintf("<@%s> %s", userID, replyPermalink), channel.ID, channelMessage.Ts)
 			}
 		}
 	}
