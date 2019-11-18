@@ -52,7 +52,6 @@ reports:
   checkneedreplymessages:
     schedule: "@yearly"
 
-
 jira:
   apiurl: https://theflow.atlassian.net
   auth:
