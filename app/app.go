@@ -1465,24 +1465,28 @@ func (a *App) CheckNeedReplyMessages() {
 			return
 		}
 		for _, channelMessage := range channelMessages {
-			var replyMessages []slack.Message
-			// check reactions or replies of channel members on message if it contains @channel
+			var (
+				replyMessages []slack.Message
+				replyUsers    []string
+			)
+			// check for replies of channel message
+			for _, reply := range channelMessage.Replies {
+				replyMessage, err := a.Slack.ChannelMessage(channel.ID, reply.Ts)
+				if err != nil {
+					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": reply.Ts}).Error("Can not get reply for message from channel")
+					return
+				}
+				if replyMessage.Subtype != "" || common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
+					continue
+				}
+				replyMessages = append(replyMessages, replyMessage)
+				replyUsers = append(replyUsers, reply.User)
+			}
+			// check reactions of channel members on message if it contains @channel
 			if strings.Contains(channelMessage.Text, "<!channel>") {
-				var reactedUsers, replyUsers []string
+				var reactedUsers []string
 				for _, rection := range channelMessage.Reactions {
 					reactedUsers = append(reactedUsers, rection.Users...)
-				}
-				for _, reply := range channelMessage.Replies {
-					replyMessage, err := a.Slack.ChannelMessage(channel.ID, reply.Ts)
-					if err != nil {
-						logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": reply.Ts}).Error("Can not get reply for message from channel")
-						return
-					}
-					if replyMessage.Subtype != "" || common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
-						continue
-					}
-					replyMessages = append(replyMessages, replyMessage)
-					replyUsers = append(replyUsers, reply.User)
 				}
 				var notReactedUsers []string
 				for _, member := range channel.Members {
