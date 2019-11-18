@@ -361,7 +361,6 @@ func (s *Slack) ChannelMessageHistory(channelID string, latest, oldest int64) ([
 		if err != nil {
 			return []Message{}, err
 		}
-		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return []Message{}, err
@@ -381,6 +380,7 @@ func (s *Slack) ChannelMessageHistory(channelID string, latest, oldest int64) ([
 		if i == 500 {
 			logrus.Warn("Message history exceed count of 500")
 		}
+		resp.Body.Close()
 	}
 	return channelMessages, nil
 }
@@ -450,13 +450,13 @@ func (s *Slack) MessagePermalink(channelID, ts string) (string, error) {
 	return res.Permalink, nil
 }
 
-// ChannelMessageHistory retrieves slice of all slack channel messages by time
+// ChannelsList retrieves slice of channels
 func (s *Slack) ChannelsList() ([]Channel, error) {
 	var (
 		channels []Channel
 		cursor   string
 	)
-	for i := 0; ; i++ {
+	for i := 0; i <= 500; i++ {
 		urlStr := fmt.Sprintf("%s/channels.list?token=%s&cursor=%s&pretty=1",
 			s.APIURL, s.InToken, cursor)
 
@@ -470,7 +470,6 @@ func (s *Slack) ChannelsList() ([]Channel, error) {
 		if err != nil {
 			return []Channel{}, err
 		}
-		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return []Channel{}, err
@@ -486,6 +485,7 @@ func (s *Slack) ChannelsList() ([]Channel, error) {
 			break
 		}
 		cursor = res.ResponseMetadata.NextCursor
+		resp.Body.Close()
 	}
 	return channels, nil
 }
