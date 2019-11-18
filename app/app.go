@@ -1527,7 +1527,7 @@ func (a *App) CheckNeedReplyMessages() {
 			// check replies for message and new nemtions in replies
 			for _, replyMessage := range replyMessages {
 				delete(mentionedUsers, replyMessage.User)
-				if replyMessage.Subtype != "" || common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
+				if replyMessage.Subtype != "" || common.ValueIn(replyMessage.User, a.Config.BotIDs...) {
 					continue
 				}
 				// if users reacted we don't send message
