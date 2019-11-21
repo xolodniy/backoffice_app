@@ -1515,18 +1515,18 @@ func (a *App) CheckNeedReplyMessages() {
 			// send mention if ReplyCount = 0
 			var message string
 			if channelMessage.ReplyCount == 0 {
-				if len(mentionedUsers) != 0 {
-					for userID := range mentionedUsers {
-						message += "<@" + userID + "> "
-					}
-					messagePermalink, err := a.Slack.MessagePermalink(channel.ID, channelMessage.Ts)
-					if err != nil {
-						logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": channelMessage.Ts}).Error("Can not get permalink for message from channel")
-						return
-					}
-					a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
+				if len(mentionedUsers) == 0 {
+					continue
 				}
-				continue
+				for userID := range mentionedUsers {
+					message += "<@" + userID + "> "
+				}
+				messagePermalink, err := a.Slack.MessagePermalink(channel.ID, channelMessage.Ts)
+				if err != nil {
+					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": channelMessage.Ts}).Error("Can not get permalink for message from channel")
+					return
+				}
+				a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
 			}
 			// check replies for message and new nemtions in replies
 			for _, replyMessage := range replyMessages {
