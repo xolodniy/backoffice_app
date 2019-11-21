@@ -1459,6 +1459,12 @@ func (a *App) CheckNeedReplyMessages() {
 		if channel.IsArchived || !channel.IsChannel || channel.NumMembers == 0 {
 			continue
 		}
+		// remove bots from channel members
+		for i := len(channel.Members) - 1; i >= 0; i-- {
+			if common.ValueIn(channel.Members[i], a.Config.BotIDs...) {
+				channel.Members = append(channel.Members[:i], channel.Members[i+1:]...)
+			}
+		}
 		channelMessages, err := a.Slack.ChannelMessageHistory(channel.ID, oldestUnix, latestUnix)
 		if err != nil {
 			logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "latestUnix": latestUnix, "oldestUnix": oldestUnix}).Error("Can not get messages from channel")
@@ -1490,8 +1496,7 @@ func (a *App) CheckNeedReplyMessages() {
 				}
 				var notReactedUsers []string
 				for _, member := range channel.Members {
-					if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, a.Config.BotIDs...) &&
-						!common.ValueIn(member, replyUsers...) && member != channelMessage.User {
+					if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, replyUsers...) && member != channelMessage.User {
 						notReactedUsers = append(notReactedUsers, member)
 					}
 				}
@@ -1540,8 +1545,7 @@ func (a *App) CheckNeedReplyMessages() {
 					reactedUsers = append(reactedUsers, rection.Users...)
 				}
 				for _, userSlackID := range channel.Members {
-					if strings.Contains(replyMessage.Text, userSlackID) && mentionedUsers[userSlackID] == "" &&
-						!common.ValueIn(userSlackID, a.Config.BotIDs...) && !common.ValueIn(userSlackID, reactedUsers...) {
+					if strings.Contains(replyMessage.Text, userSlackID) && mentionedUsers[userSlackID] == "" && !common.ValueIn(userSlackID, reactedUsers...) {
 						mentionedUsers[userSlackID] = replyMessage.Ts
 					}
 				}
