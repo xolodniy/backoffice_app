@@ -31,7 +31,7 @@ reports:
     schedule: "@hourly"
     channel: "#migrations"
   reportsprintstatus:
-    schedule: "00 00 05 * * MON"
+    schedule: "00 00 05 * * TUE"
     channel: "#general"
   reportclarificationissues:
     schedule: "00 00 07 * * *"
