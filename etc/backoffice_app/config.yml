@@ -78,8 +78,9 @@ slack:
     directorofcompany: U891K2Z2P
     projectmanager: U9FDU5W4D
     artdirector: U89802W2Z
-    teamleaderbe: U97DJLL11
+    teamleaderbe: UG47GFL92
     teamleaderfe: U88K5BQAD
+    teamleaderdevops: U97DJLL11
     beteam:
       - 'Morozov Stepan'
       - 'Stepan Morozov'
@@ -92,6 +93,8 @@ slack:
       - 'Dmitrii Tkachenko'
     design:
       - 'Vadim Zaripov'
+    devops:
+      - 'Denis Yudin'
   ignorelist:
     - 'Pavel Palenin'
     - 'Oleg Raev'
