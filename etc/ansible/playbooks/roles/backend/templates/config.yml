@@ -49,6 +49,8 @@ reports:
   reportepicclosedissues:
     schedule: "00 00 07 * * *"
     channel: "#back-office-app"
+  checkneedreplymessages:
+    schedule: "@hourly"
 
 jira:
   apiurl: https://theflow.atlassian.net
@@ -85,6 +87,10 @@ slack:
     feteam:
       - 'Andrey Solovyov'
       - 'Denis Kolosov'
+  botids:
+    - UCPK76QS2
+    - UGDQBBZ3N
+    - UHBBK6FAN
   ignorelist:
     - 'Pavel Palenin'
     - 'Oleg Raev'

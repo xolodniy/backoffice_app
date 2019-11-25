@@ -372,6 +372,16 @@ func main() {
 					application.ReportEpicsWithClosedIssues(channel)
 				},
 			},
+			{
+				Name:  "check-need-reply-messages",
+				Usage: "Send message about need reply for mention",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
+					application := app.New(cfg)
+					application.CheckNeedReplyMessages()
+				},
+			},
 		}
 
 		if err := cliApp.Run(os.Args); err != nil {
@@ -491,6 +501,13 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 
 	err = tm.AddTask(cfg.Reports.ReportEpicClosedIssues.Schedule, func() {
 		application.ReportEpicsWithClosedIssues(cfg.Reports.ReportEpicClosedIssues.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.CheckNeedReplyMessages.Schedule, func() {
+		application.CheckNeedReplyMessages()
 	})
 	if err != nil {
 		panic(err)
