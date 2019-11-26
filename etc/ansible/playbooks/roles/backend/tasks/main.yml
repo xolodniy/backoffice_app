@@ -6,7 +6,7 @@
 # Two-step request for preventing auto-redirect and intersection of auth methods
 - name: retrieve location of back-end artifacts
   uri:
-    url: "https://api.bitbucket.org/2.0/repositories/theflowglobal/{{ project_name }}/downloads/{{ project_name }}_{{ version }}"
+    url: "https://api.bitbucket.org/2.0/repositories/atnrpro/{{ project_name }}/downloads/{{ project_name }}_{{ version }}"
     follow_redirects: none
     headers:
       Authorization: "Basic {{ bitbucket_private_token }}"

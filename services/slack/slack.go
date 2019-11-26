@@ -1,8 +1,6 @@
 package slack
 
 import (
-	"backoffice_app/config"
-	"backoffice_app/types"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -10,6 +8,9 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"backoffice_app/config"
+	"backoffice_app/types"
 
 	"github.com/sirupsen/logrus"
 )
@@ -33,6 +34,7 @@ func New(config *config.Slack) Slack {
 			TeamLeaderFE:      "<@" + config.Employees.TeamLeaderFE + ">",
 			BeTeam:            config.Employees.BeTeam,
 			FeTeam:            config.Employees.FeTeam,
+			Design:            config.Employees.Design,
 		},
 	}
 }

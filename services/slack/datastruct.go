@@ -22,6 +22,7 @@ type Employees struct {
 	TeamLeaderFE      string
 	BeTeam            []string
 	FeTeam            []string
+	Design            []string
 }
 
 // FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)

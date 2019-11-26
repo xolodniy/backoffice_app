@@ -28,7 +28,7 @@ reports:
     schedule: "@yearly"
     channel: "#back-office-app"
   reportgitmigrations:
-    schedule: "@hourly"
+    schedule: "@yearly"
     channel: "#migrations"
   reportsprintstatus:
     schedule: "@yearly"
@@ -47,6 +47,9 @@ reports:
     schedule: "@yearly"
     channel: "Artem Efremov"
   reportepicclosedissues:
+    schedule: "@yearly"
+    channel: "#back-office-app"
+  reportlowpriorityissuesstarted:
     schedule: "@yearly"
     channel: "#back-office-app"
   checkneedreplymessages:
@@ -81,12 +84,16 @@ slack:
     teamleaderfe: U88K5BQAD
     beteam:
       - 'Morozov Stepan'
+      - 'Stepan Morozov'
       - 'Arthur Danilevskiy'
       - 'Roman Vlasenko'
       - 'Muzafar Muradov'
     feteam:
       - 'Andrey Solovyov'
       - 'Denis Kolosov'
+      - 'Dmitrii Tkachenko'
+    design:
+      - 'Vadim Zaripov'
   botids:
     - UCPK76QS2
     - UGDQBBZ3N
@@ -242,3 +249,21 @@ users:
     slackid: empty
     slackname: empty
     slackrealname: empty
+
+  - jiraaccountid: 5db0206ede99ed0dac191c31
+    email: dmitrii.tkachenko@atnr.pro
+    slackid: UPC78UAH1
+    slackname: dmitrii.tkachenko
+    slackrealname: "Dmitrii Tkachenko"
+
+  - jiraaccountid: 5d8e2822707a180dbe8b12b4
+    email: galina.gulidova@atnr.pro
+    slackid: UNT9KC59A
+    slackname: galina.gulidova
+    slackrealname: "Galina Gulidova"
+
+  - jiraaccountid: 5d9afb9930387c0dbe47e21e
+    email: mikhail.gaidadym@atnr.pro
+    slackid: UP39RQ5J8
+    slackname: mikhail.gaidadym
+    slackrealname: "Mikhail Gaidadym"

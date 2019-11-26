@@ -55,7 +55,7 @@ Now you can clone the application and prepare it for running:
 
 1. Clone repository
 
-        $ git clone git@bitbucket.org:theflowglobal/backoffice_app.git
+        $ git clone git@bitbucket.org:atnrpro/backoffice_app.git
     
 1. Go to app directory
 
@@ -218,6 +218,9 @@ You may use one of several pre-defined schedules in place of a cron expression.
       reportepicclosedissues:           — preference to send report about all closed issues of epic
         schedule: "00 00 07 * * *"
         channel: "#back-office-app"
+      reportlowpriorityissuesstarted:   - preference to send report about low priority issues started by developer
+        schedule: "@hourly"
+        channel: "#back-office-app"
       checkneedreplymessages:           — preference to send mention if user must reply on old mention
         schedule: "@yearly"
     
@@ -268,7 +271,7 @@ User id you can find in slack:
 
     users:                                       - users information of services
       - jiraaccountid: 5a2575776a747c0e71ab2972  - jira account id
-        email: andrey.solovyov@theflow.global    - user email
+        email: andrey.solovyov@atnr.pro          - user email
         slackid: U8990009Z                       - user slack id
         slackname: tinymail8                     - user slack nick name
         slackrealname: "Andrey Solovyov"         - user slack real name
@@ -279,7 +282,7 @@ Please see [Postman API documentation](https://lively-water-8721.postman.co/coll
 
 ## Support
 
-In case of any bugs , please, contact support@theflow.global
+In case of any bugs , please, contact support@atnr.pro
 
 
 ## Deployment with ANSIBLE
@@ -319,7 +322,7 @@ Example of specified ssh config:
 ```
 cat ~/.ssh/config
 
-Host demo.theflow.global
+Host demo.atnr.pro
     HostName 123.123.123.123
     User root
     IdentityFile ~/.ssh/id_rsa

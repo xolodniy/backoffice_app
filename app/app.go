@@ -198,14 +198,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 
 	var developerEmails = make(map[string][]jira.Issue)
 	for _, issue := range issues {
-		var ignoreDeveloper bool
-		for _, dev := range a.Slack.IgnoreList {
-			if dev == issue.DeveloperMap(jira.TagDeveloperName) {
-				ignoreDeveloper = true
-				break
-			}
-		}
-		if ignoreDeveloper {
+		if common.ValueIn(issue.DeveloperMap(jira.TagDeveloperName), a.Slack.IgnoreList...) {
 			continue
 		}
 		var developerEmail string
@@ -1107,11 +1100,15 @@ func (a *App) ReportOverworkedIssues(channel string) {
 	}
 	// sort by overwork %
 	sort.SliceStable(issues, func(i, j int) bool {
-		if issues[i].Fields.TimeTracking.OriginalEstimateSeconds == 0 || issues[j].Fields.TimeTracking.OriginalEstimateSeconds == 0 {
+		iEstimate := issues[i].Fields.TimeTracking.OriginalEstimateSeconds
+		jEstimate := issues[j].Fields.TimeTracking.OriginalEstimateSeconds
+		if iEstimate/100 == 0 || jEstimate/100 == 0 {
 			return false
 		}
-		return (issues[i].Fields.TimeTracking.TimeSpentSeconds-issues[i].Fields.TimeTracking.OriginalEstimateSeconds)/(issues[i].Fields.TimeTracking.OriginalEstimateSeconds/100) <
-			(issues[j].Fields.TimeTracking.TimeSpentSeconds-issues[j].Fields.TimeTracking.OriginalEstimateSeconds)/(issues[j].Fields.TimeTracking.OriginalEstimateSeconds/100)
+		iTimeSpent := issues[i].Fields.TimeTracking.TimeSpentSeconds
+		jTimeSpent := issues[j].Fields.TimeTracking.TimeSpentSeconds
+		return (iTimeSpent-iEstimate)/(iEstimate/100) <
+			(jTimeSpent - jEstimate/(jEstimate/100))
 	})
 	var msgBody string
 	for _, issue := range issues {
@@ -1119,16 +1116,14 @@ func (a *App) ReportOverworkedIssues(channel string) {
 		if developer == "" {
 			developer = jira.NoDeveloper
 		}
-	Loop:
-		for _, dev := range a.Slack.IgnoreList {
-			if developer == dev {
-				continue Loop
-			}
+		if common.ValueIn(developer, a.Slack.IgnoreList...) {
+			continue
 		}
 		overWorkedDuration := issue.Fields.TimeTracking.TimeSpentSeconds - issue.Fields.TimeTracking.OriginalEstimateSeconds
 		if overWorkedDuration < issue.Fields.TimeTracking.OriginalEstimateSeconds/10 ||
 			issue.Fields.TimeTracking.RemainingEstimateSeconds != 0 ||
-			issue.Fields.TimeTracking.OriginalEstimateSeconds == 0 || overWorkedDuration < 60*60 {
+			issue.Fields.TimeTracking.OriginalEstimateSeconds == 0 || overWorkedDuration < 60*60 ||
+			issue.Fields.TimeTracking.OriginalEstimateSeconds/100 == 0 {
 			continue
 		}
 		msgBody += "\n" + developer + "\n" + issue.String()
@@ -1444,6 +1439,108 @@ func (a *App) ChangeJiraSubtasksInfo(issue jira.Issue, changelog jira.Changelog)
 		}
 
 	}
+}
+
+// ReportLowPriorityIssuesStarted checks if developer start issue with low priority and send report about it
+func (a *App) ReportLowPriorityIssuesStarted(channel string) {
+	// get all opened and started issues with one last worklog activity, sorted by priority from highest
+	issues, err := a.Jira.OpenedIssuesWithLastWorklogActivity()
+	if err != nil {
+		logrus.WithError(err).Error("Can't get issue from Jira with last worklog activity")
+		return
+	}
+	// sort by assignee
+	assigneeIssues := make(map[string][]jira.Issue)
+	for _, issue := range issues {
+		if issue.Fields.Assignee == nil {
+			continue
+		}
+		assigneeIssues[issue.Fields.Assignee.AccountID] = append(assigneeIssues[issue.Fields.Assignee.AccountID], issue)
+	}
+	hourAgoUTC := time.Now().UTC().Add(-1 * time.Hour)
+	for developer, issues := range assigneeIssues {
+		user := a.GetUserInfoByTagValue(TagUserJiraAccountID, developer)
+		// check developers in ignore list
+		if common.ValueIn(user[TagUserSlackRealName], a.Config.IgnoreList...) {
+			continue
+		}
+		var activeIssue jira.Issue
+		// set first issue as priority
+		priorityIssue := issues[0]
+		// find priority and active tasks to check, if active task not priority, send message
+		for _, issue := range issues {
+			if issue.Fields.Priority.ID < priorityIssue.Fields.Priority.ID {
+				priorityIssue = issue
+			}
+			if len(issue.Fields.Worklog.Worklogs) == 0 {
+				continue
+			}
+			// check if issue has activity, but not started and start it
+			if issue.Fields.Status.Name == jira.StatusOpen {
+				a.Jira.IssueSetStatusTransition(issue.Key, jira.TransitionStart)
+			}
+
+			if activeIssue.Fields == nil || len(activeIssue.Fields.Worklog.Worklogs) == 0 {
+				activeIssue = issue
+				continue
+			}
+			issueTimeStarted := *issue.Fields.Worklog.Worklogs[0].Started
+			activeIssueTimeStarted := *activeIssue.Fields.Worklog.Worklogs[0].Started
+			if time.Time(issueTimeStarted).After(time.Time(activeIssueTimeStarted)) {
+				activeIssue = issue
+			}
+		}
+		if activeIssue.Fields == nil || activeIssue.Fields.Worklog == nil || len(activeIssue.Fields.Worklog.Worklogs) == 0 {
+			continue
+		}
+		if activeIssue.Fields.Priority.ID == priorityIssue.Fields.Priority.ID {
+			activeReleaseDate := a.getNearestFixVersionDate(activeIssue)
+			priorityReleaseDate := a.getNearestFixVersionDate(priorityIssue)
+			if (activeIssue.Fields.Duedate == priorityIssue.Fields.Duedate) && (activeReleaseDate == priorityReleaseDate) ||
+				(time.Time(activeIssue.Fields.Duedate).Before(time.Time(priorityIssue.Fields.Duedate)) || time.Time(priorityIssue.Fields.Duedate).IsZero()) &&
+					(activeReleaseDate.Before(priorityReleaseDate) || len(priorityIssue.Fields.FixVersions) == 0) {
+				continue
+			}
+		}
+		//check active issues for last our, because hubstaff updates time estimate one time in hour
+		activeIssueTimeStarted := *activeIssue.Fields.Worklog.Worklogs[0].Started
+		if time.Time(activeIssueTimeStarted).UTC().Before(hourAgoUTC) {
+			continue
+		}
+		var tl string
+		switch {
+		case common.ValueIn(user[TagUserSlackRealName], a.Slack.Employees.BeTeam...):
+			tl = a.Slack.Employees.TeamLeaderBE
+		case common.ValueIn(user[TagUserSlackRealName], a.Slack.Employees.FeTeam...):
+			tl = a.Slack.Employees.TeamLeaderFE
+		case common.ValueIn(user[TagUserSlackRealName], a.Slack.Employees.Design...):
+			tl = a.Slack.Employees.ArtDirector
+		}
+		a.Slack.SendMessage(fmt.Sprintf("<@%s> начал работать над %s вперед %s \nfyi %s %s",
+			user[TagUserSlackID], activeIssue.Link(), priorityIssue.Link(), a.Slack.Employees.ProjectManager, tl), channel)
+	}
+}
+
+func (a *App) getNearestFixVersionDate(issue jira.Issue) time.Time {
+	var releaseDate time.Time
+	for _, version := range issue.Fields.FixVersions {
+		if version.Name == "" {
+			continue
+		}
+		slice := strings.Split(version.Name, "/")
+		if len(slice) != 2 {
+			continue
+		}
+		date, err := time.Parse("20060102", slice[1])
+		if err != nil {
+			logrus.WithError(err).Error("can't parse issue fix version start date")
+			return time.Time{}
+		}
+		if releaseDate.IsZero() || date.Before(releaseDate) {
+			releaseDate = date
+		}
+	}
+	return releaseDate
 }
 
 // CheckNeedReplyMessages check messages in all channels for need to reply on it if user was mentioned
