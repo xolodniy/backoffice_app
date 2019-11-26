@@ -82,9 +82,12 @@ type Slack struct {
 		ArtDirector       string
 		TeamLeaderBE      string
 		TeamLeaderFE      string
+		TeamLeaderDevOps  string
 		BeTeam            []string
 		FeTeam            []string
 		Design            []string
+		QATeam            []string
+		DevOps            []string
 	}
 }
 

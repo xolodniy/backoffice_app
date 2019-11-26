@@ -1515,6 +1515,8 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 			tl = a.Slack.Employees.TeamLeaderFE
 		case common.ValueIn(user[TagUserSlackRealName], a.Slack.Employees.Design...):
 			tl = a.Slack.Employees.ArtDirector
+		case common.ValueIn(user[TagUserSlackRealName], a.Slack.Employees.DevOps...):
+			tl = a.Slack.Employees.TeamLeaderDevOps
 		}
 		a.Slack.SendMessage(fmt.Sprintf("<@%s> начал работать над %s вперед %s \nfyi %s %s",
 			user[TagUserSlackID], activeIssue.Link(), priorityIssue.Link(), a.Slack.Employees.ProjectManager, tl), channel)

@@ -32,9 +32,11 @@ func New(config *config.Slack) Slack {
 			ArtDirector:       "<@" + config.Employees.ArtDirector + ">",
 			TeamLeaderBE:      "<@" + config.Employees.TeamLeaderBE + ">",
 			TeamLeaderFE:      "<@" + config.Employees.TeamLeaderFE + ">",
+			TeamLeaderDevOps:  "<@" + config.Employees.TeamLeaderDevOps + ">",
 			BeTeam:            config.Employees.BeTeam,
 			FeTeam:            config.Employees.FeTeam,
 			Design:            config.Employees.Design,
+			DevOps:            config.Employees.DevOps,
 		},
 	}
 }
