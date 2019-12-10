@@ -1581,7 +1581,7 @@ func (a *App) CheckNeedReplyMessages() {
 					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": reply.Ts}).Error("Can not get reply for message from channel")
 					return
 				}
-				if replyMessage.Subtype != "" || common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
+				if replyMessage.Subtype != "" || replyMessage.BotID != "" {
 					continue
 				}
 				replyMessages = append(replyMessages, replyMessage)
@@ -1609,9 +1609,13 @@ func (a *App) CheckNeedReplyMessages() {
 				a.Slack.SendToThread(message+" ^", channel.ID, channelMessage.Ts)
 			}
 			var mentionedUsers = make(map[string]string)
-			if channelMessage.Subtype == "" || !common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
+			if channelMessage.Subtype == "" && channelMessage.BotID == "" {
+				var reactedUsers []string
+				for _, rection := range channelMessage.Reactions {
+					reactedUsers = append(reactedUsers, rection.Users...)
+				}
 				for _, userSlackID := range channel.Members {
-					if strings.Contains(channelMessage.Text, userSlackID) {
+					if strings.Contains(channelMessage.Text, userSlackID) && mentionedUsers[userSlackID] == "" && !common.ValueIn(userSlackID, reactedUsers...) {
 						mentionedUsers[userSlackID] = channelMessage.Ts
 					}
 				}
@@ -1631,11 +1635,12 @@ func (a *App) CheckNeedReplyMessages() {
 					return
 				}
 				a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
+				continue
 			}
 			// check replies for message and new nemtions in replies
 			for _, replyMessage := range replyMessages {
 				delete(mentionedUsers, replyMessage.User)
-				if replyMessage.Subtype != "" || common.ValueIn(replyMessage.User, a.Config.BotIDs...) {
+				if replyMessage.Subtype != "" || channelMessage.BotID != "" {
 					continue
 				}
 				// if users reacted we don't send message
