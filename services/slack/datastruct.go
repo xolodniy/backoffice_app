@@ -86,6 +86,7 @@ type MessagesHistory struct {
 
 // Message is object that contains message info https://api.slack.com/events/message
 type Message struct {
+	BotID           string   `json:"bot_id"`
 	Type            string   `json:"type"`
 	Channel         string   `json:"channel"`
 	User            string   `json:"user"`
