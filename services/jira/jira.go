@@ -50,6 +50,7 @@ var (
 	StatusDesignReview                 = "in Design review"
 	StatusCTOReview                    = "In CTO review"
 	StatusFEReview                     = "In FE review"
+	StatusQAReview                     = "In QA Review"
 	StatusCloseLastTask                = "Close last task"
 	StatusReadyForDemo                 = "Ready for demo"
 	StatusEmptyAssignee                = "empty"
