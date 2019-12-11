@@ -1,5 +1,7 @@
 package slack
 
+import "backoffice_app/common"
+
 // Slack is main Slack client app implementation
 type Slack struct {
 	InToken     string
@@ -86,6 +88,7 @@ type MessagesHistory struct {
 
 // Message is object that contains message info https://api.slack.com/events/message
 type Message struct {
+	BotID           string   `json:"bot_id"`
 	Type            string   `json:"type"`
 	Channel         string   `json:"channel"`
 	User            string   `json:"user"`
@@ -108,6 +111,29 @@ type Message struct {
 	}
 }
 
+// IsMessageFromBot checks if message from bot
+func (m Message) IsMessageFromBot() bool {
+	return m.Subtype != "" || m.BotID != ""
+}
+
+// ReactedUsers retrieves user that react on message
+func (m Message) ReactedUsers() []string {
+	var reactedUsers []string
+	for _, rection := range m.Reactions {
+		reactedUsers = append(reactedUsers, rection.Users...)
+	}
+	return reactedUsers
+}
+
+// RepliedUsers retrieves user that replies on message
+func (m Message) RepliedUsers() []string {
+	var repliedUsers []string
+	for _, reply := range m.Replies {
+		repliedUsers = append(repliedUsers, reply.User)
+	}
+	return repliedUsers
+}
+
 // ChannelList is chanel list object that contains channels https://api.slack.com/methods/channels.list
 type ChannelList struct {
 	Ok               bool      `json:"ok"`
@@ -127,4 +153,17 @@ type Channel struct {
 	IsPrivate  bool     `json:"is_private"`
 	NumMembers int      `json:"num_members"`
 	Members    []string `json:"members"`
+}
+
+// IsChannelActual checks if channel is actual
+func (ch Channel) IsChannelActual() bool {
+	return !ch.IsArchived && ch.IsChannel && ch.NumMembers > 0
+}
+
+func (ch *Channel) RemoveBotMembers(bots ...string) {
+	for i := len(ch.Members) - 1; i >= 0; i-- {
+		if common.ValueIn(ch.Members[i], bots...) {
+			ch.Members = append(ch.Members[:i], ch.Members[i+1:]...)
+		}
+	}
 }

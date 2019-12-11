@@ -1555,25 +1555,18 @@ func (a *App) CheckNeedReplyMessages() {
 		return
 	}
 	for _, channel := range channelsList {
-		if channel.IsArchived || !channel.IsChannel || channel.NumMembers == 0 {
+		if !channel.IsChannelActual() {
 			continue
 		}
-		// remove bots from channel members
-		for i := len(channel.Members) - 1; i >= 0; i-- {
-			if common.ValueIn(channel.Members[i], a.Config.BotIDs...) {
-				channel.Members = append(channel.Members[:i], channel.Members[i+1:]...)
-			}
-		}
+		channel.RemoveBotMembers(a.Config.BotIDs...)
 		channelMessages, err := a.Slack.ChannelMessageHistory(channel.ID, oldestUnix, latestUnix)
 		if err != nil {
 			logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "latestUnix": latestUnix, "oldestUnix": oldestUnix}).Error("Can not get messages from channel")
 			return
 		}
 		for _, channelMessage := range channelMessages {
-			var (
-				replyMessages []slack.Message
-				replyUsers    []string
-			)
+			repliedUsers := channelMessage.RepliedUsers()
+			var replyMessages []slack.Message
 			// check for replies of channel message
 			for _, reply := range channelMessage.Replies {
 				replyMessage, err := a.Slack.ChannelMessage(channel.ID, reply.Ts)
@@ -1581,21 +1574,17 @@ func (a *App) CheckNeedReplyMessages() {
 					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": reply.Ts}).Error("Can not get reply for message from channel")
 					return
 				}
-				if replyMessage.Subtype != "" || common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
+				if replyMessage.IsMessageFromBot() {
 					continue
 				}
 				replyMessages = append(replyMessages, replyMessage)
-				replyUsers = append(replyUsers, reply.User)
 			}
 			// check reactions of channel members on message if it contains @channel
 			if strings.Contains(channelMessage.Text, "<!channel>") {
-				var reactedUsers []string
-				for _, rection := range channelMessage.Reactions {
-					reactedUsers = append(reactedUsers, rection.Users...)
-				}
+				reactedUsers := channelMessage.ReactedUsers()
 				var notReactedUsers []string
 				for _, member := range channel.Members {
-					if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, replyUsers...) && member != channelMessage.User {
+					if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, repliedUsers...) && member != channelMessage.User {
 						notReactedUsers = append(notReactedUsers, member)
 					}
 				}
@@ -1609,16 +1598,17 @@ func (a *App) CheckNeedReplyMessages() {
 				a.Slack.SendToThread(message+" ^", channel.ID, channelMessage.Ts)
 			}
 			var mentionedUsers = make(map[string]string)
-			if channelMessage.Subtype == "" || !common.ValueIn(channelMessage.User, a.Config.BotIDs...) {
+			if !channelMessage.IsMessageFromBot() {
+				reactedUsers := channelMessage.ReactedUsers()
 				for _, userSlackID := range channel.Members {
-					if strings.Contains(channelMessage.Text, userSlackID) {
+					if strings.Contains(channelMessage.Text, userSlackID) && mentionedUsers[userSlackID] == "" && !common.ValueIn(userSlackID, reactedUsers...) {
 						mentionedUsers[userSlackID] = channelMessage.Ts
 					}
 				}
 			}
 			// send mention if ReplyCount = 0
-			var message string
 			if channelMessage.ReplyCount == 0 {
+				var message string
 				if len(mentionedUsers) == 0 {
 					continue
 				}
@@ -1631,18 +1621,16 @@ func (a *App) CheckNeedReplyMessages() {
 					return
 				}
 				a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
+				continue
 			}
 			// check replies for message and new nemtions in replies
 			for _, replyMessage := range replyMessages {
 				delete(mentionedUsers, replyMessage.User)
-				if replyMessage.Subtype != "" || common.ValueIn(replyMessage.User, a.Config.BotIDs...) {
+				if channelMessage.IsMessageFromBot() {
 					continue
 				}
 				// if users reacted we don't send message
-				var reactedUsers []string
-				for _, rection := range replyMessage.Reactions {
-					reactedUsers = append(reactedUsers, rection.Users...)
-				}
+				reactedUsers := replyMessage.ReactedUsers()
 				for _, userSlackID := range channel.Members {
 					if strings.Contains(replyMessage.Text, userSlackID) && mentionedUsers[userSlackID] == "" && !common.ValueIn(userSlackID, reactedUsers...) {
 						mentionedUsers[userSlackID] = replyMessage.Ts
