@@ -11,7 +11,7 @@ reports:
     channel: "#work-reports"
   reportclosedsubtasks:
     schedule: "00 00 07 * * *"
-    channel: "#back-office-app"
+    channel: "Artem Efremov"
   reportaftersecondreviewall:
     schedule: "@yearly"
     channel: "#backoffice-bot-test"

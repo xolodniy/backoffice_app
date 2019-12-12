@@ -168,6 +168,8 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 		switch {
 		case issue.Fields.Status.Name == jira.StatusDesignReview:
 			designMessage += issue.String()
+		case issue.Fields.Status.Name == jira.StatusQAReview:
+			continue
 		case issue.Fields.Status.Name != jira.StatusReadyForDemo:
 			generalMessage += issue.String()
 		}
