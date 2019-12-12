@@ -1436,8 +1436,13 @@ func (a *App) ChangeJiraSubtasksInfo(issue jira.Issue, changelog jira.Changelog)
 					return
 				}
 			}
+		case jira.ChangelogFieldDueDate:
+			for _, subtask := range issue.Fields.Subtasks {
+				if err := a.Jira.SetIssueDueDate(subtask.Key, changelogItem.ToString); err != nil {
+					return
+				}
+			}
 		}
-
 	}
 }
 
