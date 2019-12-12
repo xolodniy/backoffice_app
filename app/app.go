@@ -168,6 +168,8 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 		switch {
 		case issue.Fields.Status.Name == jira.StatusDesignReview:
 			designMessage += issue.String()
+		case issue.Fields.Status.Name == jira.StatusQAReview:
+			continue
 		case issue.Fields.Status.Name != jira.StatusReadyForDemo:
 			generalMessage += issue.String()
 		}
@@ -1436,8 +1438,13 @@ func (a *App) ChangeJiraSubtasksInfo(issue jira.Issue, changelog jira.Changelog)
 					return
 				}
 			}
+		case jira.ChangelogFieldDueDate:
+			for _, subtask := range issue.Fields.Subtasks {
+				if err := a.Jira.SetIssueDueDate(subtask.Key, changelogItem.ToString); err != nil {
+					return
+				}
+			}
 		}
-
 	}
 }
 
