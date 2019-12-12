@@ -76,6 +76,7 @@ var (
 	NoDeveloper                        = "No developer"
 	ChangelogFieldFixVersion           = "Fix Version"
 	ChangelogFieldPrioriy              = "priority"
+	ChangelogFieldDueDate              = "duedate"
 )
 
 func (i Issue) String() string {
@@ -559,6 +560,22 @@ func (j *Jira) SetIssuePriority(issueKey, priority string) error {
 	res, err := j.Issue.UpdateIssue(issueKey, dat)
 	if err != nil {
 		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", res)).Error("can't set issue priority")
+		return err
+	}
+	return nil
+}
+
+// SetIssueDueDate set issue due date by issue key
+func (j *Jira) SetIssueDueDate(issueKey, dueDate string) error {
+	byt := []byte(fmt.Sprintf(`{"fields":{"duedate":"%s"}}`, dueDate))
+	var dat map[string]interface{}
+	if err := json.Unmarshal(byt, &dat); err != nil {
+		logrus.WithError(err).Error("can't unmarshal byte data for set priority")
+		return err
+	}
+	res, err := j.Issue.UpdateIssue(issueKey, dat)
+	if err != nil {
+		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", res)).Error("can't set issue due date")
 		return err
 	}
 	return nil
