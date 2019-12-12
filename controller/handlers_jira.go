@@ -19,7 +19,6 @@ func (c *Controller) issueUpdated(ctx *gin.Context) {
 		logrus.WithError(err).Error("can't bind json answer from jira")
 		return
 	}
-	go c.App.MessageIssueAfterSecondTLReview(webHookBody.Issue)
 	go c.App.MoveJiraStatuses(webHookBody.Issue)
 	go c.App.ChangeJiraSubtasksInfo(webHookBody.Issue, webHookBody.Changelog)
 	ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
