@@ -411,7 +411,13 @@ func (a *App) ReportCurrentActivityWithCallback(callbackURL string) {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
-	message := a.stringFromCurrentActivitiesList(activitiesList)
+	notes, err := a.Hubstaff.UsersNotes(time.Now().Add(-1000*time.Second), time.Now())
+	if err != nil {
+		logrus.WithError(err).Error("Can't get user notes for report from Hubstaff.")
+		return
+	}
+	notesMap := a.mapFromNotes(notes)
+	message := a.stringFromCurrentActivitiesWithNotes(activitiesList, notesMap)
 	jsonReport, err := json.Marshal(struct {
 		Text string `json:"text"`
 	}{Text: message})
@@ -437,20 +443,40 @@ func (a *App) ReportCurrentActivity(channel string) {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
-	message := a.stringFromCurrentActivitiesList(activitiesList)
+	// get notes for last 2h for more accurate result
+	notes, err := a.Hubstaff.UsersNotes(time.Now().Add(-2*time.Hour), time.Now())
+	if err != nil {
+		logrus.WithError(err).Error("Can't get user notes for report from Hubstaff.")
+		return
+	}
+	fmt.Println(notes)
+	notesMap := a.mapFromNotes(notes)
+	message := a.stringFromCurrentActivitiesWithNotes(activitiesList, notesMap)
 	a.Slack.SendMessage(message, channel)
 }
 
-// stringFromCurrentActivitiesList convert slice of last activities in string message report
-func (a *App) stringFromCurrentActivitiesList(activitiesList []hubstaff.LastActivity) string {
+func (a *App) mapFromNotes(notes []hubstaff.Note) map[int]map[int][]string {
+	notesMap := make(map[int]map[int][]string)
+	for _, note := range notes {
+		if notesMap[note.UserID][note.ProjectID] == nil {
+			notesMap[note.UserID] = make(map[int][]string)
+		}
+		notesMap[note.UserID][note.ProjectID] = append(notesMap[note.UserID][note.ProjectID], note.Description)
+	}
+	return notesMap
+}
+
+// stringFromCurrentActivitiesWithNotes convert slice of last activities in string message report
+func (a *App) stringFromCurrentActivitiesWithNotes(activitiesList []hubstaff.LastActivity, notesMap map[int]map[int][]string) string {
 	var usersAtWork string
 	for _, activity := range activitiesList {
-		if activity.ProjectName != "" {
-			usersAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
-			if activity.TaskJiraKey != "" {
-				usersAtWork += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
-					activity.TaskJiraKey, activity.TaskSummary)
-			}
+		usersAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
+		if activity.TaskJiraKey != "" {
+			usersAtWork += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
+				activity.TaskJiraKey, activity.TaskSummary)
+		}
+		for _, note := range notesMap[activity.User.Id][activity.LastProjectID] {
+			usersAtWork += fmt.Sprintf("\n ✎ %s", note)
 		}
 	}
 	if usersAtWork == "" {
