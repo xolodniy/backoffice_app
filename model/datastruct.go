@@ -30,3 +30,24 @@ type Vacation struct {
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
+
+type ForgottenPullRequest struct {
+	ID            int       `json:"id"`
+	PullRequestID int64     `json:"pullRequestId"`
+	Title         string    `json:"title"`
+	Author        string    `json:"author"`
+	RepoSlug      string    `json:"repoSlug"`
+	Href          string    `json:"href"`
+	LastActivity  time.Time `json:"lastActivity"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
+}
+
+type ForgottenBranch struct {
+	ID        int       `json:"id"`
+	Name      string    `json:"name"`
+	Author    string    `json:"author"`
+	RepoSlug  string    `json:"repoSlug"`
+	Href      string    `json:"href"`
+	CreatedAt time.Time `json:"createdAt"`
+}

@@ -21,7 +21,7 @@ type Model struct {
 // New Model constructor
 func New(db *gorm.DB) Model {
 	return Model{
-		db: db,
+		db: db.Debug(),
 	}
 }
 
@@ -192,6 +192,76 @@ func (m *Model) DeleteVacation(userId string) error {
 	var res []Vacation
 	if err := m.db.Where(Vacation{UserId: userId}).Delete(&res).Error; err != nil {
 		logrus.WithError(err).WithField("userId", userId).Error("can't delete vacation by user id")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// GetForgottenPullRequest retrieves old pull requests
+func (m *Model) GetForgottenPullRequest() ([]ForgottenPullRequest, error) {
+	var res []ForgottenPullRequest
+	if err := m.db.Find(&res).Error; err != nil {
+		logrus.WithError(err).Error("can't get forgotten pull requests")
+		return nil, common.ErrInternal
+	}
+	return res, nil
+}
+
+// CreateForgottenPullRequest creates old pull request
+func (m *Model) CreateForgottenPullRequest(forgottenPullRequest ForgottenPullRequest) error {
+	if err := m.db.Create(&forgottenPullRequest).Error; err != nil {
+		logrus.WithError(err).WithField("forgottenPullRequest", fmt.Sprintf("%+v", forgottenPullRequest)).Error("can't create forgottenPullRequest")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// DeleteForgottenPullRequests deletes forgotten pull requests
+func (m *Model) DeleteForgottenPullRequests(ids []int) error {
+	var res []ForgottenPullRequest
+	if err := m.db.Where("id IN (?)", ids).Delete(&res).Error; err != nil {
+		logrus.WithError(err).WithField("ids", ids).Error("can't delete forgotten pull requests by ids")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// UpdateForgottenPullRequests updates forgotten pull request
+func (m *Model) UpdateForgottenPullRequest(pullRequestID int64, forgottenPullRequest ForgottenPullRequest) error {
+	if err := m.db.Model(ForgottenPullRequest{}).Where(ForgottenPullRequest{PullRequestID: pullRequestID}).Update(forgottenPullRequest).Error; err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"pullRequestID":        pullRequestID,
+			"forgottenPullRequest": fmt.Sprintf("%+v", forgottenPullRequest)}).
+			Error("can't update forgottenPullRequest")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// GetForgottenBranches retrieves old branches
+func (m *Model) GetForgottenBranches() ([]ForgottenBranch, error) {
+	var res []ForgottenBranch
+	if err := m.db.Find(&res).Error; err != nil {
+		logrus.WithError(err).Error("can't get forgotten branches")
+		return nil, common.ErrInternal
+	}
+	return res, nil
+}
+
+// CreateForgottenBranches creates old branch
+func (m *Model) CreateForgottenBranches(forgottenBranch ForgottenBranch) error {
+	if err := m.db.Create(&forgottenBranch).Error; err != nil {
+		logrus.WithError(err).WithField("forgottenBranch", fmt.Sprintf("%+v", forgottenBranch)).Error("can't create forgottenBranch")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// DeleteForgottenBranches deletes forgotten branches
+func (m *Model) DeleteForgottenBranches(ids []int) error {
+	var res []ForgottenBranch
+	if err := m.db.Where("id IN (?)", ids).Delete(&res).Error; err != nil {
+		logrus.WithError(err).WithField("ids", ids).Error("can't delete forgotten branches by ids")
 		return common.ErrInternal
 	}
 	return nil
