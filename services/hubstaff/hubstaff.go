@@ -343,24 +343,33 @@ func (h *Hubstaff) UserWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd tim
 	return userWorkReport, nil
 }
 
-// CurrentActivity returns a text report about last activities
-func (h *Hubstaff) UsersNotes(startTime, stopTime time.Time) ([]Note, error) {
+// LastUserNote returns last user note for last 12 hours
+func (h *Hubstaff) LastUserNote(userID, projectID string) (Note, error) {
 	params := url.Values{}
-	params.Add("start_time", startTime.Format(time.RFC3339))
-	params.Add("stop_time", stopTime.Format(time.RFC3339))
+	// get all user notes for last 6 hours
+	params.Add("start_time", time.Now().Add(-6*time.Hour).Format(time.RFC3339))
+	params.Add("stop_time", time.Now().Format(time.RFC3339))
+	params.Add("users", userID)
+	params.Add("projects", projectID)
 	rawResponse, err := h.do(fmt.Sprintf("/v1/notes/?%s", params.Encode()))
 	if err != nil {
-		return []Note{}, fmt.Errorf("error on getting users notes data: %v", err)
+		return Note{}, fmt.Errorf("error on getting users notes data: %v", err)
 	}
 	notesList := struct {
 		Notes []Note `json:"notes"`
 	}{}
 
 	if err = json.Unmarshal(rawResponse, &notesList); err != nil {
-		return []Note{}, fmt.Errorf("can't decode response: %s", err)
+		return Note{}, fmt.Errorf("can't decode response: %s", err)
 	}
 	if len(notesList.Notes) == 0 {
-		return []Note{}, nil
+		return Note{}, nil
 	}
-	return notesList.Notes, nil
+	var lastUserNote Note
+	for _, note := range notesList.Notes {
+		if note.RecordedAt.After(lastUserNote.RecordedAt) {
+			lastUserNote = note
+		}
+	}
+	return lastUserNote, nil
 }
