@@ -71,6 +71,9 @@ bitbucket:
   auth:
     username: stepan.morozov@atnr.pro
     password: 123123123
+  ignorebranches:
+    - 'master'
+    - 'dev'
 
 slack:
   apiurl: https://slack.com/api

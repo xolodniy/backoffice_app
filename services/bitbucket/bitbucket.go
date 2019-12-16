@@ -17,9 +17,10 @@ import (
 
 // Bitbucket main struct of jira client
 type Bitbucket struct {
-	Auth  *auth
-	Owner string
-	Url   string
+	Auth           *auth
+	Owner          string
+	Url            string
+	IgnoreBranches []string
 }
 
 type auth struct {
@@ -30,9 +31,10 @@ type auth struct {
 // New creates new Bitbucket
 func New(config *config.Bitbucket) Bitbucket {
 	return Bitbucket{
-		Auth:  &auth{user: config.Auth.Username, password: config.Auth.Password},
-		Owner: config.Owner,
-		Url:   config.APIUrl,
+		Auth:           &auth{user: config.Auth.Username, password: config.Auth.Password},
+		Owner:          config.Owner,
+		Url:            config.APIUrl,
+		IgnoreBranches: config.IgnoreBranches,
 	}
 }
 
@@ -490,8 +492,7 @@ func (b *Bitbucket) BranchesWithoutPullRequests() ([]branch, error) {
 			return nil, err
 		}
 		for _, branch := range branches {
-			//TODO add to config names of branches, that we can't take
-			if !common.ValueIn(branch.Name, branchesWithPullRequests...) && branch.Name != "master" {
+			if !common.ValueIn(branch.Name, branchesWithPullRequests...) && !common.ValueIn(branch.Name, b.IgnoreBranches...) {
 				branchesWithoutPullRequests = append(branchesWithoutPullRequests, branch)
 			}
 		}

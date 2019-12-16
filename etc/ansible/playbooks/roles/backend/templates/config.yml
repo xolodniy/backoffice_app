@@ -71,6 +71,9 @@ bitbucket:
   auth:
     username: {{ bitbucket_login }}
     password: {{ bitbucket_password }}
+  ignorebranches:
+    - 'master'
+    - 'dev'
 
 slack:
   apiurl: https://slack.com/api
