@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"backoffice_app/common"
 	"backoffice_app/config"
 
 	"github.com/sirupsen/logrus"
@@ -88,6 +89,21 @@ func (b *Bitbucket) get(urlStr string) ([]byte, error) {
 // post prepare post request by post method
 func (b *Bitbucket) post(urlStr string, jsonBody []byte) ([]byte, error) {
 	req, err := http.NewRequest("POST", urlStr, bytes.NewReader(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(b.Auth.user, b.Auth.password)
+	respBody, err := b.do(req)
+	if err != nil {
+		return nil, err
+	}
+	return respBody, nil
+}
+
+// get prepare http request by get method
+func (b *Bitbucket) delete(urlStr string) ([]byte, error) {
+	req, err := http.NewRequest("DELETE", urlStr, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -365,6 +381,174 @@ func (b *Bitbucket) CreatePullRequestIfNotExist(repoSlug, branchName, branchPare
 	if err != nil {
 		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", res)).Error("can't create pull request in bitbucket")
 		return err
+	}
+	return nil
+}
+
+// pullRequestActivities returns list of pull requests  activities in repository by repository slug and pullRequestID
+func (b *Bitbucket) pullRequestActivity(repoSlug, pullRequestID string) ([]pullRequestActivity, error) {
+	type pullRequestActivities struct {
+		Next   string                `json:"next"`
+		Values []pullRequestActivity `json:"values"`
+	}
+	var pr = pullRequestActivities{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + pullRequestID + "/activity"}
+	for {
+		res, err := b.get(pr.Next)
+		if err != nil {
+			return []pullRequestActivity{}, err
+		}
+		var nextPullRequests pullRequestActivities
+		err = json.Unmarshal(res, &nextPullRequests)
+		if err != nil {
+			return []pullRequestActivity{}, err
+		}
+		for _, pullRequest := range nextPullRequests.Values {
+			pr.Values = append(pr.Values, pullRequest)
+		}
+		if nextPullRequests.Next == "" {
+			break
+		}
+		pr.Next = nextPullRequests.Next
+	}
+	return pr.Values, nil
+}
+
+// PullRequestsActivity returns pull requests with activity
+func (b *Bitbucket) PullRequestsActivity() ([]pullRequest, error) {
+	repositories, err := b.RepositoriesList()
+	if err != nil {
+		return nil, err
+	}
+
+	var allPullRequests []pullRequest
+	for _, repository := range repositories {
+		pullRequests, err := b.PullRequestsList(repository.Name)
+		if err != nil {
+			return nil, err
+		}
+		for _, pullRequest := range pullRequests {
+			allPullRequests = append(allPullRequests, pullRequest)
+		}
+	}
+
+	for i, pullRequest := range allPullRequests {
+		activities, err := b.pullRequestActivity(pullRequest.Source.Repository.Name, strconv.FormatInt(pullRequest.ID, 10))
+		if err != nil {
+			return nil, err
+		}
+		for _, activity := range activities {
+			allPullRequests[i].Activities = append(allPullRequests[i].Activities, activity)
+		}
+	}
+	return allPullRequests, nil
+}
+
+// DeclinePullRequest declines pull request
+func (b *Bitbucket) DeclinePullRequest(repoSlug string, pullRequestID int64) error {
+	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + strconv.FormatInt(pullRequestID, 10) + "/decline"
+	res, err := b.post(urlStr, []byte{})
+	if err != nil {
+		return err
+	}
+	var checkResponse = struct {
+		Type  string `json:"type"`
+		Error struct {
+			Message string `json:"message"`
+			Data    struct {
+				Key string `json:"key"`
+			} `json:"data"`
+		} `json:"error"`
+	}{}
+	err = json.Unmarshal(res, &checkResponse)
+	if err != nil {
+		return err
+	}
+	if checkResponse.Error.Message != "" {
+		return fmt.Errorf(checkResponse.Error.Message)
+	}
+	return nil
+}
+
+func (b *Bitbucket) BranchesWithoutPullRequests() ([]branch, error) {
+	repositories, err := b.RepositoriesList()
+	if err != nil {
+		return nil, err
+	}
+
+	var branchesWithoutPullRequests []branch
+	for _, repository := range repositories {
+		var branchesWithPullRequests []string
+		pullRequests, err := b.PullRequestsList(repository.Name)
+		if err != nil {
+			return nil, err
+		}
+		for _, pullRequest := range pullRequests {
+			branchesWithPullRequests = append(branchesWithPullRequests, pullRequest.Source.Branch.Name)
+		}
+		branches, err := b.BranchesList(repository.Name)
+		if err != nil {
+			return nil, err
+		}
+		for _, branch := range branches {
+			//TODO add to config names of branches, that we can't take
+			if !common.ValueIn(branch.Name, branchesWithPullRequests...) && branch.Name != "master" {
+				branchesWithoutPullRequests = append(branchesWithoutPullRequests, branch)
+			}
+		}
+	}
+	return branchesWithoutPullRequests, nil
+}
+
+// BranchesList returns list of branches in repository by repository slug
+func (b *Bitbucket) BranchesList(repoSlug string) ([]branch, error) {
+	type paginatedBranches struct {
+		Next   string   `json:"next"`
+		Values []branch `json:"values"`
+	}
+	var pb = paginatedBranches{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/refs/branches?state=OPEN"}
+	for {
+		res, err := b.get(pb.Next)
+		if err != nil {
+			return []branch{}, err
+		}
+		var paginatedBranches paginatedBranches
+		err = json.Unmarshal(res, &paginatedBranches)
+		if err != nil {
+			return []branch{}, err
+		}
+		for _, branch := range paginatedBranches.Values {
+			pb.Values = append(pb.Values, branch)
+		}
+		if paginatedBranches.Next == "" {
+			break
+		}
+		pb.Next = paginatedBranches.Next
+	}
+	return pb.Values, nil
+}
+
+// DeleteBranch deletes branch
+func (b *Bitbucket) DeleteBranch(repoSlug, branchName string) error {
+	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/refs/branches/" + branchName
+	res, err := b.delete(urlStr)
+	if err != nil {
+		return err
+	}
+	var checkResponse = struct {
+		Type  string `json:"type"`
+		Error struct {
+			Message string `json:"message"`
+			Data    struct {
+				Key string `json:"key"`
+			} `json:"data"`
+		} `json:"error"`
+	}{}
+	err = json.Unmarshal(res, &checkResponse)
+	if err != nil {
+		return err
+	}
+	if checkResponse.Error.Message != "" {
+		return fmt.Errorf(checkResponse.Error.Message)
 	}
 	return nil
 }

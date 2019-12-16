@@ -46,6 +46,7 @@ type pullRequest struct {
 			Href string `json:"href"`
 		} `json:"html"`
 	} `json:"links"`
+	Activities []pullRequestActivity `json:"-"`
 }
 
 // Repository struct of pull repository from bitbucket
@@ -313,4 +314,52 @@ type PullRequestMergedPayload struct {
 	Actor       owner       `json:"actor"`
 	PullRequest pullRequest `json:"pullrequest"`
 	Repository  repository  `json:"repository"`
+}
+
+// pullRequestActivities
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/pullrequests/%7Bpull_request_id%7D/activity
+type pullRequestActivity struct {
+	Comment struct {
+		Deleted   bool      `json:"deleted"`
+		CreatedOn time.Time `json:"created_on"`
+		UpdatedOn time.Time `json:"updated_on"`
+	} `json:"comment"`
+	Update struct {
+		Date time.Time `json:"date"`
+	} `json:"update"`
+	Approval struct {
+		Date time.Time `json:"date"`
+	} `json:"approval"`
+}
+
+type branch struct {
+	Type   string `json:"type"`
+	Name   string `json:"name"`
+	Target struct {
+		Name   string `json:"name"`
+		Author struct {
+			Type string `json:"type"`
+			User struct {
+				DisplayName string `json:"display_name"`
+				Username    string `json:"username"`
+				UUID        string `json:"uuid"`
+			} `json:"user"`
+			Links struct {
+				Self struct {
+					Href string `json:"href"`
+				} `json:"self"`
+				HTML struct {
+					Href string `json:"href"`
+				} `json:"html"`
+				Avatar struct {
+					Href string `json:"href"`
+				} `json:"avatar"`
+			} `json:"links"`
+		} `json:"author"`
+	} `json:"target"`
+	Links struct {
+		HTML struct {
+			Href string `json:"href"`
+		} `json:"html"`
+	} `json:"links"`
 }
