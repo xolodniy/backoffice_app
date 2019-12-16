@@ -52,6 +52,12 @@ reports:
   reportlowpriorityissuesstarted:
     schedule: "@yearly"
     channel: "#back-office-app"
+  reportforgottenprs:
+    schedule: "@yearly"
+    channel: "#back-office-app"
+  reportforgottenbranches:
+    schedule: "@yearly"
+    channel: "#back-office-app"
 
 jira:
   apiurl: https://theflow.atlassian.net

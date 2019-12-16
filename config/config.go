@@ -34,6 +34,8 @@ type Main struct {
 		WeeklyReportOverworkedIssues   Report
 		ReportEpicClosedIssues         Report
 		ReportLowPriorityIssuesStarted Report
+		ReportForgottenPRs             Report
+		ReportForgottenBranches        Report
 	}
 	Database
 	Amplify
