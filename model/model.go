@@ -21,7 +21,7 @@ type Model struct {
 // New Model constructor
 func New(db *gorm.DB) Model {
 	return Model{
-		db: db.Debug(),
+		db: db,
 	}
 }
 
