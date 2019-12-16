@@ -1632,6 +1632,9 @@ func (a *App) CheckForgottenGitPullRequests(channel string) {
 	)
 	for _, pr := range prs {
 		userSlackMention := "<@" + a.GetUserInfoByTagValue(TagUserSlackRealName, pr.Author)[TagUserSlackID] + ">"
+		if a.GetUserInfoByTagValue(TagUserSlackRealName, pr.Author)[TagUserSlackID] == "" {
+			userSlackMention = "Имя пользователя не удалось определить"
+		}
 		switch {
 		case pr.UpdatedAt.Before(time.Now().AddDate(0, 0, -8)):
 			// TODO: remove third attention, add declining PRs
@@ -1730,6 +1733,9 @@ func (a *App) CheckForgottenGitBranches(channel string) {
 	)
 	for _, branch := range branches {
 		userSlackMention := "<@" + a.GetUserInfoByTagValue(TagUserSlackRealName, branch.Author)[TagUserSlackID] + ">"
+		if a.GetUserInfoByTagValue(TagUserSlackRealName, branch.Author)[TagUserSlackID] == "" {
+			userSlackMention = "Имя пользователя не удалось определить"
+		}
 		switch {
 		case branch.CreatedAt.Before(time.Now().AddDate(0, 0, -7)):
 			// TODO: remove third attention, add deleting branches
