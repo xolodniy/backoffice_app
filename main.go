@@ -48,7 +48,7 @@ func main() {
 
 			level, err := logrus.ParseLevel(cfg.LogLevel)
 			if err != nil {
-				panic("invalid logLevel \"" + cfg.LogLevel + " \" in cfg. available: ") //TODO + logrus.AllLevels()
+				panic(fmt.Sprintf("invalid logLevel \"%s\" in cfg. available: %s", cfg.LogLevel, logrus.AllLevels))
 			}
 			logrus.SetLevel(level)
 
@@ -387,6 +387,36 @@ func main() {
 					application.ReportLowPriorityIssuesStarted(channel)
 				},
 			},
+			{
+				Name:  "check-old-prs",
+				Usage: "Check old pull requests in bitbucket",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
+					application := app.New(cfg)
+					application.CheckForgottenGitPullRequests(channel)
+				},
+			},
+			{
+				Name:  "check-old-branches",
+				Usage: "Check old branches in bitbucket",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
+					application := app.New(cfg)
+					application.CheckForgottenGitBranches(channel)
+				},
+			},
 		}
 
 		if err := cliApp.Run(os.Args); err != nil {
@@ -513,6 +543,20 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 
 	err = tm.AddTask(cfg.Reports.ReportLowPriorityIssuesStarted.Schedule, func() {
 		application.ReportLowPriorityIssuesStarted(cfg.Reports.ReportLowPriorityIssuesStarted.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.ReportForgottenPRs.Schedule, func() {
+		application.CheckForgottenGitPullRequests(cfg.Reports.ReportForgottenPRs.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.ReportForgottenBranches.Schedule, func() {
+		application.CheckForgottenGitBranches(cfg.Reports.ReportForgottenBranches.Channel)
 	})
 	if err != nil {
 		panic(err)
