@@ -15,77 +15,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// Slack is main Slack client app implementation
-type Slack struct {
-	InToken     string
-	OutToken    string
-	BotName     string
-	APIURL      string
-	TotalVolume float64
-	RestVolume  float64
-	Secret      string
-	IgnoreList  []string
-	Employees   Employees
-}
-
-// Employees is struct of employees in slack
-type Employees struct {
-	DirectorOfCompany string
-	ProjectManager    string
-	ArtDirector       string
-	TeamLeaderBE      string
-	TeamLeaderFE      string
-	TeamLeaderDevOps  string
-	BeTeam            []string
-	FeTeam            []string
-	Design            []string
-	DevOps            []string
-}
-
-// FilesResponse is struct of file.list answer (https://api.slack.com/methods/files.list)
-type FilesResponse struct {
-	Ok      bool    `json:"ok"`
-	Error   string  `json:"error"`
-	Warning string  `json:"warning"`
-	Files   []Files `json:"files"`
-	Paging  struct {
-		Count int `json:"count"`
-		Total int `json:"total"`
-		Page  int `json:"page"`
-		Pages int `json:"pages"`
-	} `json:"paging"`
-}
-
-// UsersResponse is struct of users.list answer (https://api.slack.com/methods/users.list)
-type UsersResponse struct {
-	Ok      bool     `json:"ok"`
-	Error   string   `json:"error"`
-	Warning string   `json:"warning"`
-	Members []Member `json:"members"`
-	Paging  struct {
-		Count int `json:"count"`
-		Total int `json:"total"`
-		Page  int `json:"page"`
-		Pages int `json:"pages"`
-	} `json:"paging"`
-}
-
-// Files piece of FilesResponse struct for files api answer
-type Files struct {
-	ID   string  `json:"id"`
-	Size float64 `json:"size"`
-}
-
-// Member is user object contains information about a member https://api.slack.com/types/user
-type Member struct {
-	Id      string `json:"id"`
-	Name    string `json:"name"`
-	Profile struct {
-		RealName string `json:"real_name"`
-		Email    string `json:"email"`
-	} `json:"profile"`
-}
-
 // New creates new slack
 func New(config *config.Slack) Slack {
 	return Slack{
@@ -414,4 +343,153 @@ func (s *Slack) checkChannelOnUserRealName(channel string) (string, error) {
 		}
 	}
 	return channel, nil
+}
+
+// ChannelMessageHistory retrieves slice of all slack channel messages by time
+func (s *Slack) ChannelMessageHistory(channelID string, latest, oldest int64) ([]Message, error) {
+	var (
+		channelMessages []Message
+		cursor          string
+	)
+	for i := 0; i <= 500; i++ {
+		urlStr := fmt.Sprintf("%s/conversations.history?token=%s&inclusive=true&channel=%s&cursor=%s&latest=%v&oldest=%v&pretty=1",
+			s.APIURL, s.InToken, channelID, cursor, latest, oldest)
+
+		req, err := http.NewRequest("GET", urlStr, nil)
+		if err != nil {
+			return []Message{}, err
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		res := MessagesHistory{}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return []Message{}, err
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return []Message{}, err
+		}
+		if err := json.Unmarshal(body, &res); err != nil {
+			return []Message{}, err
+		}
+		if !res.Ok {
+			return []Message{}, fmt.Errorf(res.Error)
+		}
+		channelMessages = append(channelMessages, res.Messages...)
+		if !res.HasMore {
+			break
+		}
+		cursor = res.ResponseMetadata.NextCursor
+		// warning message about big history or endless cycle
+		if i == 500 {
+			logrus.Warn("Message history exceed count of 500")
+		}
+		resp.Body.Close()
+	}
+	return channelMessages, nil
+}
+
+// ChannelMessage retrieves slack channel message by ts
+func (s *Slack) ChannelMessage(channelID, ts string) (Message, error) {
+	urlStr := fmt.Sprintf("%s/channels.history?token=%s&inclusive=true&channel=%s&latest=%v&pretty=1&count=1",
+		s.APIURL, s.InToken, channelID, ts)
+
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return Message{}, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	res := MessagesHistory{}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return Message{}, err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return Message{}, err
+	}
+	if err := json.Unmarshal(body, &res); err != nil {
+		return Message{}, err
+	}
+	if !res.Ok {
+		return Message{}, fmt.Errorf(res.Error)
+	}
+	if len(res.Messages) == 0 {
+		return Message{}, nil
+	}
+	return res.Messages[0], nil
+}
+
+// MessagePermalink retrieves slack channel message permalink by ts
+func (s *Slack) MessagePermalink(channelID, ts string) (string, error) {
+	urlStr := fmt.Sprintf("%s/chat.getPermalink?token=%s&channel=%s&message_ts=%v&pretty=1",
+		s.APIURL, s.InToken, channelID, ts)
+
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	var res struct {
+		Ok        bool   `json:"ok"`
+		Error     string `json:"error"`
+		Permalink string `json:"permalink"`
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	if err := json.Unmarshal(body, &res); err != nil {
+		return "", err
+	}
+	if !res.Ok {
+		return "", fmt.Errorf(res.Error)
+	}
+	return res.Permalink, nil
+}
+
+// ChannelsList retrieves slice of channels
+func (s *Slack) ChannelsList() ([]Channel, error) {
+	var (
+		channels []Channel
+		cursor   string
+	)
+	for i := 0; i <= 500; i++ {
+		urlStr := fmt.Sprintf("%s/channels.list?token=%s&cursor=%s&pretty=1",
+			s.APIURL, s.InToken, cursor)
+
+		req, err := http.NewRequest("GET", urlStr, nil)
+		if err != nil {
+			return []Channel{}, err
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		res := ChannelList{}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return []Channel{}, err
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return []Channel{}, err
+		}
+		if err := json.Unmarshal(body, &res); err != nil {
+			return []Channel{}, err
+		}
+		if !res.Ok {
+			return []Channel{}, fmt.Errorf(res.Error)
+		}
+		channels = append(channels, res.Channels...)
+		if res.ResponseMetadata.NextCursor == "" {
+			break
+		}
+		cursor = res.ResponseMetadata.NextCursor
+		resp.Body.Close()
+	}
+	return channels, nil
 }

@@ -52,6 +52,8 @@ reports:
   reportlowpriorityissuesstarted:
     schedule: "@yearly"
     channel: "#back-office-app"
+  checkneedreplymessages:
+    schedule: "@yearly"
 
 jira:
   apiurl: https://theflow.atlassian.net
@@ -95,6 +97,13 @@ slack:
       - 'Vadim Zaripov'
     devops:
       - 'Denis Yudin'
+  botids:
+    - UCPK76QS2
+    - UGDQBBZ3N
+    - UHBBK6FAN
+    - UB85C4HSP
+    - U8X3FQU69
+    - UFY7RGQR5
   ignorelist:
     - 'Pavel Palenin'
     - 'Oleg Raev'

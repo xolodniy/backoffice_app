@@ -221,6 +221,8 @@ You may use one of several pre-defined schedules in place of a cron expression.
       reportlowpriorityissuesstarted:   - preference to send report about low priority issues started by developer
         schedule: "@hourly"
         channel: "#back-office-app"
+      checkneedreplymessages:           — preference to send mention if user must reply on old mention
+        schedule: "@yearly"
     
 #### Config.yml variables for slack users id
 

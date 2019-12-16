@@ -34,6 +34,7 @@ type Main struct {
 		WeeklyReportOverworkedIssues   Report
 		ReportEpicClosedIssues         Report
 		ReportLowPriorityIssuesStarted Report
+		CheckNeedReplyMessages         Report
 	}
 	Database
 	Amplify
@@ -73,6 +74,7 @@ type Slack struct {
 	TotalVolume    float64
 	RestVolume     float64
 	Secret         string
+	BotIDs         []string
 	IgnoreList     []string
 	Employees      struct {
 		DirectorOfCompany string
