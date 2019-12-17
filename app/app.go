@@ -449,7 +449,6 @@ func (a *App) stringFromCurrentActivitiesWithNotes(activitiesList []hubstaff.Las
 		if activity.TaskJiraKey != "" {
 			usersAtWork += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
 				activity.TaskJiraKey, activity.TaskSummary)
-			continue
 		}
 		note, err := a.Hubstaff.LastUserNote(strconv.Itoa(activity.User.Id), strconv.Itoa(activity.LastProjectID))
 		if err != nil {
@@ -459,7 +458,8 @@ func (a *App) stringFromCurrentActivitiesWithNotes(activitiesList []hubstaff.Las
 		if note.Description == "" {
 			continue
 		}
-		usersAtWork += fmt.Sprintf("\n ✎ %s", note.Description)
+		loc := time.FixedZone("UTC3", 3*60*60)
+		usersAtWork += fmt.Sprintf("\n ✎ %s (%s)", note.Description, note.RecordedAt.In(loc).Format(time.RFC822Z))
 	}
 	if usersAtWork == "" {
 		usersAtWork = "All users are not at work at the moment"
