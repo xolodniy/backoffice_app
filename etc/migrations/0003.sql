@@ -1,7 +1,7 @@
 CREATE TABLE forgotten_pull_requests
 (
-    id              BIGSERIAL                   NOT NULL PRIMARY KEY,
-    pull_request_id BIGSERIAL                   NOT NULL,
+    id              SERIAL                      NOT NULL PRIMARY KEY,
+    pull_request_id SERIAL                      NOT NULL,
     title           VARCHAR                     NOT NULL,
     author          VARCHAR                     NOT NULL,
     repo_slug       VARCHAR                     NOT NULL,
@@ -13,10 +13,10 @@ CREATE TABLE forgotten_pull_requests
 
 CREATE TABLE forgotten_branches
 (
-    id               BIGSERIAL                   NOT NULL PRIMARY KEY,
-    name             VARCHAR                     NOT NULL,
-    author           VARCHAR                     NOT NULL,
-    repo_slug        VARCHAR                     NOT NULL,
-    href             VARCHAR                     NOT NULL,
-    created_at       TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+    id         SERIAL                      NOT NULL PRIMARY KEY,
+    name       VARCHAR                     NOT NULL,
+    author     VARCHAR                     NOT NULL,
+    repo_slug  VARCHAR                     NOT NULL,
+    href       VARCHAR                     NOT NULL,
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
 );
