@@ -34,6 +34,7 @@ type Main struct {
 		WeeklyReportOverworkedIssues   Report
 		ReportEpicClosedIssues         Report
 		ReportLowPriorityIssuesStarted Report
+		CheckNeedReplyMessages         Report
 		ReportForgottenPRs             Report
 		ReportForgottenBranches        Report
 	}
@@ -75,6 +76,7 @@ type Slack struct {
 	TotalVolume    float64
 	RestVolume     float64
 	Secret         string
+	BotIDs         []string
 	IgnoreList     []string
 	Employees      struct {
 		DirectorOfCompany string
@@ -82,9 +84,12 @@ type Slack struct {
 		ArtDirector       string
 		TeamLeaderBE      string
 		TeamLeaderFE      string
+		TeamLeaderDevOps  string
 		BeTeam            []string
 		FeTeam            []string
 		Design            []string
+		QATeam            []string
+		DevOps            []string
 	}
 }
 

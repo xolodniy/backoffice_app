@@ -168,6 +168,8 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 		switch {
 		case issue.Fields.Status.Name == jira.StatusDesignReview:
 			designMessage += issue.String()
+		case issue.Fields.Status.Name == jira.StatusQAReview:
+			continue
 		case issue.Fields.Status.Name != jira.StatusReadyForDemo:
 			generalMessage += issue.String()
 		}
@@ -1436,8 +1438,13 @@ func (a *App) ChangeJiraSubtasksInfo(issue jira.Issue, changelog jira.Changelog)
 					return
 				}
 			}
+		case jira.ChangelogFieldDueDate:
+			for _, subtask := range issue.Fields.Subtasks {
+				if err := a.Jira.SetIssueDueDate(subtask.Key, changelogItem.ToString); err != nil {
+					return
+				}
+			}
 		}
-
 	}
 }
 
@@ -1515,6 +1522,8 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 			tl = a.Slack.Employees.TeamLeaderFE
 		case common.ValueIn(user[TagUserSlackRealName], a.Slack.Employees.Design...):
 			tl = a.Slack.Employees.ArtDirector
+		case common.ValueIn(user[TagUserSlackRealName], a.Slack.Employees.DevOps...):
+			tl = a.Slack.Employees.TeamLeaderDevOps
 		}
 		a.Slack.SendMessage(fmt.Sprintf("<@%s> начал работать над %s вперед %s \nfyi %s %s",
 			user[TagUserSlackID], activeIssue.Link(), priorityIssue.Link(), a.Slack.Employees.ProjectManager, tl), channel)
@@ -1541,6 +1550,110 @@ func (a *App) getNearestFixVersionDate(issue jira.Issue) time.Time {
 		}
 	}
 	return releaseDate
+}
+
+// CheckNeedReplyMessages check messages in all channels for need to reply on it if user was mentioned
+func (a *App) CheckNeedReplyMessages() {
+	latestUnix := time.Now().Add(-12 * time.Hour).Unix()
+	oldestUnix := time.Now().Add(-11 * time.Hour).Unix()
+	channelsList, err := a.Slack.ChannelsList()
+	if err != nil {
+		logrus.WithError(err).Error("Can not get channels list")
+		return
+	}
+	for _, channel := range channelsList {
+		if !channel.IsChannelActual() {
+			continue
+		}
+		channel.RemoveBotMembers(a.Config.BotIDs...)
+		channelMessages, err := a.Slack.ChannelMessageHistory(channel.ID, oldestUnix, latestUnix)
+		if err != nil {
+			logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "latestUnix": latestUnix, "oldestUnix": oldestUnix}).Error("Can not get messages from channel")
+			return
+		}
+		for _, channelMessage := range channelMessages {
+			repliedUsers := channelMessage.RepliedUsers()
+			var replyMessages []slack.Message
+			// check for replies of channel message
+			for _, reply := range channelMessage.Replies {
+				replyMessage, err := a.Slack.ChannelMessage(channel.ID, reply.Ts)
+				if err != nil {
+					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": reply.Ts}).Error("Can not get reply for message from channel")
+					return
+				}
+				if replyMessage.IsMessageFromBot() {
+					continue
+				}
+				replyMessages = append(replyMessages, replyMessage)
+			}
+			// check reactions of channel members on message if it contains @channel
+			if strings.Contains(channelMessage.Text, "<!channel>") {
+				reactedUsers := channelMessage.ReactedUsers()
+				var notReactedUsers []string
+				for _, member := range channel.Members {
+					if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, repliedUsers...) && member != channelMessage.User {
+						notReactedUsers = append(notReactedUsers, member)
+					}
+				}
+				if len(notReactedUsers) == 0 {
+					continue
+				}
+				var message string
+				for _, userID := range notReactedUsers {
+					message += "<@" + userID + "> "
+				}
+				a.Slack.SendToThread(message+" ^", channel.ID, channelMessage.Ts)
+			}
+			var mentionedUsers = make(map[string]string)
+			if !channelMessage.IsMessageFromBot() {
+				reactedUsers := channelMessage.ReactedUsers()
+				for _, userSlackID := range channel.Members {
+					if strings.Contains(channelMessage.Text, userSlackID) && mentionedUsers[userSlackID] == "" && !common.ValueIn(userSlackID, reactedUsers...) {
+						mentionedUsers[userSlackID] = channelMessage.Ts
+					}
+				}
+			}
+			// send mention if ReplyCount = 0
+			if channelMessage.ReplyCount == 0 {
+				var message string
+				if len(mentionedUsers) == 0 {
+					continue
+				}
+				for userID := range mentionedUsers {
+					message += "<@" + userID + "> "
+				}
+				messagePermalink, err := a.Slack.MessagePermalink(channel.ID, channelMessage.Ts)
+				if err != nil {
+					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": channelMessage.Ts}).Error("Can not get permalink for message from channel")
+					return
+				}
+				a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
+				continue
+			}
+			// check replies for message and new nemtions in replies
+			for _, replyMessage := range replyMessages {
+				delete(mentionedUsers, replyMessage.User)
+				if channelMessage.IsMessageFromBot() {
+					continue
+				}
+				// if users reacted we don't send message
+				reactedUsers := replyMessage.ReactedUsers()
+				for _, userSlackID := range channel.Members {
+					if strings.Contains(replyMessage.Text, userSlackID) && mentionedUsers[userSlackID] == "" && !common.ValueIn(userSlackID, reactedUsers...) {
+						mentionedUsers[userSlackID] = replyMessage.Ts
+					}
+				}
+			}
+			for userID, replyTs := range mentionedUsers {
+				replyPermalink, err := a.Slack.MessagePermalink(channel.ID, replyTs)
+				if err != nil {
+					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": replyTs}).Error("Can not get permalink for message from channel")
+					return
+				}
+				a.Slack.SendToThread(fmt.Sprintf("<@%s> %s", userID, replyPermalink), channel.ID, channelMessage.Ts)
+			}
+		}
+	}
 }
 
 // CheckForgottenGitPullRequests checks pull requests on activity

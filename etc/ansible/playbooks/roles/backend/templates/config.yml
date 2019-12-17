@@ -11,7 +11,7 @@ reports:
     channel: "#work-reports"
   reportclosedsubtasks:
     schedule: "00 00 07 * * *"
-    channel: "#back-office-app"
+    channel: "Artem Efremov"
   reportaftersecondreviewall:
     schedule: "@yearly"
     channel: "#backoffice-bot-test"
@@ -31,7 +31,7 @@ reports:
     schedule: "@hourly"
     channel: "#migrations"
   reportsprintstatus:
-    schedule: "00 00 05 * * MON"
+    schedule: "00 00 05 * * TUE"
     channel: "#general"
   reportclarificationissues:
     schedule: "00 00 07 * * *"
@@ -52,6 +52,8 @@ reports:
   reportlowpriorityissuesstarted:
     schedule: "@hourly"
     channel: "#back-office-app"
+  checkneedreplymessages:
+    schedule: "@hourly"
   reportforgottenprs:
     schedule: "00 00 07 * * *"
     channel: "#back-office-app"
@@ -87,8 +89,9 @@ slack:
     directorofcompany: U891K2Z2P
     projectmanager: U9FDU5W4D
     artdirector: U89802W2Z
-    teamleaderbe: U97DJLL11
+    teamleaderbe: UG47GFL92
     teamleaderfe: U88K5BQAD
+    teamleaderdevops: U97DJLL11
     beteam:
       - 'Morozov Stepan'
       - 'Stepan Morozov'
@@ -101,6 +104,15 @@ slack:
       - 'Dmitrii Tkachenko'
     design:
       - 'Vadim Zaripov'
+    devops:
+      - 'Denis Yudin'
+  botids:
+    - UCPK76QS2
+    - UGDQBBZ3N
+    - UHBBK6FAN
+    - UB85C4HSP
+    - U8X3FQU69
+    - UFY7RGQR5
   ignorelist:
     - 'Pavel Palenin'
     - 'Oleg Raev'

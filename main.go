@@ -388,6 +388,16 @@ func main() {
 				},
 			},
 			{
+				Name:  "check-need-reply-messages",
+				Usage: "Send message about need reply for mention",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
+					application := app.New(cfg)
+					application.CheckNeedReplyMessages()
+				},
+			},
+			{
 				Name:  "check-old-prs",
 				Usage: "Check old pull requests in bitbucket",
 				Flags: cliApp.Flags,
@@ -543,6 +553,13 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 
 	err = tm.AddTask(cfg.Reports.ReportLowPriorityIssuesStarted.Schedule, func() {
 		application.ReportLowPriorityIssuesStarted(cfg.Reports.ReportLowPriorityIssuesStarted.Channel)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.CheckNeedReplyMessages.Schedule, func() {
+		application.CheckNeedReplyMessages()
 	})
 	if err != nil {
 		panic(err)
