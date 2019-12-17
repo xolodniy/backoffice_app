@@ -41,7 +41,7 @@ func New(config *config.Jira) Jira {
 }
 
 // Status variables for jql requests
-var (
+const (
 	StatusStarted                      = "Started"
 	StatusClosed                       = "Closed"
 	StatusOpen                         = "Open"
@@ -77,6 +77,7 @@ var (
 	ChangelogFieldFixVersion           = "Fix Version"
 	ChangelogFieldPrioriy              = "priority"
 	ChangelogFieldDueDate              = "duedate"
+	InwardIsBlockedBy                  = "is blocked by"
 )
 
 func (i Issue) String() string {
@@ -96,7 +97,7 @@ func (i Issue) DeveloperMap(key string) string {
 	// Convert to marshal map to find developer emailAddress of issue developer field
 	developerMap, err := i.Fields.Unknowns.MarshalMap(FieldDeveloperMap)
 	if err != nil {
-		//can't make customfield_10026 map marshaling because field developer is empty
+		// can't make customfield_10026 map marshaling because field developer is empty
 		return ""
 	}
 	if developerMap != nil {
@@ -119,8 +120,8 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 			&jira.SearchOptions{
 				StartAt:    i,
 				MaxResults: i + 100,
-				//Determines how to validate the JQL query and treat the validation results.
-				ValidateQuery: "strict", //strict Returns a 400 response code if any errors are found, along with a list of all errors (and warnings).
+				// Determines how to validate the JQL query and treat the validation results.
+				ValidateQuery: "strict", // strict Returns a 400 response code if any errors are found, along with a list of all errors (and warnings).
 				Fields: []string{
 					FieldDeveloperMap,
 					FieldEpicKey,

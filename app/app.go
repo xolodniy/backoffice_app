@@ -1542,7 +1542,7 @@ func (a *App) ReportIssuesLockedByLowPriority(channel string) {
 			continue
 		}
 		for _, iLink := range issue.Fields.IssueLinks {
-			if iLink.Type.Inward == "is blocked by" && iLink.InwardIssue != nil {
+			if iLink.Type.Inward == jira.InwardIsBlockedBy && iLink.InwardIssue != nil {
 				if iLink.InwardIssue.Fields.Status.Name == jira.StatusClosed {
 					continue
 				}
