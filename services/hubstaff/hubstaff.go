@@ -126,8 +126,7 @@ func (h *Hubstaff) do(path string) ([]byte, error) {
 	if response.StatusCode != 200 {
 		return nil, fmt.Errorf("invalid response code: %d", response.StatusCode)
 	}
-	s, err := ioutil.ReadAll(response.Body)
-	return s, err
+	return ioutil.ReadAll(response.Body)
 }
 
 // HubstaffUsers returns a slice of Hubstaff users
@@ -164,9 +163,9 @@ func (h *Hubstaff) CurrentActivity() ([]LastActivity, error) {
 	if len(activities.List) == 0 {
 		return []LastActivity{}, nil
 	}
-	for i, activity := range activities.List {
-		layout := "2006-01-02T15:04:05Z"
-		t, err := time.Parse(layout, activity.User.LastActivity)
+	var currentActivities []LastActivity
+	for _, activity := range activities.List {
+		t, err := time.Parse(time.RFC3339, activity.User.LastActivity)
 		// if time empty or other format we continue to remove many log messages
 		if err != nil {
 			continue
@@ -175,17 +174,19 @@ func (h *Hubstaff) CurrentActivity() ([]LastActivity, error) {
 		if lastActivity > CurrentActivityDuration {
 			continue
 		}
-
-		activities.List[i].ProjectName, err = h.getProjectNameByID(activity.LastProjectID)
+		activity.ProjectName, err = h.getProjectNameByID(activity.LastProjectID)
 		if err != nil {
 			continue
 		}
-		activities.List[i].TaskJiraKey, activities.List[i].TaskSummary, err = h.getJiraTaskKeyByID(activity.LastTaskID)
-		if err != nil {
-			continue
+		if activity.LastTaskID != 0 {
+			activity.TaskJiraKey, activity.TaskSummary, err = h.getJiraTaskKeyByID(activity.LastTaskID)
+			if err != nil {
+				continue
+			}
 		}
+		currentActivities = append(currentActivities, activity)
 	}
-	return activities.List, nil
+	return currentActivities, nil
 }
 
 func (h *Hubstaff) getProjectNameByID(projectID int) (string, error) {
@@ -338,4 +339,35 @@ func (h *Hubstaff) UserWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd tim
 		}
 	}
 	return userWorkReport, nil
+}
+
+// LastUserNote returns last user note for last 12 hours
+func (h *Hubstaff) LastUserNote(userID, projectID string) (Note, error) {
+	params := url.Values{}
+	// get all user notes for last 12 hours
+	params.Add("start_time", time.Now().Add(-12*time.Hour).Format(time.RFC3339))
+	params.Add("stop_time", time.Now().Format(time.RFC3339))
+	params.Add("users", userID)
+	params.Add("projects", projectID)
+	rawResponse, err := h.do(fmt.Sprintf("/v1/notes/?%s", params.Encode()))
+	if err != nil {
+		return Note{}, fmt.Errorf("error on getting users notes data: %v", err)
+	}
+	notesList := struct {
+		Notes []Note `json:"notes"`
+	}{}
+
+	if err = json.Unmarshal(rawResponse, &notesList); err != nil {
+		return Note{}, fmt.Errorf("can't decode response: %s", err)
+	}
+	if len(notesList.Notes) == 0 {
+		return Note{}, nil
+	}
+	var lastUserNote Note
+	for _, note := range notesList.Notes {
+		if note.RecordedAt.After(lastUserNote.RecordedAt) {
+			lastUserNote = note
+		}
+	}
+	return lastUserNote, nil
 }

@@ -413,7 +413,7 @@ func (a *App) ReportCurrentActivityWithCallback(callbackURL string) {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
-	message := a.stringFromCurrentActivitiesList(activitiesList)
+	message := a.stringFromCurrentActivitiesWithNotes(activitiesList)
 	jsonReport, err := json.Marshal(struct {
 		Text string `json:"text"`
 	}{Text: message})
@@ -439,21 +439,29 @@ func (a *App) ReportCurrentActivity(channel string) {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
-	message := a.stringFromCurrentActivitiesList(activitiesList)
+	message := a.stringFromCurrentActivitiesWithNotes(activitiesList)
 	a.Slack.SendMessage(message, channel)
 }
 
-// stringFromCurrentActivitiesList convert slice of last activities in string message report
-func (a *App) stringFromCurrentActivitiesList(activitiesList []hubstaff.LastActivity) string {
+// stringFromCurrentActivitiesWithNotes convert slice of last activities in string message report
+func (a *App) stringFromCurrentActivitiesWithNotes(activitiesList []hubstaff.LastActivity) string {
 	var usersAtWork string
 	for _, activity := range activitiesList {
-		if activity.ProjectName != "" {
-			usersAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
-			if activity.TaskJiraKey != "" {
-				usersAtWork += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
-					activity.TaskJiraKey, activity.TaskSummary)
-			}
+		usersAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
+		if activity.TaskJiraKey != "" {
+			usersAtWork += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
+				activity.TaskJiraKey, activity.TaskSummary)
 		}
+		note, err := a.Hubstaff.LastUserNote(strconv.Itoa(activity.User.ID), strconv.Itoa(activity.LastProjectID))
+		if err != nil {
+			logrus.WithError(err).Error("Can't get user last note for report from Hubstaff.")
+			continue
+		}
+		if note.Description == "" {
+			continue
+		}
+		loc := time.FixedZone("UTC3", 3*60*60)
+		usersAtWork += fmt.Sprintf("\n ✎ %s (%s)", note.Description, note.RecordedAt.In(loc).Format(time.RFC822Z))
 	}
 	if usersAtWork == "" {
 		usersAtWork = "All users are not at work at the moment"
