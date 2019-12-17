@@ -54,6 +54,9 @@ reports:
     channel: "#back-office-app"
   checkneedreplymessages:
     schedule: "@hourly"
+  checklowerpriorityblockers:
+    schedule: "@daily"
+    channel: U9FDU5W4D
 
 jira:
   apiurl: https://theflow.atlassian.net

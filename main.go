@@ -373,6 +373,21 @@ func main() {
 				},
 			},
 			{
+				Name:  "get-jira-blocked-issues-with-low-priority",
+				Usage: "Gets jira low-priority blockers for current sprint issues",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
+					channel := c.String("channel")
+					if channel == "" {
+						logrus.Println("Empty channel flag!")
+						return
+					}
+					application := app.New(cfg)
+					application.ReportIssuesLockedByLowPriority(channel)
+				},
+			},
+			{
 				Name:  "get-low-priority-issues-started",
 				Usage: "Gets jira low priority issues started by developer",
 				Flags: cliApp.Flags,
@@ -530,6 +545,13 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 
 	err = tm.AddTask(cfg.Reports.CheckNeedReplyMessages.Schedule, func() {
 		application.CheckNeedReplyMessages()
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.CheckLowerPriorityBlockers.Schedule, func() {
+		application.ReportIssuesLockedByLowPriority(cfg.Reports.CheckLowerPriorityBlockers.Channel)
 	})
 	if err != nil {
 		panic(err)
