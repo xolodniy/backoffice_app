@@ -227,7 +227,7 @@ func (m *Model) DeleteForgottenPullRequests(ids []int) error {
 }
 
 // UpdateForgottenPullRequests updates forgotten pull request
-func (m *Model) UpdateForgottenPullRequest(pullRequestID int64, forgottenPullRequest ForgottenPullRequest) error {
+func (m *Model) UpdateForgottenPullRequest(pullRequestID int, forgottenPullRequest ForgottenPullRequest) error {
 	if err := m.db.Model(ForgottenPullRequest{}).Where(ForgottenPullRequest{PullRequestID: pullRequestID}).Update(forgottenPullRequest).Error; err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"pullRequestID":        pullRequestID,

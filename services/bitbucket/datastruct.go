@@ -5,7 +5,7 @@ import "time"
 // PullRequest struct of pull request from bitbucket
 // https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/pullrequests#get
 type pullRequest struct {
-	ID          int64  `json:"id"`
+	ID          int    `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	State       string `json:"state"`

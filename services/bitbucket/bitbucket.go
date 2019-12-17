@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -17,10 +18,9 @@ import (
 
 // Bitbucket main struct of jira client
 type Bitbucket struct {
-	Auth           *auth
-	Owner          string
-	Url            string
-	IgnoreBranches []string
+	Auth  *auth
+	Owner string
+	Url   string
 }
 
 type auth struct {
@@ -31,10 +31,9 @@ type auth struct {
 // New creates new Bitbucket
 func New(config *config.Bitbucket) Bitbucket {
 	return Bitbucket{
-		Auth:           &auth{user: config.Auth.Username, password: config.Auth.Password},
-		Owner:          config.Owner,
-		Url:            config.APIUrl,
-		IgnoreBranches: config.IgnoreBranches,
+		Auth:  &auth{user: config.Auth.Username, password: config.Auth.Password},
+		Owner: config.Owner,
+		Url:   config.APIUrl,
 	}
 }
 
@@ -103,7 +102,7 @@ func (b *Bitbucket) post(urlStr string, jsonBody []byte) ([]byte, error) {
 	return respBody, nil
 }
 
-// get prepare http request by get method
+// get prepare http request by delete method
 func (b *Bitbucket) delete(urlStr string) ([]byte, error) {
 	req, err := http.NewRequest("DELETE", urlStr, nil)
 	if err != nil {
@@ -231,8 +230,8 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 }
 
 // PullRequestDiff returns pull request diff of repository
-func (b *Bitbucket) PullRequestDiff(repoSlug string, pullRequestID int64) (string, error) {
-	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + strconv.FormatInt(pullRequestID, 10) + "/diff"
+func (b *Bitbucket) PullRequestDiff(repoSlug string, pullRequestID int) (string, error) {
+	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + strconv.Itoa(pullRequestID) + "/diff"
 	res, err := b.get(urlStr)
 	if err != nil {
 		return "", err
@@ -271,7 +270,7 @@ func (b *Bitbucket) CommitsOfOpenedPRs() ([]Commit, error) {
 
 	var allCommits []Commit
 	for _, pullRequest := range allPullRequests {
-		commits, err := b.PullRequestCommits(pullRequest.Source.Repository.Name, strconv.FormatInt(pullRequest.ID, 10))
+		commits, err := b.PullRequestCommits(pullRequest.Source.Repository.Name, strconv.Itoa(pullRequest.ID))
 		if err != nil {
 			return nil, err
 		}
@@ -394,7 +393,7 @@ func (b *Bitbucket) pullRequestActivity(repoSlug, pullRequestID string) ([]pullR
 		Values []pullRequestActivity `json:"values"`
 	}
 	var pr = pullRequestActivities{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + pullRequestID + "/activity"}
-	for {
+	for i := 0; i < 500; i++ {
 		res, err := b.get(pr.Next)
 		if err != nil {
 			return []pullRequestActivity{}, err
@@ -404,13 +403,15 @@ func (b *Bitbucket) pullRequestActivity(repoSlug, pullRequestID string) ([]pullR
 		if err != nil {
 			return []pullRequestActivity{}, err
 		}
-		for _, pullRequest := range nextPullRequests.Values {
-			pr.Values = append(pr.Values, pullRequest)
-		}
+		pr.Values = append(pr.Values, nextPullRequests.Values...)
 		if nextPullRequests.Next == "" {
 			break
 		}
 		pr.Next = nextPullRequests.Next
+		// warning message about big history or endless cycle
+		if i == 500 {
+			logrus.Warn("Pull request activity exceed count of 500")
+		}
 	}
 	return pr.Values, nil
 }
@@ -434,7 +435,7 @@ func (b *Bitbucket) PullRequestsActivity() ([]pullRequest, error) {
 	}
 
 	for i, pullRequest := range allPullRequests {
-		activities, err := b.pullRequestActivity(pullRequest.Source.Repository.Name, strconv.FormatInt(pullRequest.ID, 10))
+		activities, err := b.pullRequestActivity(pullRequest.Source.Repository.Name, strconv.Itoa(pullRequest.ID))
 		if err != nil {
 			return nil, err
 		}
@@ -491,8 +492,13 @@ func (b *Bitbucket) BranchesWithoutPullRequests() ([]branch, error) {
 		if err != nil {
 			return nil, err
 		}
+		r, err := regexp.Compile("^(release|hotfix)/[0-9]{8}")
+		if err != nil {
+			return nil, err
+		}
 		for _, branch := range branches {
-			if !common.ValueIn(branch.Name, branchesWithPullRequests...) && !common.ValueIn(branch.Name, b.IgnoreBranches...) {
+			if !common.ValueIn(branch.Name, branchesWithPullRequests...) &&
+				!common.ValueIn(branch.Name, "master", "dev") && !r.Match([]byte(branch.Name)) {
 				branchesWithoutPullRequests = append(branchesWithoutPullRequests, branch)
 			}
 		}

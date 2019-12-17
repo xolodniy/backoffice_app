@@ -33,7 +33,7 @@ type Vacation struct {
 
 type ForgottenPullRequest struct {
 	ID            int       `json:"id"`
-	PullRequestID int64     `json:"pullRequestId"`
+	PullRequestID int       `json:"pullRequestId"`
 	Title         string    `json:"title"`
 	Author        string    `json:"author"`
 	RepoSlug      string    `json:"repoSlug"`
