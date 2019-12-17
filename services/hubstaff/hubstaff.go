@@ -178,13 +178,11 @@ func (h *Hubstaff) CurrentActivity() ([]LastActivity, error) {
 		if err != nil {
 			continue
 		}
-		if activity.LastTaskID == 0 {
-			currentActivities = append(currentActivities, activity)
-			continue
-		}
-		activity.TaskJiraKey, activity.TaskSummary, err = h.getJiraTaskKeyByID(activity.LastTaskID)
-		if err != nil {
-			continue
+		if activity.LastTaskID != 0 {
+			activity.TaskJiraKey, activity.TaskSummary, err = h.getJiraTaskKeyByID(activity.LastTaskID)
+			if err != nil {
+				continue
+			}
 		}
 		currentActivities = append(currentActivities, activity)
 	}
@@ -346,8 +344,8 @@ func (h *Hubstaff) UserWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd tim
 // LastUserNote returns last user note for last 12 hours
 func (h *Hubstaff) LastUserNote(userID, projectID string) (Note, error) {
 	params := url.Values{}
-	// get all user notes for last 6 hours
-	params.Add("start_time", time.Now().Add(-6*time.Hour).Format(time.RFC3339))
+	// get all user notes for last 12 hours
+	params.Add("start_time", time.Now().Add(-12*time.Hour).Format(time.RFC3339))
 	params.Add("stop_time", time.Now().Format(time.RFC3339))
 	params.Add("users", userID)
 	params.Add("projects", projectID)
