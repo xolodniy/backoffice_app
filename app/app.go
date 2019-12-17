@@ -450,7 +450,7 @@ func (a *App) stringFromCurrentActivitiesWithNotes(activitiesList []hubstaff.Las
 			usersAtWork += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
 				activity.TaskJiraKey, activity.TaskSummary)
 		}
-		note, err := a.Hubstaff.LastUserNote(strconv.Itoa(activity.User.Id), strconv.Itoa(activity.LastProjectID))
+		note, err := a.Hubstaff.LastUserNote(strconv.Itoa(activity.User.ID), strconv.Itoa(activity.LastProjectID))
 		if err != nil {
 			logrus.WithError(err).Error("Can't get user last note for report from Hubstaff.")
 			continue
