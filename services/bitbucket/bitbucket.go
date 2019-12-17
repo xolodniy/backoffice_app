@@ -408,7 +408,7 @@ func (b *Bitbucket) pullRequestActivity(repoSlug, pullRequestID string) ([]pullR
 			break
 		}
 		pr.Next = nextPullRequests.Next
-		// warning message about big history or endless cycle
+		// warning message about big pull request activity or endless cycle
 		if i == 500 {
 			logrus.Warn("Pull request activity exceed count of 500")
 		}
@@ -513,7 +513,7 @@ func (b *Bitbucket) BranchesList(repoSlug string) ([]branch, error) {
 		Values []branch `json:"values"`
 	}
 	var pb = paginatedBranches{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/refs/branches?state=OPEN"}
-	for {
+	for i := 0; i < 500; i++ {
 		res, err := b.get(pb.Next)
 		if err != nil {
 			return []branch{}, err
@@ -530,6 +530,10 @@ func (b *Bitbucket) BranchesList(repoSlug string) ([]branch, error) {
 			break
 		}
 		pb.Next = paginatedBranches.Next
+		// warning message about big branche list or endless cycle
+		if i == 500 {
+			logrus.Warn("Branches list exceed count of 500")
+		}
 	}
 	return pb.Values, nil
 }
