@@ -101,7 +101,6 @@ type Bitbucket struct {
 		Username string
 		Password string
 	}
-	IgnoreBranches []string
 }
 
 // Report struct for cron values with channel for reports
