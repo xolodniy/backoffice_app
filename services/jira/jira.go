@@ -71,6 +71,7 @@ var (
 	TransitionStart                    = "Start"
 	TransitionDone                     = "Done"
 	TransitionApprove                  = "Approve"
+	TransitionCloaseLastTask           = "Close last task"
 	TagDeveloperName                   = "displayName"
 	TagDeveloperID                     = "accountId"
 	NoDeveloper                        = "No developer"

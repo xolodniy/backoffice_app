@@ -56,7 +56,7 @@ reports:
     schedule: "@yearly"
 
 jira:
-  apiurl: https://theflow.atlassian.net
+  apiurl: https://atnr.atlassian.net
   auth:
     username: stepan.morozov@atnr.pro
     token: GaQ1oimS8bWXNdqcFyRG492D

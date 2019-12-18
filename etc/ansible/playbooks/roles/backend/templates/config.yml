@@ -56,7 +56,7 @@ reports:
     schedule: "@hourly"
 
 jira:
-  apiurl: https://theflow.atlassian.net
+  apiurl: https://atnr.atlassian.net
   auth:
     username: {{ jira_login }}
     token: {{ jira_token }}
