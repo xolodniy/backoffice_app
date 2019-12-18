@@ -30,3 +30,14 @@ type Vacation struct {
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
+
+// Reminder struct of user reminders
+type Reminder struct {
+	ID         int
+	UserID     string
+	Message    string
+	ChannelID  string
+	ThreadTs   string
+	ReplyCount int
+	CreatedAt  time.Time
+}

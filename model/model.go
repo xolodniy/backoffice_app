@@ -196,3 +196,31 @@ func (m *Model) DeleteVacation(userId string) error {
 	}
 	return nil
 }
+
+// GetReminders retrieves reminders
+func (m *Model) GetReminders() ([]Reminder, error) {
+	var res []Reminder
+	if err := m.db.Find(&res).Error; err != nil {
+		logrus.WithError(err).Error("can't get reminders")
+		return nil, common.ErrInternal
+	}
+	return res, nil
+}
+
+// CreateReminder creates new reminder
+func (m *Model) CreateReminder(reminder Reminder) error {
+	if err := m.db.Create(&reminder).Error; err != nil {
+		logrus.WithError(err).WithField("reminder", fmt.Sprintf("%+v", reminder)).Error("can't create reminder")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// DeleteReminder deletes reminder
+func (m *Model) DeleteReminder(id int) error {
+	if err := m.db.Where(Reminder{ID: id}).Delete(&Reminder{}).Error; err != nil {
+		logrus.WithError(err).WithField("id", id).Error("can't delete reminder by id")
+		return common.ErrInternal
+	}
+	return nil
+}
