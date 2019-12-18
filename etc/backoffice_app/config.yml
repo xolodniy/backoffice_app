@@ -54,6 +54,8 @@ reports:
     channel: "#back-office-app"
   checkneedreplymessages:
     schedule: "@yearly"
+  sendreminders:
+    schedule: "@yearly"
 
 jira:
   apiurl: https://theflow.atlassian.net
