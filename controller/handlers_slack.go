@@ -144,7 +144,7 @@ func (c *Controller) sprintStatus(ctx *gin.Context) {
 	}{}
 	err := ctx.ShouldBindWith(&request, binding.FormPost)
 	if err != nil {
-		ctx.String(http.StatusOK, "Failed! UserId is empty!")
+		ctx.String(http.StatusOK, "Failed! UserID is empty!")
 		return
 	}
 	go c.App.ReportSprintStatus(request.UserId)

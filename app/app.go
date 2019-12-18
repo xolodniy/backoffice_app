@@ -943,7 +943,7 @@ func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.
 
 // StartAfkTimer starts timer while user is afk
 func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
-	err := a.model.CreateAfkTimer(model.AfkTimer{UserId: userId, Duration: userDuration.String()})
+	err := a.model.CreateAfkTimer(model.AfkTimer{UserID: userId, Duration: userDuration.String()})
 	if err != nil {
 		logrus.WithError(err).Errorf("can't create afk timer in database")
 	}
@@ -986,10 +986,10 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 		logrus.WithError(err).Errorf("can't take information about vacations from database")
 	}
 	for _, vacation := range vacations {
-		if strings.Contains(message, vacation.UserId) {
-			userInfo := a.GetUserInfoByTagValue(TagUserSlackID, vacation.UserId)
+		if strings.Contains(message, vacation.UserID) {
+			userInfo := a.GetUserInfoByTagValue(TagUserSlackID, vacation.UserID)
 			if userInfo[TagUserSlackRealName] == "" || userInfo[TagUserSlackRealName] == EmptyTagValue {
-				logrus.Errorf("can't take information about user name from vocabulary with id: %v", vacation.UserId)
+				logrus.Errorf("can't take information about user name from vocabulary with id: %v", vacation.UserID)
 				userInfo[TagUserSlackRealName] = "This user"
 			}
 			a.Slack.SendToThread(fmt.Sprintf("*%s* is on vacation, his message is: \n\n'%s'", userInfo[TagUserSlackRealName], vacation.Message), channel, threadId)
@@ -1081,10 +1081,10 @@ func (a *App) CheckAfkTimers() {
 		}
 		difference := time.Now().Sub(afkTimer.UpdatedAt)
 		if difference < duration && difference > 0 {
-			go a.StartAfkTimer(duration-difference, afkTimer.UserId)
+			go a.StartAfkTimer(duration-difference, afkTimer.UserID)
 			continue
 		}
-		err = a.model.DeleteAfkTimer(afkTimer.UserId)
+		err = a.model.DeleteAfkTimer(afkTimer.UserID)
 		if err != nil {
 			logrus.WithError(err).Errorf("can't delete afk timer")
 		}

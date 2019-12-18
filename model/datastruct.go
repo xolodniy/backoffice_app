@@ -16,14 +16,14 @@ type Commit struct {
 // AfkTimer struct of Afk timer
 type AfkTimer struct {
 	ID        int       `json:"id"`
-	UserId    string    `json:"userId"`
-	Duration  string    `json:"userId"`
+	UserID    string    `json:"userID"`
+	Duration  string    `json:"duration"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 // Vacation struct of user vacation
 type Vacation struct {
-	UserId    string    `json:"userId"`
+	UserID    string    `json:"userID"`
 	DateStart time.Time `json:"dateStart"`
 	DateEnd   time.Time `json:"dateEnd"`
 	Message   string    `json:"message"`
