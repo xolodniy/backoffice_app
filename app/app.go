@@ -942,21 +942,21 @@ func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.
 }
 
 // StartAfkTimer starts timer while user is afk
-func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
-	err := a.model.CreateAfkTimer(model.AfkTimer{UserID: userId, Duration: userDuration.String()})
+func (a *App) StartAfkTimer(userDuration time.Duration, userID string) {
+	err := a.model.CreateAfkTimer(model.AfkTimer{UserID: userID, Duration: userDuration.String()})
 	if err != nil {
 		logrus.WithError(err).Errorf("can't create afk timer in database")
 	}
-	a.AfkTimer.UserDurationMap[userId] = userDuration
+	a.AfkTimer.UserDurationMap[userID] = userDuration
 	ticker := time.NewTicker(time.Second)
 	go func() {
 		for range ticker.C {
 			a.AfkTimer.Lock()
-			a.AfkTimer.UserDurationMap[userId] = a.AfkTimer.UserDurationMap[userId] - time.Second
+			a.AfkTimer.UserDurationMap[userID] = a.AfkTimer.UserDurationMap[userID] - time.Second
 			a.AfkTimer.Unlock()
-			if a.AfkTimer.UserDurationMap[userId] <= 0 {
+			if a.AfkTimer.UserDurationMap[userID] <= 0 {
 				ticker.Stop()
-				err = a.model.DeleteAfkTimer(userId)
+				err = a.model.DeleteAfkTimer(userID)
 				if err != nil {
 					logrus.WithError(err).Errorf("can't delete afk timer from database")
 				}
