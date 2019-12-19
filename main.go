@@ -83,7 +83,7 @@ func main() {
 			ctx, cf := context.WithCancel(context.Background())
 			initCronTasks(ctx, &wg, cfg, application)
 
-			rb := bots.NewReleaseBot(ctx, &wg, cfg.Telegram.ReleaseBotAPIKey, &m)
+			rb := bots.NewReleaseBot(ctx, &wg, cfg.Telegram.ReleaseBotAPIKey, &m, application)
 			go rb.RunBot()
 
 			gracefulClosing(cf, &wg)

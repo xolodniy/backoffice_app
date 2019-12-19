@@ -41,7 +41,7 @@ func New(config *config.Jira) Jira {
 }
 
 // Status variables for jql requests
-var (
+const (
 	StatusStarted                      = "Started"
 	StatusClosed                       = "Closed"
 	StatusOpen                         = "Open"
@@ -78,6 +78,7 @@ var (
 	ChangelogFieldFixVersion           = "Fix Version"
 	ChangelogFieldPrioriy              = "priority"
 	ChangelogFieldDueDate              = "duedate"
+	ReleaseStatusUnreleased            = "unreleased"
 )
 
 func (i Issue) String() string {
@@ -615,4 +616,21 @@ func (j *Jira) getIssueLastWorkLogActivity(issueKey string, totalCount int) (jir
 		return *workLog, nil
 	}
 	return *workLog, nil
+}
+
+// UnreleasedFixVersionsByProjectKey returns unreleased fixVersions slice by project key
+func (j *Jira) UnreleasedFixVersionsByProjectKey(projectKey string) ([]jira.Version, error) {
+	fixVersions := &struct {
+		Values []jira.Version `json:"values"`
+	}{}
+	url := fmt.Sprintf("/rest/api/2/project/%s/version?status=%s", projectKey, ReleaseStatusUnreleased)
+	req, err := j.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("can't create request of versions enpoint: %s", err)
+	}
+	_, err = j.Do(req, fixVersions)
+	if err != nil {
+		return nil, fmt.Errorf("can't take jira worklog of issue: %s", err)
+	}
+	return fixVersions.Values, nil
 }
