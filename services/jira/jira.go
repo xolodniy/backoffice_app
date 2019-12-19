@@ -630,7 +630,25 @@ func (j *Jira) UnreleasedFixVersionsByProjectKey(projectKey string) ([]jira.Vers
 	}
 	_, err = j.Do(req, fixVersions)
 	if err != nil {
-		return nil, fmt.Errorf("can't take jira worklog of issue: %s", err)
+		return nil, fmt.Errorf("can't take jira versions list: %s", err)
 	}
 	return fixVersions.Values, nil
+}
+
+// VersionIssuesCount returns issues count and issues unresolved count by version id
+func (j *Jira) VersionIssuesCount(releaseID int) (int, int, error) {
+	result := &struct {
+		IssuesUnresolvedCount int `json:"issuesUnresolvedCount"`
+		IssuesCount           int `json:"issuesCount"`
+	}{}
+	url := fmt.Sprintf("/rest/api/2/version/%d/unresolvedIssueCount", releaseID)
+	req, err := j.NewRequest("GET", url, nil)
+	if err != nil {
+		return 0, 0, fmt.Errorf("can't create request of versions issues count enpoint: %s", err)
+	}
+	_, err = j.Do(req, result)
+	if err != nil {
+		return 0, 0, fmt.Errorf("can't take jira version issues count: %s", err)
+	}
+	return result.IssuesCount, result.IssuesUnresolvedCount, nil
 }

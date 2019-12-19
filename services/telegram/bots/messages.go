@@ -6,4 +6,6 @@ const (
 	regSuccess          = "Registration has successfully completed."
 	noProjectAvailable  = "You haven't open releases by your projects."
 	alreadyRegistered   = "You had already registered."
+	helpText            = "Please use commands. start type '/' to see commands list."
+	internalError       = "Error occurred. Try again later."
 )

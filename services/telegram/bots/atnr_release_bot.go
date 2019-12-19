@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -17,21 +18,28 @@ import (
 )
 
 type ReleaseBot struct {
-	ctx    context.Context
-	apiKey string
-	wg     *sync.WaitGroup
-	m      *model.Model
-	bot    *tgbotapi.BotAPI
-	a      *app.App
+	ctx        context.Context
+	apiKey     string
+	wg         *sync.WaitGroup
+	m          *model.Model
+	bot        *tgbotapi.BotAPI
+	a          *app.App
+	userStatus map[int64]uint8
 }
+
+const (
+	statusNone = iota
+	statusReleaseSelection
+)
 
 func NewReleaseBot(ctx context.Context, wg *sync.WaitGroup, apiKey string, m *model.Model, application *app.App) *ReleaseBot {
 	return &ReleaseBot{
-		ctx:    ctx,
-		wg:     wg,
-		apiKey: apiKey,
-		m:      m,
-		a:      application,
+		ctx:        ctx,
+		wg:         wg,
+		apiKey:     apiKey,
+		m:          m,
+		a:          application,
+		userStatus: make(map[int64]uint8),
 	}
 }
 
@@ -82,6 +90,17 @@ func (rb *ReleaseBot) processMessages(updChan tgbotapi.UpdatesChannel) {
 			rb.bot.StopReceivingUpdates()
 			return
 		case update := <-updChan:
+			if update.CallbackQuery != nil {
+				logrus.Infof("CBC === %+v", update.CallbackQuery)
+				chatID := update.CallbackQuery.From.ID
+				if rb.userStatus[int64(chatID)] == statusReleaseSelection {
+					if update.CallbackQuery.Data != "" {
+						rb.processReleaseDetails(int64(chatID), update.CallbackQuery.Data)
+						continue
+					}
+				}
+				continue
+			}
 			if update.Message == nil {
 				logrus.WithField("update", fmt.Sprintf("%+v\n", update)).Warn("not understand req")
 				continue
@@ -103,10 +122,8 @@ func (rb *ReleaseBot) processMessages(updChan tgbotapi.UpdatesChannel) {
 				continue
 			}
 
-			// ping-pong
-			reply := text
-			msg := tgbotapi.NewMessage(chatID, reply)
-			rb.sendMsgWithLog(msg)
+			// requested status in format: project - release
+			rb.sendHelp(chatID)
 		}
 
 	}
@@ -136,7 +153,12 @@ func (rb *ReleaseBot) showReleases(chatID int64) {
 	if err != nil {
 		return
 	}
-	respSlice := make([]string, 0)
+	type record struct {
+		projectName string
+		versionName string
+		versionID   string
+	}
+	respSlice := make([]record, 0)
 	for _, projectKey := range rbAuth.Projects {
 		versions, err := rb.a.Jira.UnreleasedFixVersionsByProjectKey(projectKey)
 		if err != nil {
@@ -145,17 +167,97 @@ func (rb *ReleaseBot) showReleases(chatID int64) {
 		}
 		// get releases by projects names from jira
 		for _, version := range versions {
-			respSlice = append(respSlice, fmt.Sprintf("%s - %s\n", projectKey, version.Name))
+			respSlice = append(respSlice, record{
+				projectName: projectKey,
+				versionName: version.Name,
+				versionID:   version.ID,
+			})
 		}
 	}
 	if len(respSlice) > 0 {
-		sort.Strings(respSlice)
-		resp := ""
+		sort.Slice(respSlice, func(i, j int) bool {
+			return respSlice[i].projectName < respSlice[j].projectName
+		})
+		rows := make([][]tgbotapi.InlineKeyboardButton, 0)
+
 		for _, str := range respSlice {
-			resp += str
+			btn := tgbotapi.NewInlineKeyboardButtonData(str.projectName+"/"+str.versionName, str.versionID)
+			rows = append(rows, tgbotapi.NewInlineKeyboardRow(btn))
 		}
-		rb.sendText(chatID, resp)
+
+		var keyboard = tgbotapi.NewInlineKeyboardMarkup(rows...)
+		resp := tgbotapi.NewMessage(chatID, "Select release please")
+		resp.ReplyMarkup = keyboard
+		rb.sendMsgWithLog(resp)
+		rb.userStatus[chatID] = statusReleaseSelection
 	} else {
 		rb.sendText(chatID, noProjectAvailable)
+		rb.userStatus[chatID] = statusReleaseSelection
+
 	}
+}
+
+func (rb *ReleaseBot) sendHelp(chatID int64) {
+	defer func() {
+		rb.userStatus[chatID] = statusNone
+	}()
+	rb.sendText(chatID, helpText)
+}
+
+func (rb *ReleaseBot) processReleaseDetails(chatID int64, releaseIDstr string) {
+	defer func() { rb.userStatus[chatID] = statusNone }()
+
+	releaseID, err := strconv.Atoi(releaseIDstr)
+	if err != nil {
+		logrus.WithError(err).WithField("releaseIDstr", releaseIDstr).Error("can't convert release id to int")
+		rb.sendText(chatID, internalError)
+		return
+	}
+	ver, _, err := rb.a.Jira.Version.Get(releaseID)
+	if err != nil {
+		logrus.WithError(err).WithField("releaseIDstr", releaseIDstr).Error("can't get jira version by id")
+		rb.sendText(chatID, internalError)
+		return
+	}
+	project, _, err := rb.a.Jira.Project.Get(strconv.Itoa(ver.ProjectID))
+	if err != nil {
+		logrus.WithError(err).WithField("releaseIDstr", releaseIDstr).Error("cant get project from jira")
+		rb.sendText(chatID, internalError)
+		return
+	}
+
+	rbAuth, err := rb.m.GetRbAuthByTgUserID(chatID)
+	if err != nil {
+		rb.sendText(chatID, internalError)
+		return
+	}
+	hasProjectAccess := false
+	for _, projGranted := range rbAuth.Projects {
+		if projGranted == project.Key {
+			hasProjectAccess = true
+			break
+		}
+	}
+	if !hasProjectAccess {
+		rb.sendText(chatID, projectAccessDenied)
+		return
+	}
+	releasedStatus := "unreleased"
+	if ver.Released {
+		releasedStatus = "released"
+	}
+	issuesCount, unresolvedCount, err := rb.a.Jira.VersionIssuesCount(releaseID)
+	if err != nil {
+		logrus.WithError(err).WithField("releaseIDstr", releaseIDstr).Error("cant get release counts from jira")
+		rb.sendText(chatID, internalError)
+		return
+	}
+	percent := (float32(issuesCount-unresolvedCount) / float32(issuesCount)) * 100
+	resp := fmt.Sprintf("*%s*\n\nCurrent status: %s\n\nRelease date planned: %s\n\nIssues resolved: %d / %d (%2.0f %%)",
+		ver.Name, releasedStatus, ver.ReleaseDate, (issuesCount - unresolvedCount), issuesCount, percent)
+
+	msg := tgbotapi.NewMessage(chatID, resp)
+	msg.ParseMode = tgbotapi.ModeMarkdown
+
+	rb.sendMsgWithLog(msg)
 }
