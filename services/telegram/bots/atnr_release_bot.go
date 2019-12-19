@@ -104,18 +104,15 @@ func (rb *ReleaseBot) processMessages(updChan tgbotapi.UpdatesChannel) {
 			if update.Message == nil {
 				continue
 			}
-
-			userName := update.Message.From.UserName
 			chatID := update.Message.Chat.ID
 			text := update.Message.Text
-			logrus.Debugf("[%s] %d %s", userName, chatID, text)
 			// parse commands
 			if strings.Index(text, "/") == 0 {
 				switch {
 				case text == "/help":
 					rb.sendHelp(chatID)
 				case text == "/reg":
-					rb.processRegistration(chatID, text)
+					rb.processRegistration(chatID, update.Message.From.UserName, update.Message.From.FirstName, update.Message.From.LastName)
 				case text == "/releases":
 					rb.showReleases(chatID)
 				}
@@ -129,7 +126,7 @@ func (rb *ReleaseBot) processMessages(updChan tgbotapi.UpdatesChannel) {
 	}
 }
 
-func (rb *ReleaseBot) processRegistration(chatID int64, query string) {
+func (rb *ReleaseBot) processRegistration(chatID int64, username, firstName, lastName string) {
 	_, err := rb.m.GetRbAuthByTgUserID(chatID)
 	if err != common.ErrNotFound {
 		rb.sendText(chatID, alreadyRegistered)
@@ -137,6 +134,9 @@ func (rb *ReleaseBot) processRegistration(chatID int64, query string) {
 	}
 	if err := rb.m.CreateRbAuth(model.RbAuth{
 		TgUserID:  chatID,
+		Username:  username,
+		FirstName: firstName,
+		LastName:  lastName,
 		Projects:  []string{},
 		UpdatedAt: time.Now().UTC(),
 	}); err != nil {
@@ -151,6 +151,7 @@ func (rb *ReleaseBot) processRegistration(chatID int64, query string) {
 func (rb *ReleaseBot) showReleases(chatID int64) {
 	rbAuth, err := rb.m.GetRbAuthByTgUserID(chatID)
 	if err != nil {
+		rb.sendText(chatID, needToBeRegistered)
 		return
 	}
 	type record struct {
@@ -195,10 +196,8 @@ func (rb *ReleaseBot) showReleases(chatID int64) {
 }
 
 func (rb *ReleaseBot) sendHelp(chatID int64) {
-	defer func() {
-		rb.userStatus[chatID] = statusNone
-	}()
 	rb.sendText(chatID, helpText)
+	rb.userStatus[chatID] = statusNone
 }
 
 func (rb *ReleaseBot) processReleaseDetails(chatID int64, releaseIDstr string) {

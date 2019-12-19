@@ -38,6 +38,9 @@ type Vacation struct {
 // RbAuth stores Telegram Release Bot user authorization
 type RbAuth struct {
 	TgUserID  int64
+	Username  string
+	FirstName string
+	LastName  string
 	Projects  pq.StringArray
 	UpdatedAt time.Time
 }
