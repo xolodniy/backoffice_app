@@ -392,7 +392,7 @@ func (b *Bitbucket) pullRequestActivity(repoSlug, pullRequestID string) ([]pullR
 		Values []pullRequestActivity `json:"values"`
 	}
 	var pr = pullRequestActivities{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + pullRequestID + "/activity"}
-	for i := 0; i < 500; i++ {
+	for i := 0; i <= 500; i++ {
 		res, err := b.get(pr.Next)
 		if err != nil {
 			return []pullRequestActivity{}, err
@@ -507,7 +507,7 @@ func (b *Bitbucket) BranchesList(repoSlug string) ([]branch, error) {
 		Values []branch `json:"values"`
 	}
 	var pb = paginatedBranches{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/refs/branches?state=OPEN"}
-	for i := 0; i < 500; i++ {
+	for i := 0; i <= 500; i++ {
 		res, err := b.get(pb.Next)
 		if err != nil {
 			return []branch{}, err
