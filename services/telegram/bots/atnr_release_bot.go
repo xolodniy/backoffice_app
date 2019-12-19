@@ -91,18 +91,17 @@ func (rb *ReleaseBot) processMessages(updChan tgbotapi.UpdatesChannel) {
 			return
 		case update := <-updChan:
 			if update.CallbackQuery != nil {
-				logrus.Infof("CBC === %+v", update.CallbackQuery)
-				chatID := update.CallbackQuery.From.ID
-				if rb.userStatus[int64(chatID)] == statusReleaseSelection {
+				chatID := int64(update.CallbackQuery.From.ID)
+				if rb.userStatus[chatID] == statusReleaseSelection {
 					if update.CallbackQuery.Data != "" {
-						rb.processReleaseDetails(int64(chatID), update.CallbackQuery.Data)
-						continue
+						rb.processReleaseDetails(chatID, update.CallbackQuery.Data)
 					}
+				} else {
+					rb.sendText(chatID, "Expired request. You can make a new one.")
 				}
 				continue
 			}
 			if update.Message == nil {
-				logrus.WithField("update", fmt.Sprintf("%+v\n", update)).Warn("not understand req")
 				continue
 			}
 
@@ -114,6 +113,7 @@ func (rb *ReleaseBot) processMessages(updChan tgbotapi.UpdatesChannel) {
 			if strings.Index(text, "/") == 0 {
 				switch {
 				case text == "/help":
+					rb.sendHelp(chatID)
 				case text == "/reg":
 					rb.processRegistration(chatID, text)
 				case text == "/releases":
@@ -179,12 +179,10 @@ func (rb *ReleaseBot) showReleases(chatID int64) {
 			return respSlice[i].projectName < respSlice[j].projectName
 		})
 		rows := make([][]tgbotapi.InlineKeyboardButton, 0)
-
 		for _, str := range respSlice {
 			btn := tgbotapi.NewInlineKeyboardButtonData(str.projectName+"/"+str.versionName, str.versionID)
 			rows = append(rows, tgbotapi.NewInlineKeyboardRow(btn))
 		}
-
 		var keyboard = tgbotapi.NewInlineKeyboardMarkup(rows...)
 		resp := tgbotapi.NewMessage(chatID, "Select release please")
 		resp.ReplyMarkup = keyboard
@@ -193,7 +191,6 @@ func (rb *ReleaseBot) showReleases(chatID int64) {
 	} else {
 		rb.sendText(chatID, noProjectAvailable)
 		rb.userStatus[chatID] = statusReleaseSelection
-
 	}
 }
 
@@ -225,7 +222,7 @@ func (rb *ReleaseBot) processReleaseDetails(chatID int64, releaseIDstr string) {
 		rb.sendText(chatID, internalError)
 		return
 	}
-
+	// check project access for the user
 	rbAuth, err := rb.m.GetRbAuthByTgUserID(chatID)
 	if err != nil {
 		rb.sendText(chatID, internalError)
@@ -242,6 +239,7 @@ func (rb *ReleaseBot) processReleaseDetails(chatID int64, releaseIDstr string) {
 		rb.sendText(chatID, projectAccessDenied)
 		return
 	}
+	// prepare response
 	releasedStatus := "unreleased"
 	if ver.Released {
 		releasedStatus = "released"
@@ -254,10 +252,9 @@ func (rb *ReleaseBot) processReleaseDetails(chatID int64, releaseIDstr string) {
 	}
 	percent := (float32(issuesCount-unresolvedCount) / float32(issuesCount)) * 100
 	resp := fmt.Sprintf("*%s*\n\nCurrent status: %s\n\nRelease date planned: %s\n\nIssues resolved: %d / %d (%2.0f %%)",
-		ver.Name, releasedStatus, ver.ReleaseDate, (issuesCount - unresolvedCount), issuesCount, percent)
+		ver.Name, releasedStatus, ver.ReleaseDate, issuesCount-unresolvedCount, issuesCount, percent)
 
 	msg := tgbotapi.NewMessage(chatID, resp)
 	msg.ParseMode = tgbotapi.ModeMarkdown
-
 	rb.sendMsgWithLog(msg)
 }
