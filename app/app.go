@@ -1667,23 +1667,7 @@ func (a *App) CheckForgottenGitPullRequests(channel string) {
 		return
 	}
 	for _, pr := range pullRequests {
-		var lastActivity time.Time
-		// find activity date by type (there are 3 types: approve, update, comment)
-		for _, activity := range pr.Activities {
-			if !activity.Approval.Date.IsZero() && lastActivity.Before(activity.Approval.Date) {
-				lastActivity = activity.Approval.Date
-			}
-			if !activity.Update.Date.IsZero() && lastActivity.Before(activity.Update.Date) {
-				lastActivity = activity.Update.Date
-			}
-			if !activity.Comment.CreatedOn.IsZero() && lastActivity.Before(activity.Comment.CreatedOn) {
-				if activity.Comment.CreatedOn.Before(activity.Comment.UpdatedOn) {
-					lastActivity = activity.Comment.UpdatedOn
-					continue
-				}
-				lastActivity = activity.Comment.CreatedOn
-			}
-		}
+		lastActivity := pr.LastActivityDate()
 		// if this pull request without activity last 5 days, it is old and we save or update it to database
 		if lastActivity.Before(time.Now().AddDate(0, 0, -5)) {
 			var breaked bool
