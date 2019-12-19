@@ -1790,6 +1790,14 @@ func (a *App) CheckForgottenGitBranches(channel string) {
 		return
 	}
 	for _, branch := range branchesWithoutPRs {
+		r, err := regexp.Compile("^(release|hotfix)/[0-9]{8}")
+		if err != nil {
+			logrus.WithError(err).Error("Can't compile regexp")
+			return
+		}
+		if common.ValueIn(branch.Name, "master", "dev") && r.Match([]byte(branch.Name)) {
+			continue
+		}
 		var breaked bool
 	Loop:
 		for j := len(forgottenBranches) - 1; j >= 0; j-- {

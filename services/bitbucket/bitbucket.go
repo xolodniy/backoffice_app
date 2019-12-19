@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -492,13 +491,8 @@ func (b *Bitbucket) BranchesWithoutPullRequests() ([]branch, error) {
 		if err != nil {
 			return nil, err
 		}
-		r, err := regexp.Compile("^(release|hotfix)/[0-9]{8}")
-		if err != nil {
-			return nil, err
-		}
 		for _, branch := range branches {
-			if !common.ValueIn(branch.Name, branchesWithPullRequests...) &&
-				!common.ValueIn(branch.Name, "master", "dev") && !r.Match([]byte(branch.Name)) {
+			if !common.ValueIn(branch.Name, branchesWithPullRequests...) {
 				branchesWithoutPullRequests = append(branchesWithoutPullRequests, branch)
 			}
 		}
