@@ -17,20 +17,24 @@ import (
 type TaskManager struct {
 	cron *cron.Cron
 	wg   *sync.WaitGroup
-
-	ctx    context.Context
-	cancel context.CancelFunc
+	ctx  context.Context
 }
 
 // New TaskManager constructor
-func New(wg *sync.WaitGroup) *TaskManager {
-	ctx, cancel := context.WithCancel(context.Background())
-	return &TaskManager{
-		cron:   cron.New(),
-		wg:     wg,
-		ctx:    ctx,
-		cancel: cancel,
+func New(ctx context.Context, wg *sync.WaitGroup) *TaskManager {
+	tm := &TaskManager{
+		cron: cron.New(),
+		wg:   wg,
+		ctx:  ctx,
 	}
+	go func() {
+		select {
+		case <-ctx.Done():
+			tm.cron.Stop()
+			return
+		}
+	}()
+	return tm
 }
 
 // AddTask adds a func to the Cron to be run on the given schedule.
@@ -68,10 +72,4 @@ func (tm *TaskManager) AddTask(spec string, cmd func()) error {
 // Start taskManager
 func (tm *TaskManager) Start() {
 	tm.cron.Start()
-}
-
-// Stop TaskManager
-func (tm *TaskManager) Stop() {
-	tm.cron.Stop()
-	tm.cancel()
 }

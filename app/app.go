@@ -27,7 +27,6 @@ import (
 	"backoffice_app/services/slack"
 	"backoffice_app/types"
 
-	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/now"
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
@@ -48,7 +47,7 @@ type App struct {
 	Bitbucket bitbucket.Bitbucket
 	Config    config.Main
 	AfkTimer  AfkTimer
-	model     model.Model
+	model     *model.Model
 }
 
 // Tags for user map of account info
@@ -68,19 +67,7 @@ type AfkTimer struct {
 }
 
 // New is main App constructor
-func New(conf *config.Main) *App {
-	db, err := gorm.Open("postgres", conf.Database.ConnURL())
-	if err != nil {
-		logrus.WithError(err).Fatal("can't open connection with a database")
-	}
-	if err := db.DB().Ping(); err != nil {
-		logrus.WithError(err).Fatal("can't ping connection with a database")
-	}
-
-	model := model.New(db)
-	if err := model.CheckMigrations(); err != nil {
-		logrus.WithError(err).Fatal("invalid database condition")
-	}
+func New(conf *config.Main, m *model.Model) *App {
 	return &App{
 		Hubstaff:  hubstaff.New(&conf.Hubstaff),
 		Slack:     slack.New(&conf.Slack),
@@ -88,7 +75,7 @@ func New(conf *config.Main) *App {
 		Bitbucket: bitbucket.New(&conf.Bitbucket),
 		Config:    *conf,
 		AfkTimer:  AfkTimer{Mutex: &sync.Mutex{}, UserDurationMap: make(map[string]time.Duration)},
-		model:     model,
+		model:     m,
 	}
 }
 

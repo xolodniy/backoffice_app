@@ -15,6 +15,7 @@ import (
 	"backoffice_app/libs/taskmanager"
 	"backoffice_app/model"
 	"backoffice_app/services/jira"
+	"backoffice_app/services/telegram/bots"
 
 	runtime "github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/jinzhu/gorm"
@@ -57,7 +58,20 @@ func main() {
 			logrus.SetFormatter(&formatter)
 
 			now.WeekStartDay = time.Monday
-			application := app.New(cfg)
+
+			db, err := gorm.Open("postgres", cfg.Database.ConnURL())
+			if err != nil {
+				logrus.WithError(err).Fatal("can't open connection with a database")
+			}
+			if err := db.DB().Ping(); err != nil {
+				logrus.WithError(err).Fatal("can't ping connection with a database")
+			}
+			m := model.New(db)
+			if err := m.CheckMigrations(); err != nil {
+				logrus.WithError(err).Fatal("invalid database condition")
+			}
+
+			application := app.New(cfg, &m)
 
 			go controller.New(*cfg, application).Start()
 			log.Println("Requests listener started.")
@@ -66,9 +80,13 @@ func main() {
 			go application.FillCache()
 
 			wg := sync.WaitGroup{}
-			tm := initCronTasks(&wg, cfg, application)
+			ctx, cf := context.WithCancel(context.Background())
+			initCronTasks(ctx, &wg, cfg, application)
 
-			gracefulClosing(tm.Stop, &wg)
+			rb := bots.NewReleaseBot(ctx, &wg, cfg.Telegram.ReleaseBotAPIKey, &m)
+			go rb.RunBot()
+
+			gracefulClosing(cf, &wg)
 		}
 
 		cliApp.Commands = []cli.Command{
@@ -96,7 +114,7 @@ func main() {
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
 					cfg := config.GetConfig(true, c.String("config"))
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					files, err := application.Slack.Files()
 					if len(files) == 0 {
 						// We finished.
@@ -124,7 +142,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportEmployeesHaveExceededTasks(channel)
 				},
 			},
@@ -139,7 +157,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportIsuuesWithClosedSubtasks(channel)
 				},
 			},
@@ -154,7 +172,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportIssuesAfterSecondReview(channel)
 				},
 			},
@@ -169,7 +187,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportIssuesAfterSecondReview(channel, jira.TypeBETask, jira.TypeBESubTask)
 				},
 			},
@@ -184,7 +202,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportIssuesAfterSecondReview(channel, jira.TypeFETask, jira.TypeFESubTask)
 				},
 			},
@@ -199,7 +217,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportGitMigrations(channel)
 				},
 			},
@@ -214,7 +232,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportGitAnsibleChanges(channel)
 				},
 			},
@@ -229,7 +247,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportSlackEndingFreeSpace(channel)
 				},
 			},
@@ -244,7 +262,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportSprintStatus(channel)
 				},
 			},
@@ -259,7 +277,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.MakeWorkersWorkedReportLastWeek("manual", channel)
 				},
 			},
@@ -274,7 +292,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.MakeWorkersWorkedReportYesterday("manual", channel)
 				},
 			},
@@ -283,7 +301,7 @@ func main() {
 				Usage: "Obtains Hubstaff authorization token.",
 				Action: func(c *cli.Context) {
 					cfg := config.GetConfig(true, c.String("config"))
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 
 					authToken, err := application.Hubstaff.ObtainAuthToken(cfg.Hubstaff.Auth)
 					if err != nil {
@@ -303,7 +321,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportCurrentActivity(channel)
 				},
 			},
@@ -313,7 +331,7 @@ func main() {
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
 					cfg := config.GetConfig(true, c.String("config"))
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportClarificationIssues()
 				},
 			},
@@ -323,7 +341,7 @@ func main() {
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
 					cfg := config.GetConfig(true, c.String("config"))
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.Report24HoursReviewIssues()
 				},
 			},
@@ -338,7 +356,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.MakeWorkersLessWorkedReportYesterday(channel)
 				},
 			},
@@ -353,7 +371,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportOverworkedIssues(channel)
 				},
 			},
@@ -368,7 +386,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportEpicsWithClosedIssues(channel)
 				},
 			},
@@ -383,7 +401,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportLowPriorityIssuesStarted(channel)
 				},
 			},
@@ -393,7 +411,7 @@ func main() {
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
 					cfg := config.GetConfig(true, c.String("config"))
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.CheckNeedReplyMessages()
 				},
 			},
@@ -406,8 +424,25 @@ func main() {
 
 }
 
-func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *taskmanager.TaskManager {
-	tm := taskmanager.New(wg)
+func initAppWithDB(cfg *config.Main) *app.App {
+	db, err := gorm.Open("postgres", cfg.Database.ConnURL())
+	if err != nil {
+		logrus.WithError(err).Fatal("can't open connection with a database")
+	}
+	if err := db.DB().Ping(); err != nil {
+		logrus.WithError(err).Fatal("can't ping connection with a database")
+	}
+	m := model.New(db)
+	if err := m.CheckMigrations(); err != nil {
+		logrus.WithError(err).Fatal("invalid database condition")
+	}
+
+	application := app.New(cfg, &m)
+	return application
+}
+
+func initCronTasks(ctx context.Context, wg *sync.WaitGroup, cfg *config.Main, application *app.App) {
+	tm := taskmanager.New(ctx, wg)
 
 	err := tm.AddTask(cfg.Reports.DailyWorkersWorkedTime.Schedule, func() {
 		application.MakeWorkersWorkedReportYesterday("auto", cfg.Reports.DailyWorkersWorkedTime.Channel)
@@ -537,8 +572,6 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 
 	tm.Start()
 	log.Println("Task scheduler started.")
-
-	return tm
 }
 
 func gracefulClosing(cancel context.CancelFunc, servicesWg *sync.WaitGroup) {
