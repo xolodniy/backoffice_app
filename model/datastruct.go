@@ -41,6 +41,7 @@ type RbAuth struct {
 	Username  string
 	FirstName string
 	LastName  string
+	Title     string
 	Projects  pq.StringArray
 	UpdatedAt time.Time
 }
