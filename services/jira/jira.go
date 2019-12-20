@@ -324,7 +324,7 @@ func (j *Jira) IssuesStoryBugOfOpenSprints(project string) ([]Issue, error) {
 
 // IssuesOfOpenSprints searches all Issues in open sprints
 func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
-	request := fmt.Sprintf(`Sprint IN openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`)
+	request := fmt.Sprintf(`Sprint IN openSprints() ORDER BY project, key ASC`)
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, fmt.Errorf("can't take jira issues of open sprints: %s", err.Error())
