@@ -56,7 +56,7 @@ reports:
     schedule: "@yearly"
   checklowerpriorityblockers:
     schedule: "@yearly"
-    channel: U9FDU5W4D
+    channel: "Artem Efremov"
 
 jira:
   apiurl: https://theflow.atlassian.net
