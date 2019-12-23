@@ -1538,6 +1538,35 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 	}
 }
 
+// ReportIssuesLockedByLowPriority report about issues locked by lower priority
+func (a *App) ReportIssuesLockedByLowPriority(channel string) {
+	issues, err := a.Jira.IssuesOfOpenSprints()
+	if err != nil {
+		return
+	}
+	msg := ""
+	for _, issue := range issues {
+		if issue.Fields.Status.Name == jira.StatusClosed {
+			continue
+		}
+		for _, iLink := range issue.Fields.IssueLinks {
+			if iLink.Type.Inward == jira.InwardIsBlockedBy && iLink.InwardIssue != nil {
+				if iLink.InwardIssue.Fields.Status.Name == jira.StatusClosed {
+					continue
+				}
+				// lower ID = higher priority
+				if issue.Fields.Priority.ID < iLink.InwardIssue.Fields.Priority.ID {
+					msg += fmt.Sprintf("%s (%s) заблокирована %s (%s)\n",
+						issue.Link(), issue.Fields.Priority.Name,
+						fmt.Sprintf("<%s/browse/%[2]s|%[2]s>", a.Config.Jira.APIUrl, iLink.InwardIssue.Key),
+						iLink.InwardIssue.Fields.Priority.Name)
+				}
+			}
+		}
+	}
+	a.Slack.SendMessage(msg, channel)
+}
+
 func (a *App) getNearestFixVersionDate(issue jira.Issue) time.Time {
 	var releaseDate time.Time
 	for _, version := range issue.Fields.FixVersions {

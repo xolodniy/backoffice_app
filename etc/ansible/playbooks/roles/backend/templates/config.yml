@@ -54,6 +54,9 @@ reports:
     channel: "#back-office-app"
   checkneedreplymessages:
     schedule: "@hourly"
+  checklowerpriorityblockers:
+    schedule: "@daily"
+    channel: "Artem Efremov"
 
 jira:
   apiurl: https://atnr.atlassian.net

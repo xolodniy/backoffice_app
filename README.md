@@ -223,6 +223,9 @@ You may use one of several pre-defined schedules in place of a cron expression.
         channel: "#back-office-app"
       checkneedreplymessages:           — preference to send mention if user must reply on old mention
         schedule: "@yearly"
+      checklowerpriorityblockers:       - preference to send message to pm about lower priority lockers
+        schedule: "@daily"
+        channel: U9FDU5W4D
     
 #### Config.yml variables for slack users id
 
