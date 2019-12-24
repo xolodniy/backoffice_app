@@ -1,4 +1,4 @@
-package telegram
+package tg_bot
 
 import (
 	"context"
@@ -11,9 +11,9 @@ import (
 	"github.com/Syfaro/telegram-bot-api"
 	"github.com/sirupsen/logrus"
 
-	"backoffice_app/app"
 	"backoffice_app/common"
 	"backoffice_app/model"
+	"backoffice_app/services/jira"
 )
 
 type ReleaseBot struct {
@@ -22,16 +22,16 @@ type ReleaseBot struct {
 	wg     *sync.WaitGroup
 	m      *model.Model
 	bot    *tgbotapi.BotAPI
-	a      *app.App
+	j      *jira.Jira
 }
 
-func NewReleaseBot(ctx context.Context, wg *sync.WaitGroup, apiKey string, m *model.Model, application *app.App) *ReleaseBot {
-	return &ReleaseBot{
+func NewReleaseBot(ctx context.Context, wg *sync.WaitGroup, apiKey string, m *model.Model, j *jira.Jira) ReleaseBot {
+	return ReleaseBot{
 		ctx:    ctx,
 		wg:     wg,
 		apiKey: apiKey,
 		m:      m,
-		a:      application,
+		j:      j,
 	}
 }
 
@@ -152,7 +152,7 @@ func (rb *ReleaseBot) showReleases(chatID int64) {
 	}
 	respSlice := make([]record, 0)
 	for _, projectKey := range rbAuth.Projects {
-		versions, err := rb.a.Jira.UnreleasedFixVersionsByProjectKey(projectKey)
+		versions, err := rb.j.UnreleasedFixVersionsByProjectKey(projectKey)
 		if err != nil {
 			logrus.WithError(err).WithField("projectKey", projectKey).Error("can't get versions by project")
 			continue
@@ -192,13 +192,13 @@ func (rb *ReleaseBot) processReleaseDetails(chatID int64, releaseIDstr string) {
 		rb.sendText(chatID, internalError)
 		return
 	}
-	ver, _, err := rb.a.Jira.Version.Get(releaseID)
+	ver, _, err := rb.j.Version.Get(releaseID)
 	if err != nil {
 		logrus.WithError(err).WithField("releaseIDstr", releaseIDstr).Error("can't get jira version by id")
 		rb.sendText(chatID, internalError)
 		return
 	}
-	project, _, err := rb.a.Jira.Project.Get(strconv.Itoa(ver.ProjectID))
+	project, _, err := rb.j.Project.Get(strconv.Itoa(ver.ProjectID))
 	if err != nil {
 		logrus.WithError(err).WithField("releaseIDstr", releaseIDstr).Error("cant get project from jira")
 		rb.sendText(chatID, internalError)
@@ -226,7 +226,7 @@ func (rb *ReleaseBot) processReleaseDetails(chatID int64, releaseIDstr string) {
 	if ver.Released {
 		releasedStatus = "released"
 	}
-	issuesCount, unresolvedCount, err := rb.a.Jira.VersionIssuesCount(releaseID)
+	issuesCount, unresolvedCount, err := rb.j.VersionIssuesCount(releaseID)
 	if err != nil {
 		logrus.WithError(err).WithField("releaseIDstr", releaseIDstr).Error("cant get release counts from jira")
 		rb.sendText(chatID, internalError)

@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"backoffice_app/app/tg_bot"
 	"backoffice_app/common"
 	"backoffice_app/config"
 	"backoffice_app/model"
@@ -41,13 +43,14 @@ type CommitsCache struct {
 
 // App is main App implementation
 type App struct {
-	Hubstaff  hubstaff.Hubstaff
-	Slack     slack.Slack
-	Jira      jira.Jira
-	Bitbucket bitbucket.Bitbucket
-	Config    config.Main
-	AfkTimer  AfkTimer
-	model     *model.Model
+	Hubstaff   hubstaff.Hubstaff
+	Slack      slack.Slack
+	Jira       jira.Jira
+	Bitbucket  bitbucket.Bitbucket
+	Config     config.Main
+	AfkTimer   AfkTimer
+	model      *model.Model
+	ReleaseBot tg_bot.ReleaseBot
 }
 
 // Tags for user map of account info
@@ -67,15 +70,17 @@ type AfkTimer struct {
 }
 
 // New is main App constructor
-func New(conf *config.Main, m *model.Model) *App {
+func New(conf *config.Main, m *model.Model, ctx context.Context, wg *sync.WaitGroup) *App {
+	j := jira.New(&conf.Jira)
 	return &App{
-		Hubstaff:  hubstaff.New(&conf.Hubstaff),
-		Slack:     slack.New(&conf.Slack),
-		Jira:      jira.New(&conf.Jira),
-		Bitbucket: bitbucket.New(&conf.Bitbucket),
-		Config:    *conf,
-		AfkTimer:  AfkTimer{Mutex: &sync.Mutex{}, UserDurationMap: make(map[string]time.Duration)},
-		model:     m,
+		Hubstaff:   hubstaff.New(&conf.Hubstaff),
+		Slack:      slack.New(&conf.Slack),
+		Jira:       j,
+		ReleaseBot: tg_bot.NewReleaseBot(ctx, wg, conf.Telegram.ReleaseBotAPIKey, m, &j),
+		Bitbucket:  bitbucket.New(&conf.Bitbucket),
+		Config:     *conf,
+		AfkTimer:   AfkTimer{Mutex: &sync.Mutex{}, UserDurationMap: make(map[string]time.Duration)},
+		model:      m,
 	}
 }
 
@@ -1551,7 +1556,9 @@ func (a *App) ReportIssuesLockedByLowPriority(channel string) {
 			}
 		}
 	}
-	a.Slack.SendMessage(msg, channel)
+	if msg != "" {
+		a.Slack.SendMessage(msg, channel)
+	}
 }
 
 func (a *App) getNearestFixVersionDate(issue jira.Issue) time.Time {

@@ -1,4 +1,4 @@
-package telegram
+package tg_bot
 
 const (
 	projectAccessDenied = "You need to obtain access to the project. Contact with your manager."
