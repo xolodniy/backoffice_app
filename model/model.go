@@ -142,10 +142,10 @@ func (m *Model) GetAfkTimers() ([]AfkTimer, error) {
 }
 
 // DeleteAfkTimer deletes afk timer
-func (m *Model) DeleteAfkTimer(userId string) error {
+func (m *Model) DeleteAfkTimer(userID string) error {
 	var res []AfkTimer
-	if err := m.db.Where(AfkTimer{UserID: userId}).Delete(&res).Error; err != nil {
-		logrus.WithError(err).WithField("userId", userId).Error("can't delete afk timer by user id")
+	if err := m.db.Where(AfkTimer{UserID: userID}).Delete(&res).Error; err != nil {
+		logrus.WithError(err).WithField("userID", userID).Error("can't delete afk timer by user id")
 		return common.ErrInternal
 	}
 	return nil

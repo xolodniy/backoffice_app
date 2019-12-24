@@ -545,9 +545,7 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 		panic(err)
 	}
 
-	err = tm.AddTask(cfg.Reports.SendReminders.Schedule, func() {
-		application.SendReminders()
-	})
+	err = tm.AddTask(cfg.Reports.SendReminders.Schedule, application.SendReminders)
 	if err != nil {
 		panic(err)
 	}

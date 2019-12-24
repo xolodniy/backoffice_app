@@ -1033,22 +1033,22 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	}
 	developerID := issue.DeveloperMap(jira.TagDeveloperID)
 	userInfo := a.GetUserInfoByTagValue(TagUserJiraAccountID, developerID)
-	var userId string
+	var userID string
 	switch {
 	case userInfo[TagUserSlackID] == EmptyTagValue:
-		userId = userInfo[TagUserEmail]
+		userID = userInfo[TagUserEmail]
 	case userInfo[TagUserSlackID] == "":
-		userId = jira.NoDeveloper
+		userID = jira.NoDeveloper
 	default:
-		userId = "<@" + userInfo[TagUserSlackID] + ">"
+		userID = "<@" + userInfo[TagUserSlackID] + ">"
 	}
 
 	msgBody := fmt.Sprintf("The issue %s has been rejected after %v reviews\n\n", issue.Key, reviewCount)
 	switch issue.Fields.Type.Name {
 	case jira.TypeBESubTask, jira.TypeBETask:
-		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", userId, a.Slack.Employees.TeamLeaderBE, a.Slack.Employees.DirectorOfCompany)
+		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", userID, a.Slack.Employees.TeamLeaderBE, a.Slack.Employees.DirectorOfCompany)
 	case jira.TypeFESubTask, jira.TypeFETask:
-		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", userId, a.Slack.Employees.TeamLeaderFE, a.Slack.Employees.DirectorOfCompany)
+		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", userID, a.Slack.Employees.TeamLeaderFE, a.Slack.Employees.DirectorOfCompany)
 	default:
 		return
 	}
@@ -1191,7 +1191,7 @@ func (a *App) FindLastSprintDates(sprints []interface{}) (time.Time, time.Time, 
 }
 
 // SetVacationPeriod create vacation period for user
-func (a *App) SetVacationPeriod(dateStart, dateEnd, message, userId string) error {
+func (a *App) SetVacationPeriod(dateStart, dateEnd, message, userID string) error {
 	dStart, err := time.Parse("02.01.2006", dateStart)
 	if err != nil {
 		return err
@@ -1205,7 +1205,7 @@ func (a *App) SetVacationPeriod(dateStart, dateEnd, message, userId string) erro
 	}
 
 	err = a.model.SaveVacation(model.Vacation{
-		UserID:    userId,
+		UserID:    userID,
 		DateStart: dStart,
 		DateEnd:   dEnd,
 		Message:   message,
@@ -1217,12 +1217,12 @@ func (a *App) SetVacationPeriod(dateStart, dateEnd, message, userId string) erro
 }
 
 // CancelVacation delete vacation
-func (a *App) CancelVacation(userId string) error {
-	_, err := a.CheckVacationSatus(userId)
+func (a *App) CancelVacation(userID string) error {
+	_, err := a.CheckVacationSatus(userID)
 	if err != nil {
 		return err
 	}
-	err = a.model.DeleteVacation(userId)
+	err = a.model.DeleteVacation(userID)
 	if err != nil {
 		return err
 	}
@@ -1230,8 +1230,8 @@ func (a *App) CancelVacation(userId string) error {
 }
 
 // CheckVacationSatus get vacation if exist
-func (a *App) CheckVacationSatus(userId string) (model.Vacation, error) {
-	vacation, err := a.model.GetVacation(userId)
+func (a *App) CheckVacationSatus(userID string) (model.Vacation, error) {
+	vacation, err := a.model.GetVacation(userID)
 	if err != nil {
 		return model.Vacation{}, err
 	}
