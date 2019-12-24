@@ -78,6 +78,7 @@ const (
 	ChangelogFieldFixVersion           = "Fix Version"
 	ChangelogFieldPrioriy              = "priority"
 	ChangelogFieldDueDate              = "duedate"
+	InwardIsBlockedBy                  = "is blocked by"
 	ReleaseStatusUnreleased            = "unreleased"
 )
 
@@ -98,7 +99,7 @@ func (i Issue) DeveloperMap(key string) string {
 	// Convert to marshal map to find developer emailAddress of issue developer field
 	developerMap, err := i.Fields.Unknowns.MarshalMap(FieldDeveloperMap)
 	if err != nil {
-		//can't make customfield_10026 map marshaling because field developer is empty
+		// can't make customfield_10026 map marshaling because field developer is empty
 		return ""
 	}
 	if developerMap != nil {
@@ -121,8 +122,8 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 			&jira.SearchOptions{
 				StartAt:    i,
 				MaxResults: i + 100,
-				//Determines how to validate the JQL query and treat the validation results.
-				ValidateQuery: "strict", //strict Returns a 400 response code if any errors are found, along with a list of all errors (and warnings).
+				// Determines how to validate the JQL query and treat the validation results.
+				ValidateQuery: "strict", // strict Returns a 400 response code if any errors are found, along with a list of all errors (and warnings).
 				Fields: []string{
 					FieldDeveloperMap,
 					FieldEpicKey,
@@ -139,6 +140,7 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 					"worklog",
 					"priority",
 					"fixVersions",
+					"issuelinks",
 				},
 			},
 		)
@@ -318,6 +320,16 @@ func (j *Jira) IssuesStoryBugOfOpenSprints(project string) ([]Issue, error) {
 	issues, err := j.issues(request)
 	if err != nil {
 		return nil, fmt.Errorf("can't take jira issues with type in (story, bug) of open sprints: %s", err)
+	}
+	return issues, nil
+}
+
+// IssuesOfOpenSprints searches all Issues in open sprints
+func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
+	request := fmt.Sprintf(`Sprint IN openSprints() ORDER BY project, key ASC`)
+	issues, err := j.issues(request)
+	if err != nil {
+		return nil, fmt.Errorf("can't take jira issues of open sprints: %s", err.Error())
 	}
 	return issues, nil
 }
