@@ -1606,17 +1606,13 @@ func (a *App) CheckNeedReplyMessages() {
 				var message string
 				for _, userID := range notReactedUsers {
 					if common.ValueIn(userID, afkUsers...) {
-						reminder := model.Reminder{
+						a.model.CreateReminder(model.Reminder{
 							UserID:     userID,
 							Message:    "<@" + userID + "> ",
 							ChannelID:  channel.ID,
 							ThreadTs:   channelMessage.Ts,
 							ReplyCount: channelMessage.ReplyCount,
-						}
-						if err := a.model.CreateReminder(reminder); err != nil {
-							logrus.WithError(err).WithField("reminder", reminder).Error("can't create reminder")
-							return
-						}
+						})
 						continue
 					}
 					message += "<@" + userID + "> "
@@ -1645,17 +1641,13 @@ func (a *App) CheckNeedReplyMessages() {
 				}
 				for userID := range mentionedUsers {
 					if common.ValueIn(userID, afkUsers...) {
-						reminder := model.Reminder{
+						a.model.CreateReminder(model.Reminder{
 							UserID:     userID,
 							Message:    fmt.Sprintf("<@%s> %s", userID, messagePermalink),
 							ChannelID:  channel.ID,
 							ThreadTs:   channelMessage.Ts,
 							ReplyCount: channelMessage.ReplyCount,
-						}
-						if err := a.model.CreateReminder(reminder); err != nil {
-							logrus.WithError(err).WithField("reminder", reminder).Error("can't create reminder")
-							return
-						}
+						})
 						continue
 					}
 					message += "<@" + userID + "> "
@@ -1684,17 +1676,13 @@ func (a *App) CheckNeedReplyMessages() {
 					return
 				}
 				if common.ValueIn(userID, afkUsers...) {
-					reminder := model.Reminder{
+					a.model.CreateReminder(model.Reminder{
 						UserID:     userID,
 						Message:    fmt.Sprintf("<@%s> %s", userID, replyPermalink),
 						ChannelID:  channel.ID,
 						ThreadTs:   channelMessage.Ts,
 						ReplyCount: channelMessage.ReplyCount,
-					}
-					if err := a.model.CreateReminder(reminder); err != nil {
-						logrus.WithError(err).WithField("reminder", reminder).Error("can't create reminder")
-						return
-					}
+					})
 					continue
 				}
 				a.Slack.SendToThread(fmt.Sprintf("<@%s> %s", userID, replyPermalink), channel.ID, channelMessage.Ts)
@@ -1747,15 +1735,14 @@ func (a *App) SendReminders() {
 				Error("Can not get message from channel")
 			return
 		}
+		newReplies := message.Replies[reminder.ReplyCount-1:]
 		var wasAnswered bool
-		if message.ReplyCount != reminder.ReplyCount && message.ReplyCount > reminder.ReplyCount && len(message.Replies) == message.ReplyCount {
-			for i := reminder.ReplyCount - 1; i < message.ReplyCount; i++ {
-				if message.Replies[i].User != reminder.UserID {
-					continue
-				}
-				wasAnswered = true
-				break
+		for _, reply := range newReplies {
+			if reply.User != reminder.UserID {
+				continue
 			}
+			wasAnswered = true
+			break
 		}
 		if !wasAnswered {
 			a.Slack.SendToThread(reminder.Message, reminder.ChannelID, reminder.ThreadTs)

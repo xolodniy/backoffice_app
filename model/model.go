@@ -208,12 +208,10 @@ func (m *Model) GetReminders() ([]Reminder, error) {
 }
 
 // CreateReminder creates new reminder
-func (m *Model) CreateReminder(reminder Reminder) error {
+func (m *Model) CreateReminder(reminder Reminder) {
 	if err := m.db.Create(&reminder).Error; err != nil {
 		logrus.WithError(err).WithField("reminder", fmt.Sprintf("%+v", reminder)).Error("can't create reminder")
-		return common.ErrInternal
 	}
-	return nil
 }
 
 // DeleteReminder deletes reminder
