@@ -154,7 +154,6 @@ func (rb *ReleaseBot) showReleases(chatID int64) {
 	for _, projectKey := range rbAuth.Projects {
 		versions, err := rb.j.UnreleasedFixVersionsByProjectKey(projectKey)
 		if err != nil {
-			logrus.WithError(err).WithField("projectKey", projectKey).Error("can't get versions by project")
 			continue
 		}
 		// get releases by projects names from jira
@@ -228,7 +227,6 @@ func (rb *ReleaseBot) processReleaseDetails(chatID int64, releaseIDstr string) {
 	}
 	issuesCount, unresolvedCount, err := rb.j.VersionIssuesCount(releaseID)
 	if err != nil {
-		logrus.WithError(err).WithField("releaseIDstr", releaseIDstr).Error("cant get release counts from jira")
 		rb.sendText(chatID, internalError)
 		return
 	}

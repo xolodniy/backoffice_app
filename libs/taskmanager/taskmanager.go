@@ -27,13 +27,6 @@ func New(ctx context.Context, wg *sync.WaitGroup) *TaskManager {
 		wg:   wg,
 		ctx:  ctx,
 	}
-	go func() {
-		select {
-		case <-ctx.Done():
-			tm.cron.Stop()
-			return
-		}
-	}()
 	return tm
 }
 
@@ -72,4 +65,13 @@ func (tm *TaskManager) AddTask(spec string, cmd func()) error {
 // Start taskManager
 func (tm *TaskManager) Start() {
 	tm.cron.Start()
+	tm.wg.Add(1)
+	go func() {
+		select {
+		case <-tm.ctx.Done():
+			tm.cron.Stop()
+			tm.wg.Done()
+			return
+		}
+	}()
 }

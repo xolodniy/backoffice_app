@@ -638,11 +638,13 @@ func (j *Jira) UnreleasedFixVersionsByProjectKey(projectKey string) ([]jira.Vers
 	url := fmt.Sprintf("/rest/api/2/project/%s/version?status=%s", projectKey, ReleaseStatusUnreleased)
 	req, err := j.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("can't create request of versions enpoint: %s", err)
+		logrus.WithError(err).WithField("projectKey", projectKey).Error("can't make req versions by project")
+		return nil, err
 	}
 	_, err = j.Do(req, fixVersions)
 	if err != nil {
-		return nil, fmt.Errorf("can't take jira versions list: %s", err)
+		logrus.WithError(err).WithField("projectKey", projectKey).Error("can't do req versions by project")
+		return nil, err
 	}
 	return fixVersions.Values, nil
 }
@@ -656,10 +658,12 @@ func (j *Jira) VersionIssuesCount(releaseID int) (int, int, error) {
 	url := fmt.Sprintf("/rest/api/2/version/%d/unresolvedIssueCount", releaseID)
 	req, err := j.NewRequest("GET", url, nil)
 	if err != nil {
+		logrus.WithError(err).WithField("releaseID", releaseID).Error("cant make req release counts from jira")
 		return 0, 0, fmt.Errorf("can't create request of versions issues count enpoint: %s", err)
 	}
 	_, err = j.Do(req, result)
 	if err != nil {
+		logrus.WithError(err).WithField("releaseID", releaseID).Error("cant do req release counts from jira")
 		return 0, 0, fmt.Errorf("can't take jira version issues count: %s", err)
 	}
 	return result.IssuesCount, result.IssuesUnresolvedCount, nil
