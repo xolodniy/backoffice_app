@@ -15,7 +15,7 @@ import (
 	"backoffice_app/libs/taskmanager"
 	"backoffice_app/model"
 	"backoffice_app/services/jira"
-	"backoffice_app/services/telegram/bots"
+	"backoffice_app/services/telegram"
 
 	runtime "github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/jinzhu/gorm"
@@ -83,7 +83,7 @@ func main() {
 			ctx, cf := context.WithCancel(context.Background())
 			initCronTasks(ctx, &wg, cfg, application)
 
-			rb := bots.NewReleaseBot(ctx, &wg, cfg.Telegram.ReleaseBotAPIKey, &m, application)
+			rb := telegram.NewReleaseBot(ctx, &wg, cfg.Telegram.ReleaseBotAPIKey, &m, application)
 			go rb.RunBot()
 
 			gracefulClosing(cf, &wg)

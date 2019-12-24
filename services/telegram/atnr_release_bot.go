@@ -1,11 +1,10 @@
-package bots
+package telegram
 
 import (
 	"context"
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -26,11 +25,6 @@ type ReleaseBot struct {
 	a      *app.App
 }
 
-const (
-	statusNone = iota
-	statusReleaseSelection
-)
-
 func NewReleaseBot(ctx context.Context, wg *sync.WaitGroup, apiKey string, m *model.Model, application *app.App) *ReleaseBot {
 	return &ReleaseBot{
 		ctx:    ctx,
@@ -50,7 +44,6 @@ func (rb *ReleaseBot) RunBot() {
 	if err != nil {
 		logrus.WithError(err).Error("can't run Release bot")
 	}
-	rb.bot.Debug = true
 
 	logrus.Debugf("Authorized on account %s", rb.bot.Self.UserName)
 
@@ -59,6 +52,7 @@ func (rb *ReleaseBot) RunBot() {
 	updChan, err := rb.bot.GetUpdatesChan(ucfg)
 	if err != nil {
 		logrus.WithError(err).Error("Cant open updates chan")
+		return
 	}
 	rb.processMessages(updChan)
 }
@@ -80,7 +74,6 @@ func (rb *ReleaseBot) sendMsgWithLog(msg tgbotapi.Chattable) {
 }
 
 func (rb *ReleaseBot) processMessages(updChan tgbotapi.UpdatesChannel) {
-
 	for {
 		select {
 		case <-rb.ctx.Done():
@@ -102,25 +95,17 @@ func (rb *ReleaseBot) processMessages(updChan tgbotapi.UpdatesChannel) {
 			chatID := update.Message.Chat.ID
 			text := update.Message.Text
 			nameSuffix := "@" + rb.bot.Self.String()
-			fmt.Println("===== ", nameSuffix, text)
 			// parse commands
-			if strings.Index(text, "/") == 0 {
-				switch {
-				case update.Message.Chat.IsPrivate() && text == "/help",
-					text == "/help"+nameSuffix:
-					rb.sendHelp(chatID)
-				case update.Message.Chat.IsPrivate() && text == "/reg",
-					text == "/reg"+nameSuffix:
-					rb.processRegistration(update.Message.Chat)
-				case update.Message.Chat.IsPrivate() && text == "/releases",
-					text == "/releases"+nameSuffix:
-					rb.showReleases(chatID)
-				}
-				continue
+			switch {
+			default:
+				rb.sendText(chatID, helpText)
+			case update.Message.Chat.IsPrivate() && text == "/reg",
+				text == "/reg"+nameSuffix:
+				rb.processRegistration(update.Message.Chat)
+			case update.Message.Chat.IsPrivate() && text == "/releases",
+				text == "/releases"+nameSuffix:
+				rb.showReleases(chatID)
 			}
-
-			// requested status in format: project - release
-			rb.sendHelp(chatID)
 		}
 
 	}
@@ -151,7 +136,6 @@ func (rb *ReleaseBot) processRegistration(chat *tgbotapi.Chat) {
 		return
 	}
 	rb.sendText(chat.ID, regSuccess)
-
 	// TODO send to pm msg about registration
 }
 
@@ -198,10 +182,6 @@ func (rb *ReleaseBot) showReleases(chatID int64) {
 	} else {
 		rb.sendText(chatID, noProjectAvailable)
 	}
-}
-
-func (rb *ReleaseBot) sendHelp(chatID int64) {
-	rb.sendText(chatID, helpText)
 }
 
 func (rb *ReleaseBot) processReleaseDetails(chatID int64, releaseIDstr string) {
