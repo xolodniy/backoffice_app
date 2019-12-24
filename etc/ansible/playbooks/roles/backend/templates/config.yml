@@ -54,11 +54,14 @@ reports:
     channel: "#back-office-app"
   checkneedreplymessages:
     schedule: "@hourly"
+  checklowerpriorityblockers:
+    schedule: "@daily"
+    channel: "Artem Efremov"
   sendreminders:
     schedule: "@hourly"
 
 jira:
-  apiurl: https://theflow.atlassian.net
+  apiurl: https://atnr.atlassian.net
   auth:
     username: {{ jira_login }}
     token: {{ jira_token }}

@@ -413,7 +413,7 @@ func (a *App) ReportCurrentActivityWithCallback(callbackURL string) {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
-	message := a.stringFromCurrentActivitiesList(activitiesList)
+	message := a.stringFromCurrentActivitiesWithNotes(activitiesList)
 	jsonReport, err := json.Marshal(struct {
 		Text string `json:"text"`
 	}{Text: message})
@@ -439,21 +439,29 @@ func (a *App) ReportCurrentActivity(channel string) {
 		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
-	message := a.stringFromCurrentActivitiesList(activitiesList)
+	message := a.stringFromCurrentActivitiesWithNotes(activitiesList)
 	a.Slack.SendMessage(message, channel)
 }
 
-// stringFromCurrentActivitiesList convert slice of last activities in string message report
-func (a *App) stringFromCurrentActivitiesList(activitiesList []hubstaff.LastActivity) string {
+// stringFromCurrentActivitiesWithNotes convert slice of last activities in string message report
+func (a *App) stringFromCurrentActivitiesWithNotes(activitiesList []hubstaff.LastActivity) string {
 	var usersAtWork string
 	for _, activity := range activitiesList {
-		if activity.ProjectName != "" {
-			usersAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
-			if activity.TaskJiraKey != "" {
-				usersAtWork += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
-					activity.TaskJiraKey, activity.TaskSummary)
-			}
+		usersAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
+		if activity.TaskJiraKey != "" {
+			usersAtWork += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
+				activity.TaskJiraKey, activity.TaskSummary)
 		}
+		note, err := a.Hubstaff.LastUserNote(strconv.Itoa(activity.User.ID), strconv.Itoa(activity.LastProjectID))
+		if err != nil {
+			logrus.WithError(err).Error("Can't get user last note for report from Hubstaff.")
+			continue
+		}
+		if note.Description == "" {
+			continue
+		}
+		loc := time.FixedZone("UTC3", 3*60*60)
+		usersAtWork += fmt.Sprintf("\n ✎ %s (%s)", note.Description, note.RecordedAt.In(loc).Format(time.RFC822Z))
 	}
 	if usersAtWork == "" {
 		usersAtWork = "All users are not at work at the moment"
@@ -1368,7 +1376,7 @@ func (a *App) MoveJiraStatuses(issue jira.Issue) {
 
 	if issue.Fields.Type.Name == jira.TypeStory && issue.Fields.Unknowns[jira.FieldEpicKey] != nil {
 		if issue.Fields.Status.Name == jira.StatusStarted {
-			err := a.Jira.IssueSetStatusTransition(fmt.Sprint(issue.Fields.Unknowns[jira.FieldEpicKey]), jira.TransitionApprove)
+			err := a.Jira.IssueSetStatusTransition(fmt.Sprint(issue.Fields.Unknowns[jira.FieldEpicKey]), jira.TransitionCloaseLastTask)
 			if err != nil {
 				return
 			}
@@ -1528,6 +1536,35 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 		a.Slack.SendMessage(fmt.Sprintf("<@%s> начал работать над %s вперед %s \nfyi %s %s",
 			user[TagUserSlackID], activeIssue.Link(), priorityIssue.Link(), a.Slack.Employees.ProjectManager, tl), channel)
 	}
+}
+
+// ReportIssuesLockedByLowPriority report about issues locked by lower priority
+func (a *App) ReportIssuesLockedByLowPriority(channel string) {
+	issues, err := a.Jira.IssuesOfOpenSprints()
+	if err != nil {
+		return
+	}
+	msg := ""
+	for _, issue := range issues {
+		if issue.Fields.Status.Name == jira.StatusClosed {
+			continue
+		}
+		for _, iLink := range issue.Fields.IssueLinks {
+			if iLink.Type.Inward == jira.InwardIsBlockedBy && iLink.InwardIssue != nil {
+				if iLink.InwardIssue.Fields.Status.Name == jira.StatusClosed {
+					continue
+				}
+				// lower ID = higher priority
+				if issue.Fields.Priority.ID < iLink.InwardIssue.Fields.Priority.ID {
+					msg += fmt.Sprintf("%s (%s) заблокирована %s (%s)\n",
+						issue.Link(), issue.Fields.Priority.Name,
+						fmt.Sprintf("<%s/browse/%[2]s|%[2]s>", a.Config.Jira.APIUrl, iLink.InwardIssue.Key),
+						iLink.InwardIssue.Fields.Priority.Name)
+				}
+			}
+		}
+	}
+	a.Slack.SendMessage(msg, channel)
 }
 
 func (a *App) getNearestFixVersionDate(issue jira.Issue) time.Time {

@@ -2,6 +2,7 @@ package hubstaff
 
 import (
 	"fmt"
+	"time"
 )
 
 const (
@@ -64,7 +65,19 @@ type LastActivity struct {
 	TaskJiraKey   string `json:"taskjirakey"`
 	TaskSummary   string `json:"tasksummary"`
 	User          struct {
+		ID           int    `json:"id" binding:"required"`
 		Name         string `json:"name" binding:"required"`
 		LastActivity string `json:"last_activity" binding:"required"`
 	} `json:"user" binding:"required"`
+}
+
+// Note type for query notes of users
+type Note struct {
+	ID          int       `json:"id"`
+	Description string    `json:"description"`
+	TaskID      *int      `json:"task_id"`
+	TimeSlot    string    `json:"time_slot"`
+	RecordedAt  time.Time `json:"recorded_at"`
+	UserID      int       `json:"user_id"`
+	ProjectID   int       `json:"project_id"`
 }
