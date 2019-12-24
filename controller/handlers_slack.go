@@ -204,7 +204,7 @@ func (c *Controller) vacation(ctx *gin.Context) {
 		}
 		err = c.App.SetVacationPeriod(datesSlice[0], datesSlice[1], message[1], request.UserId)
 		if err != nil {
-			ctx.JSON(http.StatusOK, fmt.Sprintf(err.Error()))
+			ctx.JSON(http.StatusOK, err.Error())
 			return
 		}
 		ctx.JSON(http.StatusOK, fmt.Sprintf("Your vacation autoreply from %s to %s has registered", datesSlice[0], datesSlice[1]))
