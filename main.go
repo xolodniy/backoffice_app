@@ -401,7 +401,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg)
 					application.ReportIssuesLockedByLowPriority(channel)
 				},
 			},
