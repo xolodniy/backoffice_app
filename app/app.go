@@ -1666,82 +1666,56 @@ func (a *App) CheckForgottenGitPullRequests(channel string) {
 	if err != nil {
 		return
 	}
-	for _, pr := range pullRequests {
-		lastActivity := pr.LastActivityDate()
-		// if this pull request without activity last 5 days, it is old and we save or update it to database
-		if lastActivity.Before(time.Now().AddDate(0, 0, -5)) {
-			var breaked bool
-		Loop:
-			for i := len(forgottenPullRequests) - 1; i >= 0; i-- {
-				if forgottenPullRequests[i].PullRequestID == pr.ID {
-					if forgottenPullRequests[i].LastActivity.Equal(lastActivity) {
-						forgottenPullRequests[i] = forgottenPullRequests[len(forgottenPullRequests)-1]
-						forgottenPullRequests = forgottenPullRequests[:len(forgottenPullRequests)-1]
-						breaked = true
-						break Loop
-					}
-					forgottenPullRequests[i] = forgottenPullRequests[len(forgottenPullRequests)-1]
-					forgottenPullRequests = forgottenPullRequests[:len(forgottenPullRequests)-1]
-					if err := a.model.UpdateForgottenPullRequest(pr.ID, model.ForgottenPullRequest{
-						PullRequestID: pr.ID,
-						Author:        pr.Author.DisplayName,
-						RepoSlug:      pr.Source.Repository.Name,
-						Href:          pr.Links.HTML.Href,
-						Title:         pr.Title,
-						LastActivity:  lastActivity,
-					}); err != nil {
-						return
-					}
-					breaked = true
-					break Loop
-				}
-			}
-			if !breaked {
-				if err := a.model.CreateForgottenPullRequest(model.ForgottenPullRequest{
-					PullRequestID: pr.ID,
-					Author:        pr.Author.DisplayName,
-					RepoSlug:      pr.Source.Repository.Name,
-					Href:          pr.Links.HTML.Href,
-					Title:         pr.Title,
-					LastActivity:  lastActivity,
-				}); err != nil {
-					return
-				}
-			}
-		}
-	}
-	var ids []int
-	for _, pr := range forgottenPullRequests {
-		ids = append(ids, pr.ID)
-	}
-	if err := a.model.DeleteForgottenPullRequests(ids); err != nil {
-		return
-	}
-	prs, err := a.model.GetForgottenPullRequest()
-	if err != nil {
-		return
-	}
 	var (
-		firstAttentionPRs       = make(map[string][]string)
-		secondAttentionPRs      = make(map[string][]string)
-		thirdAttentionPRs       = make(map[string][]string)
-		idsOnDeleteFromDatabase = make([]int, 0)
+		firstAttentionPRs  = make(map[string][]string)
+		secondAttentionPRs = make(map[string][]string)
+		thirdAttentionPRs  = make(map[string][]string)
 	)
-	for _, pr := range prs {
-		userSlackMention := "<@" + a.GetUserInfoByTagValue(TagUserSlackRealName, pr.Author)[TagUserSlackID] + ">"
-		if a.GetUserInfoByTagValue(TagUserSlackRealName, pr.Author)[TagUserSlackID] == "" {
+	for _, pr := range pullRequests {
+		userSlackMention := "<@" + a.GetUserInfoByTagValue(TagUserSlackRealName, pr.Author.DisplayName)[TagUserSlackID] + ">"
+		if a.GetUserInfoByTagValue(TagUserSlackRealName, pr.Author.DisplayName)[TagUserSlackID] == "" {
 			userSlackMention = "Имя пользователя не удалось определить"
 		}
-		switch {
-		case pr.UpdatedAt.Before(time.Now().AddDate(0, 0, -8)):
-			// TODO: remove third attention, add declining PRs
-			idsOnDeleteFromDatabase = append(idsOnDeleteFromDatabase, pr.ID)
-			thirdAttentionPRs[userSlackMention] = append(thirdAttentionPRs[userSlackMention], "<"+pr.Href+"|"+pr.Title+">")
-			//a.Bitbucket.DeclinePullRequest(pr.RepoSlug, pr.PullRequestID)
-		case pr.UpdatedAt.Before(time.Now().AddDate(0, 0, -7)):
-			secondAttentionPRs[userSlackMention] = append(secondAttentionPRs[userSlackMention], "<"+pr.Href+"|"+pr.Title+">")
-		case pr.UpdatedAt.Before(time.Now().AddDate(0, 0, -5)):
-			firstAttentionPRs[userSlackMention] = append(firstAttentionPRs[userSlackMention], "<"+pr.Href+"|"+pr.Title+">")
+		lastActivity := pr.LastActivityDate()
+		// if this pull request without activity last 5 days, it is old and we create it in database
+		if lastActivity.After(time.Now().AddDate(0, 0, -5)) {
+			continue
+		}
+		var isExist bool
+		for i := len(forgottenPullRequests) - 1; i >= 0; i-- {
+			if forgottenPullRequests[i].PullRequestID != pr.ID || forgottenPullRequests[i].RepoSlug != pr.Source.Repository.Name {
+				continue
+			}
+			switch {
+			case lastActivity.Before(time.Now().AddDate(0, 0, -8)) && forgottenPullRequests[i].CreatedAt.Before(time.Now().AddDate(0, 0, -3)):
+				if err := a.model.DeleteForgottenPullRequest(forgottenPullRequests[i].PullRequestID, forgottenPullRequests[i].RepoSlug); err != nil {
+					return
+				}
+				// TODO: remove third attention, add declining PRs
+				thirdAttentionPRs[userSlackMention] = append(thirdAttentionPRs[userSlackMention], "<"+pr.Links.HTML.Href+"|"+pr.Title+">")
+				//a.Bitbucket.DeclinePullRequest(pr.RepoSlug, pr.PullRequestID)
+			case lastActivity.Before(time.Now().AddDate(0, 0, -7)) && forgottenPullRequests[i].CreatedAt.Before(time.Now().AddDate(0, 0, -2)):
+				secondAttentionPRs[userSlackMention] = append(secondAttentionPRs[userSlackMention], "<"+pr.Links.HTML.Href+"|"+pr.Title+">")
+			}
+			forgottenPullRequests[i] = forgottenPullRequests[len(forgottenPullRequests)-1]
+			forgottenPullRequests = forgottenPullRequests[:len(forgottenPullRequests)-1]
+			isExist = true
+			break
+		}
+		if !isExist {
+			firstAttentionPRs[userSlackMention] = append(firstAttentionPRs[userSlackMention], "<"+pr.Links.HTML.Href+"|"+pr.Title+">")
+			if err := a.model.CreateForgottenPullRequest(model.ForgottenPullRequest{
+				PullRequestID: pr.ID,
+				RepoSlug:      pr.Source.Repository.Name,
+			}); err != nil {
+				return
+			}
+
+		}
+	}
+	for _, pr := range forgottenPullRequests {
+		if err := a.model.DeleteForgottenPullRequest(pr.PullRequestID, pr.RepoSlug); err != nil {
+			return
 		}
 	}
 	for author, prLinks := range firstAttentionPRs {
@@ -1749,18 +1723,12 @@ func (a *App) CheckForgottenGitPullRequests(channel string) {
 		for _, link := range prLinks {
 			firstAttention += link + "\n"
 		}
-		if firstAttention == "" {
-			continue
-		}
 		a.Slack.SendMessage("В этих ПР давно нет активности, необходимо это исправить:\n"+firstAttention, channel)
 	}
 	for author, prLinks := range secondAttentionPRs {
 		secondAttention := "\n" + author + "\n"
 		for _, link := range prLinks {
 			secondAttention += link + "\n"
-		}
-		if secondAttention == "" {
-			continue
 		}
 		a.Slack.SendMessage("Если в этих ПР в течение дня не будет никакой активности, они идут нахер:\n"+secondAttention, channel)
 	}
@@ -1770,12 +1738,8 @@ func (a *App) CheckForgottenGitPullRequests(channel string) {
 		for _, link := range prLinks {
 			thirdAttention += link + "\n"
 		}
-		if thirdAttention == "" {
-			continue
-		}
 		a.Slack.SendMessage("Удалены(фактически нет):\n"+thirdAttention, channel)
 	}
-	a.model.DeleteForgottenPullRequests(idsOnDeleteFromDatabase)
 	return
 }
 
@@ -1789,68 +1753,58 @@ func (a *App) CheckForgottenGitBranches(channel string) {
 	if err != nil {
 		return
 	}
+	var (
+		firstAttentionBranches  = make(map[string][]string)
+		secondAttentionBranches = make(map[string][]string)
+		thirdAttentionBranches  = make(map[string][]string)
+	)
 	for _, branch := range branchesWithoutPRs {
 		r, err := regexp.Compile("^(release|hotfix)/[0-9]{8}")
 		if err != nil {
 			logrus.WithError(err).Error("Can't compile regexp")
 			return
 		}
-		if common.ValueIn(branch.Name, "master", "dev") && r.Match([]byte(branch.Name)) {
+		if common.ValueIn(branch.Name, "master", "dev") || r.Match([]byte(branch.Name)) {
 			continue
 		}
-		var breaked bool
-	Loop:
-		for j := len(forgottenBranches) - 1; j >= 0; j-- {
-			if branch.Name == forgottenBranches[j].Name {
-				forgottenBranches[j] = forgottenBranches[len(forgottenBranches)-1]
-				forgottenBranches = forgottenBranches[:len(forgottenBranches)-1]
-				breaked = true
-				break Loop
-			}
+		userSlackMention := "<@" + a.GetUserInfoByTagValue(TagUserSlackRealName, branch.Target.Author.User.DisplayName)[TagUserSlackID] + ">"
+		if a.GetUserInfoByTagValue(TagUserSlackRealName, branch.Target.Author.User.DisplayName)[TagUserSlackID] == "" {
+			userSlackMention = "Имя пользователя не удалось определить"
 		}
-		if !breaked {
+		var isExist bool
+		for i := len(forgottenBranches) - 1; i >= 0; i-- {
+			if branch.Name != forgottenBranches[i].Name || branch.Target.Repository.Name != forgottenBranches[i].RepoSlug {
+				continue
+			}
+			switch {
+			case forgottenBranches[i].CreatedAt.Before(time.Now().AddDate(0, 0, -7)):
+				if err := a.model.DeleteForgottenBranch(forgottenBranches[i].Name, forgottenBranches[i].RepoSlug); err != nil {
+					return
+				}
+				// TODO: remove third attention, add deleting branches
+				thirdAttentionBranches[userSlackMention] = append(thirdAttentionBranches[userSlackMention], "<"+branch.Links.HTML.Href+"|"+branch.Name+">")
+				//a.Bitbucket.DeleteBranch(branch.RepoSlug, branch.Name)
+			case forgottenBranches[i].CreatedAt.Before(time.Now().AddDate(0, 0, -6)):
+				secondAttentionBranches[userSlackMention] = append(secondAttentionBranches[userSlackMention], "<"+branch.Links.HTML.Href+"|"+branch.Name+">")
+			}
+			forgottenBranches[i] = forgottenBranches[len(forgottenBranches)-1]
+			forgottenBranches = forgottenBranches[:len(forgottenBranches)-1]
+			isExist = true
+			break
+		}
+		if !isExist {
+			firstAttentionBranches[userSlackMention] = append(firstAttentionBranches[userSlackMention], "<"+branch.Links.HTML.Href+"|"+branch.Name+">")
 			if err := a.model.CreateForgottenBranches(model.ForgottenBranch{
-				Author:   branch.Target.Author.User.DisplayName,
-				RepoSlug: branch.Target.Name,
-				Href:     branch.Links.HTML.Href,
+				RepoSlug: branch.Target.Repository.Name,
 				Name:     branch.Name,
 			}); err != nil {
 				return
 			}
 		}
 	}
-	var ids []int
 	for _, b := range forgottenBranches {
-		ids = append(ids, b.ID)
-	}
-	if err := a.model.DeleteForgottenBranches(ids); err != nil {
-		return
-	}
-	branches, err := a.model.GetForgottenBranches()
-	if err != nil {
-		return
-	}
-	var (
-		firstAttentionBranches  = make(map[string][]string)
-		secondAttentionBranches = make(map[string][]string)
-		thirdAttentionBranches  = make(map[string][]string)
-		idsOnDeleteFromDatabase = make([]int, 0)
-	)
-	for _, branch := range branches {
-		userSlackMention := "<@" + a.GetUserInfoByTagValue(TagUserSlackRealName, branch.Author)[TagUserSlackID] + ">"
-		if a.GetUserInfoByTagValue(TagUserSlackRealName, branch.Author)[TagUserSlackID] == "" {
-			userSlackMention = "Имя пользователя не удалось определить"
-		}
-		switch {
-		case branch.CreatedAt.Before(time.Now().AddDate(0, 0, -7)):
-			// TODO: remove third attention, add deleting branches
-			idsOnDeleteFromDatabase = append(idsOnDeleteFromDatabase, branch.ID)
-			thirdAttentionBranches[userSlackMention] = append(thirdAttentionBranches[userSlackMention], "<"+branch.Href+"|"+branch.Name+">")
-			//a.Bitbucket.DeleteBranch(branch.RepoSlug, branch.Name)
-		case branch.CreatedAt.Before(time.Now().AddDate(0, 0, -6)):
-			secondAttentionBranches[userSlackMention] = append(secondAttentionBranches[userSlackMention], "<"+branch.Href+"|"+branch.Name+">")
-		case branch.CreatedAt.After(time.Now().AddDate(0, 0, -1)):
-			firstAttentionBranches[userSlackMention] = append(firstAttentionBranches[userSlackMention], "<"+branch.Href+"|"+branch.Name+">")
+		if err := a.model.DeleteForgottenBranch(b.Name, b.RepoSlug); err != nil {
+			return
 		}
 	}
 	for author, prLinks := range firstAttentionBranches {
@@ -1858,18 +1812,12 @@ func (a *App) CheckForgottenGitBranches(channel string) {
 		for _, link := range prLinks {
 			firstAttention += link + "\n"
 		}
-		if firstAttention == "" {
-			continue
-		}
 		a.Slack.SendMessage("Если для этих веток в течение 7 дней не будут созданы PR, они идут нахер:\n"+firstAttention, channel)
 	}
 	for author, prLinks := range secondAttentionBranches {
 		secondAttention := "\n" + author + "\n"
 		for _, link := range prLinks {
 			secondAttention += link + "\n"
-		}
-		if secondAttention == "" {
-			continue
 		}
 		a.Slack.SendMessage("Если в этих ветках в течение дня не будут созданы PR, они будут удалены:\n"+secondAttention, channel)
 	}
@@ -1879,12 +1827,6 @@ func (a *App) CheckForgottenGitBranches(channel string) {
 		for _, link := range prLinks {
 			thirdAttention += link + "\n"
 		}
-		if thirdAttention == "" {
-			continue
-		}
 		a.Slack.SendMessage("Удалены(фактически нет):\n"+thirdAttention, channel)
-	}
-	if err := a.model.DeleteForgottenBranches(idsOnDeleteFromDatabase); err != nil {
-		return
 	}
 }
