@@ -160,6 +160,7 @@ func (c *Controller) vacation(ctx *gin.Context) {
 	err := ctx.ShouldBindWith(&request, binding.FormPost)
 	if err != nil {
 		ctx.String(http.StatusOK, errWrongFormat)
+		logrus.WithError(err).Error("can't parse request to json")
 		return
 	}
 	switch {
@@ -167,7 +168,7 @@ func (c *Controller) vacation(ctx *gin.Context) {
 		err := c.App.CancelVacation(request.UserId)
 		switch {
 		case err == common.ErrNotFound:
-			ctx.String(http.StatusOK, "You have no actived vacation autoreply yet")
+			ctx.String(http.StatusOK, "You have no activated vacation autoreply yet")
 		case err != nil:
 			ctx.String(http.StatusOK, err.Error())
 		default:
@@ -177,7 +178,7 @@ func (c *Controller) vacation(ctx *gin.Context) {
 		vacation, err := c.App.CheckVacationSatus(request.UserId)
 		switch {
 		case err == common.ErrNotFound:
-			ctx.String(http.StatusOK, "You have no actived vacation autoreply yet")
+			ctx.String(http.StatusOK, "You have no activated vacation autoreply yet")
 		case err != nil:
 			ctx.String(http.StatusOK, err.Error())
 		default:
@@ -187,22 +188,25 @@ func (c *Controller) vacation(ctx *gin.Context) {
 	default:
 		if !strings.Contains(request.Text, `"`) {
 			ctx.String(http.StatusOK, errWrongFormat)
+			logrus.WithField("text", request.Text).Error(`text doesn't contain " to split it`)
 			return
 		}
 		message := regexp.MustCompile(`"(.+)?"`).FindStringSubmatch(request.Text)
 		splitFn := func(c rune) bool {
 			return c == ' '
 		}
-		textSlice := strings.FieldsFunc(request.Text[:strings.IndexByte(request.Text, '"')], splitFn)
-		if len(message) != 0 && len(textSlice) == 2 {
-			err = c.App.SetVacationPeriod(textSlice[0], textSlice[1], message[1], request.UserId)
-			if err != nil {
-				ctx.JSON(http.StatusOK, fmt.Sprintf(err.Error()))
-				return
-			}
-			ctx.JSON(http.StatusOK, fmt.Sprintf("Your vacation autoreply from %s to %s has registered", textSlice[0], textSlice[1]))
+		datesSlice := strings.FieldsFunc(request.Text[:strings.IndexByte(request.Text, '"')], splitFn)
+		if len(message) == 0 || len(datesSlice) != 2 {
+			ctx.String(http.StatusOK, errWrongFormat)
+			logrus.WithFields(logrus.Fields{"datesSlice": datesSlice, "message": message}).
+				Error(`datesSlice has count of elements != 2 or message slice is empty`)
 			return
 		}
-		ctx.String(http.StatusOK, errWrongFormat)
+		err = c.App.SetVacationPeriod(datesSlice[0], datesSlice[1], message[1], request.UserId)
+		if err != nil {
+			ctx.JSON(http.StatusOK, err.Error())
+			return
+		}
+		ctx.JSON(http.StatusOK, fmt.Sprintf("Your vacation autoreply from %s to %s has registered", datesSlice[0], datesSlice[1]))
 	}
 }

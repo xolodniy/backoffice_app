@@ -54,6 +54,9 @@ reports:
     channel: "#back-office-app"
   checkneedreplymessages:
     schedule: "@yearly"
+  checklowerpriorityblockers:
+    schedule: "@yearly"
+    channel: "Artem Efremov"
   reportforgottenprs:
     schedule: "@yearly"
     channel: "#back-office-app"
@@ -62,7 +65,7 @@ reports:
     channel: "#back-office-app"
 
 jira:
-  apiurl: https://theflow.atlassian.net
+  apiurl: https://atnr.atlassian.net
   auth:
     username: stepan.morozov@atnr.pro
     token: GaQ1oimS8bWXNdqcFyRG492D

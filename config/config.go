@@ -35,6 +35,7 @@ type Main struct {
 		ReportEpicClosedIssues         Report
 		ReportLowPriorityIssuesStarted Report
 		CheckNeedReplyMessages         Report
+		CheckLowerPriorityBlockers     Report
 		ReportForgottenPRs             Report
 		ReportForgottenBranches        Report
 	}
