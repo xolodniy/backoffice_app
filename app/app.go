@@ -1598,11 +1598,6 @@ func (a *App) CheckNeedReplyMessages() {
 		logrus.WithError(err).Error("Can not get channels list")
 		return
 	}
-	afkUsers, err := a.getAfkUsersIDs()
-	if err != nil {
-		logrus.WithError(err).Error("Can't get afk users ids")
-		return
-	}
 	for _, channel := range channelsList {
 		if !channel.IsChannelActual() {
 			continue
@@ -1630,31 +1625,7 @@ func (a *App) CheckNeedReplyMessages() {
 			}
 			// check reactions of channel members on message if it contains @channel
 			if strings.Contains(channelMessage.Text, "<!channel>") {
-				reactedUsers := channelMessage.ReactedUsers()
-				var notReactedUsers []string
-				for _, member := range channel.Members {
-					if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, repliedUsers...) && member != channelMessage.User {
-						notReactedUsers = append(notReactedUsers, member)
-					}
-				}
-				if len(notReactedUsers) == 0 {
-					continue
-				}
-				var message string
-				for _, userID := range notReactedUsers {
-					if common.ValueIn(userID, afkUsers...) {
-						a.model.CreateReminder(model.Reminder{
-							UserID:     userID,
-							Message:    "<@" + userID + "> ",
-							ChannelID:  channel.ID,
-							ThreadTs:   channelMessage.Ts,
-							ReplyCount: channelMessage.ReplyCount,
-						})
-						continue
-					}
-					message += "<@" + userID + "> "
-				}
-				a.Slack.SendToThread(message+" ^", channel.ID, channelMessage.Ts)
+				a.sendMessageToNotReactedUsers(channelMessage, channel, repliedUsers)
 			}
 			var mentionedUsers = make(map[string]string)
 			if !channelMessage.IsMessageFromBot() {
@@ -1664,33 +1635,6 @@ func (a *App) CheckNeedReplyMessages() {
 						mentionedUsers[userSlackID] = channelMessage.Ts
 					}
 				}
-			}
-			// send mention if ReplyCount = 0
-			if channelMessage.ReplyCount == 0 {
-				var message string
-				if len(mentionedUsers) == 0 {
-					continue
-				}
-				messagePermalink, err := a.Slack.MessagePermalink(channel.ID, channelMessage.Ts)
-				if err != nil {
-					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": channelMessage.Ts}).Error("Can not get permalink for message from channel")
-					return
-				}
-				for userID := range mentionedUsers {
-					if common.ValueIn(userID, afkUsers...) {
-						a.model.CreateReminder(model.Reminder{
-							UserID:     userID,
-							Message:    fmt.Sprintf("<@%s> %s", userID, messagePermalink),
-							ChannelID:  channel.ID,
-							ThreadTs:   channelMessage.Ts,
-							ReplyCount: channelMessage.ReplyCount,
-						})
-						continue
-					}
-					message += "<@" + userID + "> "
-				}
-				a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
-				continue
 			}
 			// check replies for message and new nemtions in replies
 			for _, replyMessage := range replyMessages {
@@ -1706,25 +1650,76 @@ func (a *App) CheckNeedReplyMessages() {
 					}
 				}
 			}
-			for userID, replyTs := range mentionedUsers {
-				replyPermalink, err := a.Slack.MessagePermalink(channel.ID, replyTs)
-				if err != nil {
-					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": replyTs}).Error("Can not get permalink for message from channel")
-					return
-				}
-				if common.ValueIn(userID, afkUsers...) {
-					a.model.CreateReminder(model.Reminder{
-						UserID:     userID,
-						Message:    fmt.Sprintf("<@%s> %s", userID, replyPermalink),
-						ChannelID:  channel.ID,
-						ThreadTs:   channelMessage.Ts,
-						ReplyCount: channelMessage.ReplyCount,
-					})
-					continue
-				}
-				a.Slack.SendToThread(fmt.Sprintf("<@%s> %s", userID, replyPermalink), channel.ID, channelMessage.Ts)
-			}
+			a.sendMessageToMentionedUsers(channelMessage, channel, mentionedUsers)
 		}
+	}
+}
+
+// sendMessageToNotReactedUsers sends messages to not reacted users for CheckNeedReplyMessages method
+func (a *App) sendMessageToNotReactedUsers(channelMessage slack.Message, channel slack.Channel, repliedUsers []string) {
+	reactedUsers := channelMessage.ReactedUsers()
+	var notReactedUsers []string
+	for _, member := range channel.Members {
+		if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, repliedUsers...) && member != channelMessage.User {
+			notReactedUsers = append(notReactedUsers, member)
+		}
+	}
+	if len(notReactedUsers) == 0 {
+		return
+	}
+	afkUsers, err := a.getAfkUsersIDs()
+	if err != nil {
+		logrus.WithError(err).Error("Can't get afk users ids")
+		return
+	}
+	var message string
+	for _, userID := range notReactedUsers {
+		if common.ValueIn(userID, afkUsers...) {
+			a.model.CreateReminder(model.Reminder{
+				UserID:     userID,
+				Message:    "<@" + userID + "> ",
+				ChannelID:  channel.ID,
+				ThreadTs:   channelMessage.Ts,
+				ReplyCount: channelMessage.ReplyCount,
+			})
+			continue
+		}
+		message += "<@" + userID + "> "
+	}
+	a.Slack.SendToThread(message+" ^", channel.ID, channelMessage.Ts)
+}
+
+// sendMessageToMentionedUsers sends messages to mentioned users for CheckNeedReplyMessages method
+func (a *App) sendMessageToMentionedUsers(channelMessage slack.Message, channel slack.Channel, mentionedUsers map[string]string) {
+	if len(mentionedUsers) == 0 {
+		return
+	}
+	afkUsers, err := a.getAfkUsersIDs()
+	if err != nil {
+		logrus.WithError(err).Error("Can't get afk users ids")
+		return
+	}
+	messages := make(map[string]string)
+	for userID, replyTs := range mentionedUsers {
+		replyPermalink, err := a.Slack.MessagePermalink(channel.ID, replyTs)
+		if err != nil {
+			logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": replyTs}).Error("Can not get permalink for message from channel")
+			return
+		}
+		if common.ValueIn(userID, afkUsers...) {
+			a.model.CreateReminder(model.Reminder{
+				UserID:     userID,
+				Message:    fmt.Sprintf("<@%s> %s", userID, replyPermalink),
+				ChannelID:  channel.ID,
+				ThreadTs:   channelMessage.Ts,
+				ReplyCount: channelMessage.ReplyCount,
+			})
+			continue
+		}
+		messages[replyPermalink] += "<@" + userID + "> "
+	}
+	for messagePermalink, message := range messages {
+		a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
 	}
 }
 
