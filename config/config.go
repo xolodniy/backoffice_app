@@ -36,6 +36,7 @@ type Main struct {
 		ReportLowPriorityIssuesStarted Report
 		CheckNeedReplyMessages         Report
 		CheckLowerPriorityBlockers     Report
+		SendReminders                  Report
 	}
 	Database
 	Amplify

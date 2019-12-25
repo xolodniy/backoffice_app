@@ -4,29 +4,40 @@ import "time"
 
 // Commit struct of commit cache
 type Commit struct {
-	ID         int       `json:"id"`
-	Type       string    `json:"type"`
-	Hash       string    `json:"hash"`
-	Repository string    `json:"repository"`
-	Path       string    `json:"path"`
-	Message    string    `json:"message"`
-	CreatedAt  time.Time `json:"createdAt"`
+	ID         int
+	Type       string
+	Hash       string
+	Repository string
+	Path       string
+	Message    string
+	CreatedAt  time.Time
 }
 
 // AfkTimer struct of Afk timer
 type AfkTimer struct {
-	ID        int       `json:"id"`
-	UserId    string    `json:"userId"`
-	Duration  string    `json:"userId"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID        int
+	UserID    string
+	Duration  string
+	UpdatedAt time.Time
 }
 
 // Vacation struct of user vacation
 type Vacation struct {
-	UserId    string    `json:"userId"`
-	DateStart time.Time `json:"dateStart"`
-	DateEnd   time.Time `json:"dateEnd"`
-	Message   string    `json:"message"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	UserID    string
+	DateStart time.Time
+	DateEnd   time.Time
+	Message   string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// Reminder struct of user reminders
+type Reminder struct {
+	ID         int
+	UserID     string
+	Message    string
+	ChannelID  string
+	ThreadTs   string
+	ReplyCount int
+	CreatedAt  time.Time
 }
