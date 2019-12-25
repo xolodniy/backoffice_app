@@ -359,8 +359,8 @@ type branch struct {
 	Type   string `json:"type"`
 	Name   string `json:"name"`
 	Target struct {
-		Name   string `json:"name"`
-		Author struct {
+		Repository repository `json:"repository"`
+		Author     struct {
 			Type string `json:"type"`
 			User struct {
 				DisplayName string `json:"display_name"`

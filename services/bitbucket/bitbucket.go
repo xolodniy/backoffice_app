@@ -79,11 +79,7 @@ func (b *Bitbucket) get(urlStr string) ([]byte, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.SetBasicAuth(b.Auth.user, b.Auth.password)
-	respBody, err := b.do(req)
-	if err != nil {
-		return nil, err
-	}
-	return respBody, nil
+	return b.do(req)
 }
 
 // post prepare post request by post method
@@ -94,11 +90,7 @@ func (b *Bitbucket) post(urlStr string, jsonBody []byte) ([]byte, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.SetBasicAuth(b.Auth.user, b.Auth.password)
-	respBody, err := b.do(req)
-	if err != nil {
-		return nil, err
-	}
-	return respBody, nil
+	return b.do(req)
 }
 
 // get prepare http request by delete method
@@ -109,11 +101,7 @@ func (b *Bitbucket) delete(urlStr string) ([]byte, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.SetBasicAuth(b.Auth.user, b.Auth.password)
-	respBody, err := b.do(req)
-	if err != nil {
-		return nil, err
-	}
-	return respBody, nil
+	return b.do(req)
 }
 
 // RepositoriesList returns list of all repositories
