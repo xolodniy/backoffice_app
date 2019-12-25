@@ -216,11 +216,11 @@ func (m *Model) CreateForgottenPullRequest(forgottenPullRequest ForgottenPullReq
 	return nil
 }
 
-// DeleteForgottenPullRequests deletes forgotten pull requests
-func (m *Model) DeleteForgottenPullRequests(ids []int) error {
-	var res []ForgottenPullRequest
-	if err := m.db.Where("id IN (?)", ids).Delete(&res).Error; err != nil {
-		logrus.WithError(err).WithField("ids", ids).Error("can't delete forgotten pull requests by ids")
+// DeleteForgottenPullRequest deletes forgotten pull request
+func (m *Model) DeleteForgottenPullRequest(pullRequestID int, repoSlug string) error {
+	if err := m.db.Where("pull_request_id = ? AND repo_slug = ?", pullRequestID, repoSlug).Delete(&ForgottenPullRequest{}).Error; err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{"pullRequestID": pullRequestID, "repo_slug": repoSlug}).
+			Error("can't delete forgotten pull request by pullRequestID and repo slug")
 		return common.ErrInternal
 	}
 	return nil
@@ -257,11 +257,11 @@ func (m *Model) CreateForgottenBranches(forgottenBranch ForgottenBranch) error {
 	return nil
 }
 
-// DeleteForgottenBranches deletes forgotten branches
-func (m *Model) DeleteForgottenBranches(ids []int) error {
-	var res []ForgottenBranch
-	if err := m.db.Where("id IN (?)", ids).Delete(&res).Error; err != nil {
-		logrus.WithError(err).WithField("ids", ids).Error("can't delete forgotten branches by ids")
+// DeleteForgottenBranch deletes forgotten branch
+func (m *Model) DeleteForgottenBranch(branchName, repoSlug string) error {
+	if err := m.db.Where("name = ? AND repo_slug = ?", branchName, repoSlug).Delete(&ForgottenBranch{}).Error; err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{"branchName": branchName, "repo_slug": repoSlug}).
+			Error("can't delete forgotten branch by branch name and repo slug")
 		return common.ErrInternal
 	}
 	return nil

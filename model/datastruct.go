@@ -31,23 +31,16 @@ type Vacation struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
+// ForgottenPullRequest struct of forgotten pr notify number
 type ForgottenPullRequest struct {
-	ID            int
 	PullRequestID int
-	Title         string
-	Author        string
 	RepoSlug      string
-	Href          string
-	LastActivity  time.Time
 	CreatedAt     time.Time
-	UpdatedAt     time.Time
 }
 
+// ForgottenBranch struct of forgotten branches notify number
 type ForgottenBranch struct {
-	ID        int
 	Name      string
-	Author    string
 	RepoSlug  string
-	Href      string
 	CreatedAt time.Time
 }
