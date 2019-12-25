@@ -165,22 +165,22 @@ func (rb *ReleaseBot) showReleases(chatID int64) {
 			})
 		}
 	}
-	if len(respSlice) > 0 {
-		sort.Slice(respSlice, func(i, j int) bool {
-			return respSlice[i].projectName < respSlice[j].projectName
-		})
-		rows := make([][]tgbotapi.InlineKeyboardButton, 0)
-		for _, str := range respSlice {
-			btn := tgbotapi.NewInlineKeyboardButtonData(str.projectName+"/"+str.versionName, str.versionID)
-			rows = append(rows, tgbotapi.NewInlineKeyboardRow(btn))
-		}
-		var keyboard = tgbotapi.NewInlineKeyboardMarkup(rows...)
-		resp := tgbotapi.NewMessage(chatID, "Select release please")
-		resp.ReplyMarkup = keyboard
-		rb.sendMsgWithLog(resp)
-	} else {
+	if len(respSlice) == 0 {
 		rb.sendText(chatID, noProjectAvailable)
+		return
 	}
+	sort.Slice(respSlice, func(i, j int) bool {
+		return respSlice[i].projectName < respSlice[j].projectName
+	})
+	rows := make([][]tgbotapi.InlineKeyboardButton, 0)
+	for _, str := range respSlice {
+		btn := tgbotapi.NewInlineKeyboardButtonData(str.projectName+"/"+str.versionName, str.versionID)
+		rows = append(rows, tgbotapi.NewInlineKeyboardRow(btn))
+	}
+	var keyboard = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	resp := tgbotapi.NewMessage(chatID, "Select release please")
+	resp.ReplyMarkup = keyboard
+	rb.sendMsgWithLog(resp)
 }
 
 func (rb *ReleaseBot) processReleaseDetails(chatID int64, releaseIDstr string) {
