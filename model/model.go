@@ -226,18 +226,6 @@ func (m *Model) DeleteForgottenPullRequest(pullRequestID int, repoSlug string) e
 	return nil
 }
 
-// UpdateForgottenPullRequests updates forgotten pull request
-func (m *Model) UpdateForgottenPullRequest(pullRequestID int, forgottenPullRequest ForgottenPullRequest) error {
-	if err := m.db.Model(ForgottenPullRequest{}).Where(ForgottenPullRequest{PullRequestID: pullRequestID}).Update(forgottenPullRequest).Error; err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"pullRequestID":        pullRequestID,
-			"forgottenPullRequest": fmt.Sprintf("%+v", forgottenPullRequest)}).
-			Error("can't update forgottenPullRequest")
-		return common.ErrInternal
-	}
-	return nil
-}
-
 // GetForgottenBranches retrieves old branches
 func (m *Model) GetForgottenBranches() ([]ForgottenBranch, error) {
 	var res []ForgottenBranch
