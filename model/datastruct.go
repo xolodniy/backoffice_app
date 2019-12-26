@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/lib/pq"
+)
 
 // Commit struct of commit cache
 type Commit struct {
@@ -40,4 +44,19 @@ type Reminder struct {
 	ThreadTs   string
 	ReplyCount int
 	CreatedAt  time.Time
+}
+
+// RbAuth stores Telegram Release Bot user authorization
+type RbAuth struct {
+	TgUserID  int64
+	Username  string
+	FirstName string
+	LastName  string
+	Title     string
+	Projects  pq.StringArray
+	UpdatedAt time.Time
+}
+
+func (rb RbAuth) TableName() string {
+	return "rb_auth"
 }

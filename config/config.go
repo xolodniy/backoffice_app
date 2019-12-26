@@ -40,6 +40,9 @@ type Main struct {
 	}
 	Database
 	Amplify
+	Telegram struct {
+		ReleaseBotAPIKey string
+	}
 	Users []User
 }
 

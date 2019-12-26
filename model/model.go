@@ -1,11 +1,12 @@
 package model
 
 import (
-	"backoffice_app/common"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
+
+	"backoffice_app/common"
 
 	"github.com/GuiaBolso/darwin"
 	"github.com/gobuffalo/packr"
@@ -221,4 +222,27 @@ func (m *Model) DeleteReminder(id int) error {
 		return common.ErrInternal
 	}
 	return nil
+}
+
+// CreateRbAuth saves rbAuth
+func (m *Model) CreateRbAuth(auth RbAuth) error {
+	if err := m.db.Create(&auth).Error; err != nil {
+		logrus.WithError(err).WithField("auth", fmt.Sprintf("%+v", auth)).Error("can't save rbAuth")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// GetRbAuthByTgUserID retrieves RbAuth by user id
+func (m *Model) GetRbAuthByTgUserID(TgUserID int64) (RbAuth, error) {
+	var res RbAuth
+	err := m.db.Take(&res, RbAuth{TgUserID: TgUserID}).Error
+	if err == gorm.ErrRecordNotFound {
+		return RbAuth{}, common.ErrNotFound
+	}
+	if err != nil {
+		logrus.WithError(err).WithField("TgUserID", TgUserID).Error("can't get rb auth by user id")
+		return RbAuth{}, common.ErrInternal
+	}
+	return res, nil
 }
