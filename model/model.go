@@ -125,7 +125,7 @@ func (m *Model) DeleteCommitsByType(commitsType string) error {
 
 // CreateAfkTimer creates afk timer
 func (m *Model) CreateAfkTimer(afkTimer AfkTimer) error {
-	if err := m.db.Where(AfkTimer{UserId: afkTimer.UserId}).Assign(AfkTimer{Duration: afkTimer.Duration}).FirstOrCreate(&afkTimer).Error; err != nil {
+	if err := m.db.Where(AfkTimer{UserID: afkTimer.UserID}).Assign(AfkTimer{Duration: afkTimer.Duration}).FirstOrCreate(&afkTimer).Error; err != nil {
 		logrus.WithError(err).WithField("afkTimer", fmt.Sprintf("%+v", afkTimer)).Error("can't create afk timer")
 		return common.ErrInternal
 	}
@@ -143,10 +143,10 @@ func (m *Model) GetAfkTimers() ([]AfkTimer, error) {
 }
 
 // DeleteAfkTimer deletes afk timer
-func (m *Model) DeleteAfkTimer(userId string) error {
+func (m *Model) DeleteAfkTimer(userID string) error {
 	var res []AfkTimer
-	if err := m.db.Where(AfkTimer{UserId: userId}).Delete(&res).Error; err != nil {
-		logrus.WithError(err).WithField("userId", userId).Error("can't delete afk timer by user id")
+	if err := m.db.Where(AfkTimer{UserID: userID}).Delete(&res).Error; err != nil {
+		logrus.WithError(err).WithField("userID", userID).Error("can't delete afk timer by user id")
 		return common.ErrInternal
 	}
 	return nil
@@ -154,7 +154,7 @@ func (m *Model) DeleteAfkTimer(userId string) error {
 
 // CreateVacation creates new vacation
 func (m *Model) SaveVacation(vacation Vacation) error {
-	if err := m.db.Where(Vacation{UserId: vacation.UserId}).Assign(Vacation{
+	if err := m.db.Where(Vacation{UserID: vacation.UserID}).Assign(Vacation{
 		DateStart: vacation.DateStart,
 		DateEnd:   vacation.DateEnd,
 		Message:   vacation.Message,
@@ -176,13 +176,13 @@ func (m *Model) GetActualVacations() ([]Vacation, error) {
 }
 
 // GetVacation retrieves vacation by user id
-func (m *Model) GetVacation(userId string) (Vacation, error) {
+func (m *Model) GetVacation(userID string) (Vacation, error) {
 	var res Vacation
-	if err := m.db.Find(&res).Where(Vacation{UserId: userId}).Error; err != nil {
+	if err := m.db.Find(&res).Where(Vacation{UserID: userID}).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return Vacation{}, common.ErrNotFound
 		}
-		logrus.WithError(err).WithField("userId", userId).Error("can't get vacation")
+		logrus.WithError(err).WithField("userID", userID).Error("can't get vacation")
 		return Vacation{}, common.ErrInternal
 	}
 	return res, nil
@@ -191,8 +191,34 @@ func (m *Model) GetVacation(userId string) (Vacation, error) {
 // DeleteVacation deletes vacation
 func (m *Model) DeleteVacation(userId string) error {
 	var res []Vacation
-	if err := m.db.Where(Vacation{UserId: userId}).Delete(&res).Error; err != nil {
+	if err := m.db.Where(Vacation{UserID: userId}).Delete(&res).Error; err != nil {
 		logrus.WithError(err).WithField("userId", userId).Error("can't delete vacation by user id")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// GetReminders retrieves reminders
+func (m *Model) GetReminders() ([]Reminder, error) {
+	var res []Reminder
+	if err := m.db.Find(&res).Error; err != nil {
+		logrus.WithError(err).Error("can't get reminders")
+		return nil, common.ErrInternal
+	}
+	return res, nil
+}
+
+// CreateReminder creates new reminder
+func (m *Model) CreateReminder(reminder Reminder) {
+	if err := m.db.Create(&reminder).Error; err != nil {
+		logrus.WithError(err).WithField("reminder", fmt.Sprintf("%+v", reminder)).Error("can't create reminder")
+	}
+}
+
+// DeleteReminder deletes reminder
+func (m *Model) DeleteReminder(id int) error {
+	if err := m.db.Where(Reminder{ID: id}).Delete(&Reminder{}).Error; err != nil {
+		logrus.WithError(err).WithField("id", id).Error("can't delete reminder by id")
 		return common.ErrInternal
 	}
 	return nil

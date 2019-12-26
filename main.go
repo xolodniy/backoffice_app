@@ -416,6 +416,16 @@ func main() {
 					application.CheckNeedReplyMessages()
 				},
 			},
+			{
+				Name:  "send-reminders",
+				Usage: "Send remind about need reply message",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
+					application := app.New(cfg)
+					application.SendReminders()
+				},
+			},
 		}
 
 		if err := cliApp.Run(os.Args); err != nil {
@@ -574,6 +584,11 @@ func initCronTasks(ctx context.Context, wg *sync.WaitGroup, cfg *config.Main, ap
 	err = tm.AddTask(cfg.Reports.CheckLowerPriorityBlockers.Schedule, func() {
 		application.ReportIssuesLockedByLowPriority(cfg.Reports.CheckLowerPriorityBlockers.Channel)
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.SendReminders.Schedule, application.SendReminders)
 	if err != nil {
 		panic(err)
 	}

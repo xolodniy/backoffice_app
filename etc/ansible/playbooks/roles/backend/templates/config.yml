@@ -57,6 +57,8 @@ reports:
   checklowerpriorityblockers:
     schedule: "@daily"
     channel: "Artem Efremov"
+  sendreminders:
+    schedule: "@hourly"
 
 jira:
   apiurl: https://atnr.atlassian.net

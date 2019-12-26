@@ -942,21 +942,21 @@ func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.
 }
 
 // StartAfkTimer starts timer while user is afk
-func (a *App) StartAfkTimer(userDuration time.Duration, userId string) {
-	err := a.model.CreateAfkTimer(model.AfkTimer{UserId: userId, Duration: userDuration.String()})
+func (a *App) StartAfkTimer(userDuration time.Duration, userID string) {
+	err := a.model.CreateAfkTimer(model.AfkTimer{UserID: userID, Duration: userDuration.String()})
 	if err != nil {
 		logrus.WithError(err).Errorf("can't create afk timer in database")
 	}
-	a.AfkTimer.UserDurationMap[userId] = userDuration
+	a.AfkTimer.UserDurationMap[userID] = userDuration
 	ticker := time.NewTicker(time.Second)
 	go func() {
 		for range ticker.C {
 			a.AfkTimer.Lock()
-			a.AfkTimer.UserDurationMap[userId] = a.AfkTimer.UserDurationMap[userId] - time.Second
+			a.AfkTimer.UserDurationMap[userID] = a.AfkTimer.UserDurationMap[userID] - time.Second
 			a.AfkTimer.Unlock()
-			if a.AfkTimer.UserDurationMap[userId] <= 0 {
+			if a.AfkTimer.UserDurationMap[userID] <= 0 {
 				ticker.Stop()
-				err = a.model.DeleteAfkTimer(userId)
+				err = a.model.DeleteAfkTimer(userID)
 				if err != nil {
 					logrus.WithError(err).Errorf("can't delete afk timer from database")
 				}
@@ -986,10 +986,10 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 		logrus.WithError(err).Errorf("can't take information about vacations from database")
 	}
 	for _, vacation := range vacations {
-		if strings.Contains(message, vacation.UserId) {
-			userInfo := a.GetUserInfoByTagValue(TagUserSlackID, vacation.UserId)
+		if strings.Contains(message, vacation.UserID) {
+			userInfo := a.GetUserInfoByTagValue(TagUserSlackID, vacation.UserID)
 			if userInfo[TagUserSlackRealName] == "" || userInfo[TagUserSlackRealName] == EmptyTagValue {
-				logrus.Errorf("can't take information about user name from vocabulary with id: %v", vacation.UserId)
+				logrus.Errorf("can't take information about user name from vocabulary with id: %v", vacation.UserID)
 				userInfo[TagUserSlackRealName] = "This user"
 			}
 			a.Slack.SendToThread(fmt.Sprintf("*%s* is on vacation, his message is: \n\n'%s'", userInfo[TagUserSlackRealName], vacation.Message), channel, threadId)
@@ -1033,22 +1033,22 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	}
 	developerID := issue.DeveloperMap(jira.TagDeveloperID)
 	userInfo := a.GetUserInfoByTagValue(TagUserJiraAccountID, developerID)
-	var userId string
+	var userID string
 	switch {
 	case userInfo[TagUserSlackID] == EmptyTagValue:
-		userId = userInfo[TagUserEmail]
+		userID = userInfo[TagUserEmail]
 	case userInfo[TagUserSlackID] == "":
-		userId = jira.NoDeveloper
+		userID = jira.NoDeveloper
 	default:
-		userId = "<@" + userInfo[TagUserSlackID] + ">"
+		userID = "<@" + userInfo[TagUserSlackID] + ">"
 	}
 
 	msgBody := fmt.Sprintf("The issue %s has been rejected after %v reviews\n\n", issue.Key, reviewCount)
 	switch issue.Fields.Type.Name {
 	case jira.TypeBESubTask, jira.TypeBETask:
-		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", userId, a.Slack.Employees.TeamLeaderBE, a.Slack.Employees.DirectorOfCompany)
+		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", userID, a.Slack.Employees.TeamLeaderBE, a.Slack.Employees.DirectorOfCompany)
 	case jira.TypeFESubTask, jira.TypeFETask:
-		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", userId, a.Slack.Employees.TeamLeaderFE, a.Slack.Employees.DirectorOfCompany)
+		msgBody += fmt.Sprintf("Developer: %s\nfyi %s\nсс %s", userID, a.Slack.Employees.TeamLeaderFE, a.Slack.Employees.DirectorOfCompany)
 	default:
 		return
 	}
@@ -1081,10 +1081,10 @@ func (a *App) CheckAfkTimers() {
 		}
 		difference := time.Now().Sub(afkTimer.UpdatedAt)
 		if difference < duration && difference > 0 {
-			go a.StartAfkTimer(duration-difference, afkTimer.UserId)
+			go a.StartAfkTimer(duration-difference, afkTimer.UserID)
 			continue
 		}
-		err = a.model.DeleteAfkTimer(afkTimer.UserId)
+		err = a.model.DeleteAfkTimer(afkTimer.UserID)
 		if err != nil {
 			logrus.WithError(err).Errorf("can't delete afk timer")
 		}
@@ -1191,7 +1191,7 @@ func (a *App) FindLastSprintDates(sprints []interface{}) (time.Time, time.Time, 
 }
 
 // SetVacationPeriod create vacation period for user
-func (a *App) SetVacationPeriod(dateStart, dateEnd, message, userId string) error {
+func (a *App) SetVacationPeriod(dateStart, dateEnd, message, userID string) error {
 	dStart, err := time.Parse("02.01.2006", dateStart)
 	if err != nil {
 		return err
@@ -1205,7 +1205,7 @@ func (a *App) SetVacationPeriod(dateStart, dateEnd, message, userId string) erro
 	}
 
 	err = a.model.SaveVacation(model.Vacation{
-		UserId:    userId,
+		UserID:    userID,
 		DateStart: dStart,
 		DateEnd:   dEnd,
 		Message:   message,
@@ -1217,12 +1217,12 @@ func (a *App) SetVacationPeriod(dateStart, dateEnd, message, userId string) erro
 }
 
 // CancelVacation delete vacation
-func (a *App) CancelVacation(userId string) error {
-	_, err := a.CheckVacationSatus(userId)
+func (a *App) CancelVacation(userID string) error {
+	_, err := a.CheckVacationSatus(userID)
 	if err != nil {
 		return err
 	}
-	err = a.model.DeleteVacation(userId)
+	err = a.model.DeleteVacation(userID)
 	if err != nil {
 		return err
 	}
@@ -1230,8 +1230,8 @@ func (a *App) CancelVacation(userId string) error {
 }
 
 // CheckVacationSatus get vacation if exist
-func (a *App) CheckVacationSatus(userId string) (model.Vacation, error) {
-	vacation, err := a.model.GetVacation(userId)
+func (a *App) CheckVacationSatus(userID string) (model.Vacation, error) {
+	vacation, err := a.model.GetVacation(userID)
 	if err != nil {
 		return model.Vacation{}, err
 	}
@@ -1619,21 +1619,7 @@ func (a *App) CheckNeedReplyMessages() {
 			}
 			// check reactions of channel members on message if it contains @channel
 			if strings.Contains(channelMessage.Text, "<!channel>") {
-				reactedUsers := channelMessage.ReactedUsers()
-				var notReactedUsers []string
-				for _, member := range channel.Members {
-					if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, repliedUsers...) && member != channelMessage.User {
-						notReactedUsers = append(notReactedUsers, member)
-					}
-				}
-				if len(notReactedUsers) == 0 {
-					continue
-				}
-				var message string
-				for _, userID := range notReactedUsers {
-					message += "<@" + userID + "> "
-				}
-				a.Slack.SendToThread(message+" ^", channel.ID, channelMessage.Ts)
+				a.sendMessageToNotReactedUsers(channelMessage, channel, repliedUsers)
 			}
 			var mentionedUsers = make(map[string]string)
 			if !channelMessage.IsMessageFromBot() {
@@ -1643,23 +1629,6 @@ func (a *App) CheckNeedReplyMessages() {
 						mentionedUsers[userSlackID] = channelMessage.Ts
 					}
 				}
-			}
-			// send mention if ReplyCount = 0
-			if channelMessage.ReplyCount == 0 {
-				var message string
-				if len(mentionedUsers) == 0 {
-					continue
-				}
-				for userID := range mentionedUsers {
-					message += "<@" + userID + "> "
-				}
-				messagePermalink, err := a.Slack.MessagePermalink(channel.ID, channelMessage.Ts)
-				if err != nil {
-					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": channelMessage.Ts}).Error("Can not get permalink for message from channel")
-					return
-				}
-				a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
-				continue
 			}
 			// check replies for message and new nemtions in replies
 			for _, replyMessage := range replyMessages {
@@ -1675,14 +1644,137 @@ func (a *App) CheckNeedReplyMessages() {
 					}
 				}
 			}
-			for userID, replyTs := range mentionedUsers {
-				replyPermalink, err := a.Slack.MessagePermalink(channel.ID, replyTs)
-				if err != nil {
-					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": replyTs}).Error("Can not get permalink for message from channel")
-					return
-				}
-				a.Slack.SendToThread(fmt.Sprintf("<@%s> %s", userID, replyPermalink), channel.ID, channelMessage.Ts)
+			a.sendMessageToMentionedUsers(channelMessage, channel, mentionedUsers)
+		}
+	}
+}
+
+// sendMessageToNotReactedUsers sends messages to not reacted users for CheckNeedReplyMessages method
+func (a *App) sendMessageToNotReactedUsers(channelMessage slack.Message, channel slack.Channel, repliedUsers []string) {
+	reactedUsers := channelMessage.ReactedUsers()
+	var notReactedUsers []string
+	for _, member := range channel.Members {
+		if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, repliedUsers...) && member != channelMessage.User {
+			notReactedUsers = append(notReactedUsers, member)
+		}
+	}
+	if len(notReactedUsers) == 0 {
+		return
+	}
+	afkUsers, err := a.getAfkUsersIDs()
+	if err != nil {
+		logrus.WithError(err).Error("Can't get afk users ids")
+		return
+	}
+	var message string
+	for _, userID := range notReactedUsers {
+		if common.ValueIn(userID, afkUsers...) {
+			a.model.CreateReminder(model.Reminder{
+				UserID:     userID,
+				Message:    "<@" + userID + "> ",
+				ChannelID:  channel.ID,
+				ThreadTs:   channelMessage.Ts,
+				ReplyCount: channelMessage.ReplyCount,
+			})
+			continue
+		}
+		message += "<@" + userID + "> "
+	}
+	a.Slack.SendToThread(message+" ^", channel.ID, channelMessage.Ts)
+}
+
+// sendMessageToMentionedUsers sends messages to mentioned users for CheckNeedReplyMessages method
+func (a *App) sendMessageToMentionedUsers(channelMessage slack.Message, channel slack.Channel, mentionedUsers map[string]string) {
+	if len(mentionedUsers) == 0 {
+		return
+	}
+	afkUsers, err := a.getAfkUsersIDs()
+	if err != nil {
+		logrus.WithError(err).Error("Can't get afk users ids")
+		return
+	}
+	messages := make(map[string]string)
+	for userID, replyTs := range mentionedUsers {
+		replyPermalink, err := a.Slack.MessagePermalink(channel.ID, replyTs)
+		if err != nil {
+			logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": replyTs}).Error("Can not get permalink for message from channel")
+			return
+		}
+		if common.ValueIn(userID, afkUsers...) {
+			a.model.CreateReminder(model.Reminder{
+				UserID:     userID,
+				Message:    fmt.Sprintf("<@%s> %s", userID, replyPermalink),
+				ChannelID:  channel.ID,
+				ThreadTs:   channelMessage.Ts,
+				ReplyCount: channelMessage.ReplyCount,
+			})
+			continue
+		}
+		messages[replyPermalink] += "<@" + userID + "> "
+	}
+	for messagePermalink, message := range messages {
+		a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
+	}
+}
+
+// getAfkUsersIDs retrieves all afk users on vacation or with afk status
+func (a *App) getAfkUsersIDs() ([]string, error) {
+	var usersIDs []string
+	afkTimers, err := a.model.GetAfkTimers()
+	if err != nil {
+		return []string{}, err
+	}
+	for _, at := range afkTimers {
+		usersIDs = append(usersIDs, at.UserID)
+	}
+	vacations, err := a.model.GetActualVacations()
+	if err != nil {
+		return []string{}, err
+	}
+	for _, v := range vacations {
+		if common.ValueIn(v.UserID, usersIDs...) {
+			continue
+		}
+		usersIDs = append(usersIDs, v.UserID)
+	}
+	return usersIDs, nil
+}
+
+// SendReminders sends reminders for non afk users
+func (a *App) SendReminders() {
+	afkUsers, err := a.getAfkUsersIDs()
+	if err != nil {
+		logrus.WithError(err).Error("Can't get afk users ids")
+		return
+	}
+	reminders, err := a.model.GetReminders()
+	if err != nil {
+		return
+	}
+	for _, reminder := range reminders {
+		if common.ValueIn(reminder.UserID, afkUsers...) {
+			continue
+		}
+		message, err := a.Slack.ChannelMessage(reminder.ChannelID, reminder.ThreadTs)
+		if err != nil {
+			logrus.WithError(err).WithFields(logrus.Fields{"channelID": reminder.ChannelID, "ts": reminder.ThreadTs}).
+				Error("Can not get message from channel")
+			return
+		}
+		newReplies := message.Replies[reminder.ReplyCount-1:]
+		var wasAnswered bool
+		for _, reply := range newReplies {
+			if reply.User != reminder.UserID {
+				continue
 			}
+			wasAnswered = true
+			break
+		}
+		if !wasAnswered {
+			a.Slack.SendToThread(reminder.Message, reminder.ChannelID, reminder.ThreadTs)
+		}
+		if err := a.model.DeleteReminder(reminder.ID); err != nil {
+			return
 		}
 	}
 }
