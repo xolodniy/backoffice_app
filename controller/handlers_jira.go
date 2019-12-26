@@ -24,6 +24,20 @@ func (c *Controller) issueUpdated(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
 }
 
+func (c *Controller) issueCommentCreated(ctx *gin.Context) {
+	webHookBody := struct {
+		Comment jira.Comment `json:"comment"`
+		Issue   jira.Issue   `json:"issue"`
+	}{}
+	if err := ctx.ShouldBindJSON(&webHookBody); err != nil {
+		ctx.String(http.StatusBadRequest, "error")
+		logrus.WithError(err).Error("can't bind json answer from jira")
+		return
+	}
+	go c.App.SendJiraMention(webHookBody.Comment, webHookBody.Issue)
+	ctx.JSON(http.StatusOK, gin.H{"result": "ok"})
+}
+
 func (c *Controller) issueStarted(ctx *gin.Context) {
 	webHookBody := struct {
 		Issue jira.Issue `json:"issue"`
