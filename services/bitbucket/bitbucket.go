@@ -442,9 +442,7 @@ func (b *Bitbucket) PullRequestsActivity() ([]pullRequest, error) {
 		if err != nil {
 			return nil, err
 		}
-		for _, activity := range activities {
-			allPullRequests[i].Activities = append(allPullRequests[i].Activities, activity)
-		}
+		allPullRequests[i].Activities = activities
 	}
 	return allPullRequests, nil
 }
@@ -481,6 +479,7 @@ func (b *Bitbucket) DeclinePullRequest(repoSlug string, pullRequestID int64) err
 	return nil
 }
 
+// BranchesWithoutPullRequests retrieves branches without pull requests
 func (b *Bitbucket) BranchesWithoutPullRequests() ([]branch, error) {
 	repositories, err := b.RepositoriesList()
 	if err != nil {
