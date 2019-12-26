@@ -1693,6 +1693,7 @@ func (a *App) CheckNeedReplyMessages() {
 	}
 }
 
+// SendJiraMention sends message to DM in slack for mentioned users
 func (a *App) SendJiraMention(comment jira.Comment, issue jira.Issue) {
 	if !strings.Contains(comment.Body, "[~accountid:") {
 		return
@@ -1701,13 +1702,14 @@ func (a *App) SendJiraMention(comment jira.Comment, issue jira.Issue) {
 	for _, id := range ids {
 		slackID := a.GetUserInfoByTagValue(TagUserJiraAccountID, id)[TagUserSlackID]
 		if slackID == "" {
-			logrus.WithField("jiraAccountID", id).Error("Can't find jira user slack id for user from jira")
+			logrus.WithField("jiraAccountID", id).Error("Can't find slack id for user from jira")
 			continue
 		}
 		a.Slack.SendMessage("Вас упомянули в комментарии к задаче:\n"+issue.String(), slackID)
 	}
 }
 
+// getUniqueJiraAccountIDsFromText returns unique ids of mentioned users in jira issue comment text
 func getUniqueJiraAccountIDsFromText(text string) []string {
 	accountIDs := make([]string, 0)
 	r, err := regexp.Compile(`(\[~accountid):[\w]*:*[\w]*-*[\w]*-*[\w]*-*[\w]*-*[\w]*]`)
