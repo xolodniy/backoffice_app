@@ -1692,3 +1692,33 @@ func (a *App) CheckNeedReplyMessages() {
 		}
 	}
 }
+
+func (a *App) SendJiraMention(comment jira.Comment, issue jira.Issue) {
+	if !strings.Contains(comment.Body, "[~accountid:") {
+		return
+	}
+	ids := getUniqueJiraAccountIDsFromText(comment.Body)
+	for _, id := range ids {
+		slackID := a.GetUserInfoByTagValue(TagUserJiraAccountID, id)[TagUserSlackID]
+		if slackID == "" {
+			logrus.WithField("jiraAccountID", id).Error("Can't find jira user slack id for user from jira")
+			continue
+		}
+		a.Slack.SendMessage("Вас упомянули в комментарии к задаче:\n"+issue.String(), slackID)
+	}
+}
+
+func getUniqueJiraAccountIDsFromText(text string) []string {
+	accountIDs := make([]string, 0)
+	r, err := regexp.Compile(`(\[~accountid):[\w]*:*[\w]*-*[\w]*-*[\w]*-*[\w]*-*[\w]*]`)
+	if err != nil {
+		logrus.WithError(err).Error("Can't compile regexp")
+		return []string{}
+	}
+	accountIDs = r.FindAllString(text, -1)
+	for i := 0; i < len(accountIDs); i += 1 {
+		accountIDs[i] = strings.TrimLeft(strings.TrimRight(accountIDs[i], "]"), "[~accountid:")
+	}
+	accountIDs = common.RemoveDuplicates(accountIDs)
+	return accountIDs
+}
