@@ -57,6 +57,8 @@ reports:
   checklowerpriorityblockers:
     schedule: "@yearly"
     channel: "Artem Efremov"
+  sendreminders:
+    schedule: "@yearly"
   reportforgottenprs:
     schedule: "@yearly"
     channel: "#back-office-app"

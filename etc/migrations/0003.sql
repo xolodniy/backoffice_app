@@ -1,15 +1,10 @@
-CREATE TABLE forgotten_pull_requests
+CREATE TABLE reminders
 (
-    pull_request_id INT                         NOT NULL,
-    repo_slug       VARCHAR                     NOT NULL,
-    created_at      TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (pull_request_id, repo_slug)
-);
-
-CREATE TABLE forgotten_branches
-(
-    name          VARCHAR                     NOT NULL,
-    repo_slug     VARCHAR                     NOT NULL,
-    created_at    TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (name, repo_slug)
+    id          SERIAL                      NOT NULL PRIMARY KEY,
+    user_id     VARCHAR                     NOT NULL,
+    message     VARCHAR                     NOT NULL,
+    channel_id  VARCHAR                     NOT NULL,
+    thread_ts   VARCHAR                     NOT NULL,
+    reply_count INT                         NOT NULL,
+    created_at  TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
 );

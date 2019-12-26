@@ -140,14 +140,14 @@ func (c *Controller) messagesCheck(ctx *gin.Context) {
 
 func (c *Controller) sprintStatus(ctx *gin.Context) {
 	request := struct {
-		UserId string `form:"user_id" binding:"required"`
+		UserID string `form:"user_id" binding:"required"`
 	}{}
 	err := ctx.ShouldBindWith(&request, binding.FormPost)
 	if err != nil {
-		ctx.String(http.StatusOK, "Failed! UserId is empty!")
+		ctx.String(http.StatusOK, "Failed! UserID is empty!")
 		return
 	}
-	go c.App.ReportSprintStatus(request.UserId)
+	go c.App.ReportSprintStatus(request.UserID)
 	ctx.JSON(http.StatusOK, "ok, wait for report")
 }
 

@@ -413,6 +413,16 @@ func main() {
 				},
 			},
 			{
+				Name:  "send-reminders",
+				Usage: "Send remind about need reply message",
+				Flags: cliApp.Flags,
+				Action: func(c *cli.Context) {
+					cfg := config.GetConfig(true, c.String("config"))
+					application := app.New(cfg)
+					application.SendReminders()
+				},
+			},
+			{
 				Name:  "check-old-prs",
 				Usage: "Check old pull requests in bitbucket",
 				Flags: cliApp.Flags,
@@ -583,6 +593,11 @@ func initCronTasks(wg *sync.WaitGroup, cfg *config.Main, application *app.App) *
 	err = tm.AddTask(cfg.Reports.CheckLowerPriorityBlockers.Schedule, func() {
 		application.ReportIssuesLockedByLowPriority(cfg.Reports.CheckLowerPriorityBlockers.Channel)
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = tm.AddTask(cfg.Reports.SendReminders.Schedule, application.SendReminders)
 	if err != nil {
 		panic(err)
 	}
