@@ -28,6 +28,11 @@ type Changelog struct {
 	Items []jira.ChangelogItems `json:"items"`
 }
 
+// Comment struct don't let go-jira dependency on Controller level
+type Comment struct {
+	jira.Comment
+}
+
 // New creates new jira
 func New(config *config.Jira) Jira {
 	auth := jira.BasicAuthTransport{Username: config.Auth.Username, Password: config.Auth.Token}
