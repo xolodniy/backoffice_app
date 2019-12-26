@@ -422,7 +422,7 @@ func main() {
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
 					cfg := config.GetConfig(true, c.String("config"))
-					application := app.New(cfg)
+					application := initAppWithDB(cfg, context.Background(), &sync.WaitGroup{})
 					application.SendReminders()
 				},
 			},
