@@ -32,3 +32,21 @@ func ValueIn(value string, in ...string) bool {
 	}
 	return false
 }
+
+// RemoveDuplicates returns elements without duplicate
+func RemoveDuplicates(elements []string) []string {
+	result := []string{}
+	for i := 0; i < len(elements); i++ {
+		exists := false
+		for v := 0; v < i; v++ {
+			if elements[v] == elements[i] {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			result = append(result, elements[i])
+		}
+	}
+	return result
+}
