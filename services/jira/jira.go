@@ -97,6 +97,11 @@ func (i Issue) Link() string {
 	return message
 }
 
+func (i Issue) LinkWithDescription() string {
+	message := fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>", i.Key, i.Fields.Summary)
+	return message
+}
+
 // DeveloperMap retrieves information about developer variable by key
 func (i Issue) DeveloperMap(key string) string {
 	var developerKeyInfo string

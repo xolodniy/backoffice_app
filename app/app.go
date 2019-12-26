@@ -1705,7 +1705,7 @@ func (a *App) SendJiraMention(comment jira.Comment, issue jira.Issue) {
 			logrus.WithField("jiraAccountID", id).Error("Can't find slack id for user from jira")
 			continue
 		}
-		a.Slack.SendMessage("Вас упомянули в комментарии к задаче:\n"+issue.String(), slackID)
+		a.Slack.SendMessage("Вас упомянули в комментарии к задаче:\n"+issue.LinkWithDescription(), slackID)
 	}
 }
 
