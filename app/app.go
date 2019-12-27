@@ -1718,7 +1718,7 @@ func getUniqueJiraAccountIDsFromText(text string) []string {
 		return []string{}
 	}
 	accountIDs = r.FindAllString(text, -1)
-	for i := 0; i < len(accountIDs); i += 1 {
+	for i := 0; i < len(accountIDs); i++ {
 		accountIDs[i] = strings.TrimLeft(strings.TrimRight(accountIDs[i], "]"), "[~accountid:")
 	}
 	accountIDs = common.RemoveDuplicates(accountIDs)
