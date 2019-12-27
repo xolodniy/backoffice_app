@@ -1984,3 +1984,72 @@ func getUniqueJiraAccountIDsFromText(text string) []string {
 	accountIDs = common.RemoveDuplicates(accountIDs)
 	return accountIDs
 }
+
+func (a *App) SetOnDutyUsers(team string, userMentions []string) error {
+	vacations, err := a.model.GetActualVacations()
+	if err != nil {
+		return err
+	}
+	var usersIDsOnVacation []string
+	for _, vacation := range vacations {
+		usersIDsOnVacation = append(usersIDsOnVacation, vacation.UserID)
+	}
+	users, err := a.Slack.UsersSlice()
+	if err != nil {
+		logrus.WithError(err).Error("can't get users slice from slack")
+		return err
+	}
+	var usersOnDuty []slack.Member
+	for _, user := range users {
+		if !common.ValueIn("@"+user.Name, userMentions...) {
+			continue
+		}
+		if common.ValueIn(user.Id, usersIDsOnVacation...) {
+			return fmt.Errorf("User <@%s> is on vacation!", user.Id)
+		}
+		usersOnDuty = append(usersOnDuty, user)
+	}
+	if len(usersOnDuty) == 0 {
+		return fmt.Errorf("There aren't real users for adding on duty")
+	}
+	tx, err := a.model.StartTransaction()
+	if err != nil {
+		return err
+	}
+	if err := tx.DeleteOnDutyUsersByTeam(team); err != nil {
+		tx.RollBackTransaction()
+		return err
+	}
+	for _, user := range usersOnDuty {
+		if err := tx.CreateOnDutyUser(model.OnDutyUser{Team: team, SlackUserID: user.Id}); err != nil {
+			tx.RollBackTransaction()
+			return err
+		}
+	}
+	return tx.CommitTransaction()
+}
+
+func (a *App) SendMentionUsersOnDuty(message, ts, channel string) {
+	if strings.Contains(strings.ToLower(message), common.OnDutyBe) {
+		users, err := a.model.GetOnDutyUsersByTeam(common.DevTeamBackend)
+		if err != nil {
+			return
+		}
+		var message string
+		for _, user := range users {
+			message += "<@" + user.SlackUserID + "> "
+		}
+		a.Slack.SendToThread(message+"^", channel, ts)
+	}
+	if strings.Contains(strings.ToLower(message), common.OnDutyFe) {
+		users, err := a.model.GetOnDutyUsersByTeam(common.DevTeamFrontend)
+		if err != nil {
+			return
+		}
+		var message string
+		for _, user := range users {
+			message += "<@" + user.SlackUserID + "> "
+		}
+		a.Slack.SendToThread(message+"^", channel, ts)
+	}
+}

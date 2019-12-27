@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"regexp"
 	"strings"
 	"time"
@@ -129,8 +130,10 @@ func (c *Controller) messagesCheck(ctx *gin.Context) {
 		break
 	case request.Event.ThreadTs != "":
 		go c.App.CheckUserAfkVacation(request.Event.Text, request.Event.ThreadTs, request.Event.Channel)
+		go c.App.SendMentionUsersOnDuty(request.Event.Text, request.Event.ThreadTs, request.Event.Channel)
 	case request.Event.Text != "":
 		go c.App.CheckUserAfkVacation(request.Event.Text, request.Event.Ts, request.Event.Channel)
+		go c.App.SendMentionUsersOnDuty(request.Event.Text, request.Event.Ts, request.Event.Channel)
 	}
 	if len(request.Event.Attachments) != 0 && request.Event.Subtype == "bot_message" {
 		go c.App.CheckAmplifyMessage(request.Event.Channel, request.Event.Attachments)
@@ -209,4 +212,47 @@ func (c *Controller) vacation(ctx *gin.Context) {
 		}
 		ctx.JSON(http.StatusOK, fmt.Sprintf("Your vacation autoreply from %s to %s has registered", datesSlice[0], datesSlice[1]))
 	}
+}
+
+func (c *Controller) setOnDutyBackend(ctx *gin.Context) {
+	dump, err := httputil.DumpRequest(ctx.Request, true)
+	if err != nil {
+		logrus.WithError(err).Error("Can't get dump of request")
+		ctx.String(http.StatusOK, common.ErrInternal.Error())
+		return
+	}
+	request := struct {
+		Text   string `form:"text" binding:"required"`
+		UserId string `form:"user_id" binding:"required"`
+	}{}
+	err = ctx.ShouldBindWith(&request, binding.FormPost)
+	if err != nil {
+		logrus.WithError(err).WithField("dump", dump).Error("Can't parse request by struct")
+		ctx.String(http.StatusOK, common.ErrInternal.Error())
+		return
+	}
+	usersMentions := strings.Split(request.Text, " ")
+	if err := c.App.SetOnDutyUsers(common.DevTeamBackend, usersMentions); err != nil {
+		ctx.String(http.StatusOK, fmt.Sprintf("Failed with error: %s! Please, type /set-onduty-be @Name", err.Error()))
+		return
+	}
+	ctx.JSON(http.StatusOK, "Success! These users are on duty for backend team!")
+}
+
+func (c *Controller) setOnDutyFrontend(ctx *gin.Context) {
+	request := struct {
+		Text   string `form:"text" binding:"required"`
+		UserId string `form:"user_id" binding:"required"`
+	}{}
+	err := ctx.ShouldBindWith(&request, binding.FormPost)
+	if err != nil {
+		ctx.String(http.StatusOK, "Failed! User mention is empty! Please, type /set-onduty-fe @Name")
+		return
+	}
+	usersMentions := strings.Split(request.Text, " ")
+	if err := c.App.SetOnDutyUsers(common.DevTeamFrontend, usersMentions); err != nil {
+		ctx.String(http.StatusOK, fmt.Sprintf("Failed with error: %s! Please, type /set-onduty-fe @Name", err.Error()))
+		return
+	}
+	ctx.JSON(http.StatusOK, "Success! These users are on duty for frontend team!")
 }

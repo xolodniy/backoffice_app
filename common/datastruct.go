@@ -5,6 +5,12 @@ import "fmt"
 const (
 	CommitTypeMigration = "migration"
 	CommitTypeAnsible   = "ansible"
+
+	DevTeamBackend  = "backend"
+	DevTeamFrontend = "frontend"
+
+	OnDutyBe = "ondutybe"
+	OnDutyFe = "ondutyfe"
 )
 
 var (
