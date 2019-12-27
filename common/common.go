@@ -36,17 +36,12 @@ func ValueIn(value string, in ...string) bool {
 // RemoveDuplicates returns elements without duplicate
 func RemoveDuplicates(elements []string) []string {
 	result := []string{}
-	for i := 0; i < len(elements); i++ {
-		exists := false
-		for v := 0; v < i; v++ {
-			if elements[v] == elements[i] {
-				exists = true
-				break
-			}
-		}
-		if !exists {
-			result = append(result, elements[i])
-		}
+	elementMap := make(map[string]string)
+	for _, element := range elements {
+		elementMap[element] = element
+	}
+	for _, element := range elementMap {
+		result = append(result, element)
 	}
 	return result
 }
