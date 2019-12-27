@@ -59,6 +59,12 @@ reports:
     channel: "Artem Efremov"
   sendreminders:
     schedule: "@yearly"
+  reportforgottenprs:
+    schedule: "@yearly"
+    channel: "#back-office-app"
+  reportforgottenbranches:
+    schedule: "@yearly"
+    channel: "#back-office-app"
 
 jira:
   apiurl: https://atnr.atlassian.net

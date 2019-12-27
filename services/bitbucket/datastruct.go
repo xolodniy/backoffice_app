@@ -1,11 +1,13 @@
 package bitbucket
 
-import "time"
+import (
+	"time"
+)
 
 // PullRequest struct of pull request from bitbucket
 // https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/pullrequests#get
 type pullRequest struct {
-	ID          int64  `json:"id"`
+	ID          int    `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	State       string `json:"state"`
@@ -46,6 +48,28 @@ type pullRequest struct {
 			Href string `json:"href"`
 		} `json:"html"`
 	} `json:"links"`
+	Activities []pullRequestActivity `json:"-"`
+}
+
+func (pr pullRequest) LastActivityDate() time.Time {
+	var lastActivity time.Time
+	// find activity date by type (there are 3 types: approve, update, comment)
+	for _, activity := range pr.Activities {
+		if !activity.Approval.Date.IsZero() && lastActivity.Before(activity.Approval.Date) {
+			lastActivity = activity.Approval.Date
+		}
+		if !activity.Update.Date.IsZero() && lastActivity.Before(activity.Update.Date) {
+			lastActivity = activity.Update.Date
+		}
+		if !activity.Comment.CreatedOn.IsZero() && lastActivity.Before(activity.Comment.CreatedOn) {
+			if activity.Comment.CreatedOn.Before(activity.Comment.UpdatedOn) {
+				lastActivity = activity.Comment.UpdatedOn
+				continue
+			}
+			lastActivity = activity.Comment.CreatedOn
+		}
+	}
+	return lastActivity
 }
 
 // Repository struct of pull repository from bitbucket
@@ -313,4 +337,52 @@ type PullRequestMergedPayload struct {
 	Actor       owner       `json:"actor"`
 	PullRequest pullRequest `json:"pullrequest"`
 	Repository  repository  `json:"repository"`
+}
+
+// pullRequestActivities
+// https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/pullrequests/%7Bpull_request_id%7D/activity
+type pullRequestActivity struct {
+	Comment struct {
+		Deleted   bool      `json:"deleted"`
+		CreatedOn time.Time `json:"created_on"`
+		UpdatedOn time.Time `json:"updated_on"`
+	} `json:"comment"`
+	Update struct {
+		Date time.Time `json:"date"`
+	} `json:"update"`
+	Approval struct {
+		Date time.Time `json:"date"`
+	} `json:"approval"`
+}
+
+type branch struct {
+	Type   string `json:"type"`
+	Name   string `json:"name"`
+	Target struct {
+		Repository repository `json:"repository"`
+		Author     struct {
+			Type string `json:"type"`
+			User struct {
+				DisplayName string `json:"display_name"`
+				Username    string `json:"username"`
+				UUID        string `json:"uuid"`
+			} `json:"user"`
+			Links struct {
+				Self struct {
+					Href string `json:"href"`
+				} `json:"self"`
+				HTML struct {
+					Href string `json:"href"`
+				} `json:"html"`
+				Avatar struct {
+					Href string `json:"href"`
+				} `json:"avatar"`
+			} `json:"links"`
+		} `json:"author"`
+	} `json:"target"`
+	Links struct {
+		HTML struct {
+			Href string `json:"href"`
+		} `json:"html"`
+	} `json:"links"`
 }

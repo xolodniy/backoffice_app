@@ -60,3 +60,17 @@ type RbAuth struct {
 func (rb RbAuth) TableName() string {
 	return "rb_auth"
 }
+
+// ForgottenPullRequest struct of forgotten pr notify number
+type ForgottenPullRequest struct {
+	PullRequestID int
+	RepoSlug      string
+	CreatedAt     time.Time
+}
+
+// ForgottenBranch struct of forgotten branches notify number
+type ForgottenBranch struct {
+	Name      string
+	RepoSlug  string
+	CreatedAt time.Time
+}

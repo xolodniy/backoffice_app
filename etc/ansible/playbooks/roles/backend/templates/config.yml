@@ -59,6 +59,12 @@ reports:
     channel: "Artem Efremov"
   sendreminders:
     schedule: "@hourly"
+  reportforgottenprs:
+    schedule: "00 00 07 * * *"
+    channel: "#back-office-app"
+  reportforgottenbranches:
+    schedule: "00 00 07 * * *"
+    channel: "#back-office-app"
 
 jira:
   apiurl: https://atnr.atlassian.net

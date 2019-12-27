@@ -246,3 +246,61 @@ func (m *Model) GetRbAuthByTgUserID(TgUserID int64) (RbAuth, error) {
 	}
 	return res, nil
 }
+
+// GetForgottenPullRequest retrieves old pull requests
+func (m *Model) GetForgottenPullRequest() ([]ForgottenPullRequest, error) {
+	var res []ForgottenPullRequest
+	if err := m.db.Find(&res).Error; err != nil {
+		logrus.WithError(err).Error("can't get forgotten pull requests")
+		return nil, common.ErrInternal
+	}
+	return res, nil
+}
+
+// CreateForgottenPullRequest creates old pull request
+func (m *Model) CreateForgottenPullRequest(forgottenPullRequest ForgottenPullRequest) error {
+	if err := m.db.Create(&forgottenPullRequest).Error; err != nil {
+		logrus.WithError(err).WithField("forgottenPullRequest", fmt.Sprintf("%+v", forgottenPullRequest)).Error("can't create forgottenPullRequest")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// DeleteForgottenPullRequest deletes forgotten pull request
+func (m *Model) DeleteForgottenPullRequest(pullRequestID int, repoSlug string) error {
+	if err := m.db.Where("pull_request_id = ? AND repo_slug = ?", pullRequestID, repoSlug).Delete(&ForgottenPullRequest{}).Error; err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{"pullRequestID": pullRequestID, "repo_slug": repoSlug}).
+			Error("can't delete forgotten pull request by pullRequestID and repo slug")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// GetForgottenBranches retrieves old branches
+func (m *Model) GetForgottenBranches() ([]ForgottenBranch, error) {
+	var res []ForgottenBranch
+	if err := m.db.Find(&res).Error; err != nil {
+		logrus.WithError(err).Error("can't get forgotten branches")
+		return nil, common.ErrInternal
+	}
+	return res, nil
+}
+
+// CreateForgottenBranches creates old branch
+func (m *Model) CreateForgottenBranches(forgottenBranch ForgottenBranch) error {
+	if err := m.db.Create(&forgottenBranch).Error; err != nil {
+		logrus.WithError(err).WithField("forgottenBranch", fmt.Sprintf("%+v", forgottenBranch)).Error("can't create forgottenBranch")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// DeleteForgottenBranch deletes forgotten branch
+func (m *Model) DeleteForgottenBranch(branchName, repoSlug string) error {
+	if err := m.db.Where("name = ? AND repo_slug = ?", branchName, repoSlug).Delete(&ForgottenBranch{}).Error; err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{"branchName": branchName, "repo_slug": repoSlug}).
+			Error("can't delete forgotten branch by branch name and repo slug")
+		return common.ErrInternal
+	}
+	return nil
+}
