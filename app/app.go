@@ -2005,7 +2005,7 @@ func (a *App) SetOnDutyUsers(team string, userMentions []string) error {
 			continue
 		}
 		if common.ValueIn(user.Id, usersIDsOnVacation...) {
-			return fmt.Errorf("User <@%s> is on vacation!")
+			return fmt.Errorf("User <@%s> is on vacation!", user.Id)
 		}
 		usersOnDuty = append(usersOnDuty, user)
 	}
