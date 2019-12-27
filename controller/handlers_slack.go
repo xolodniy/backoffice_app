@@ -242,17 +242,17 @@ func (c *Controller) setOnDutyFrontend(ctx *gin.Context) {
 	}{}
 	err := ctx.ShouldBindWith(&request, binding.FormPost)
 	if err != nil {
-		ctx.String(http.StatusOK, "Failed! User mention is empty! Please, type /set-onduty-be @Name")
+		ctx.String(http.StatusOK, "Failed! User mention is empty! Please, type /set-onduty-fe @Name")
 		return
 	}
 	usersMentions := strings.Split(request.Text, " ")
 	if len(usersMentions) == 0 {
-		ctx.String(http.StatusOK, "Failed! Format error! Please, type /set-onduty-be @Name")
+		ctx.String(http.StatusOK, "Failed! Format error! Please, type /set-onduty-fe @Name")
 		return
 	}
 	if err := c.App.SetOnDutyUsers(common.DevTeamFrontend, usersMentions); err != nil {
-		ctx.String(http.StatusOK, fmt.Sprintf("Failed with error: %s! Please, type /set-onduty-be @Name", err.Error()))
+		ctx.String(http.StatusOK, fmt.Sprintf("Failed with error: %s! Please, type /set-onduty-fe @Name", err.Error()))
 		return
 	}
-	ctx.JSON(http.StatusOK, "Success! These users are on duty for backend team!")
+	ctx.JSON(http.StatusOK, "Success! These users are on duty for frontend team!")
 }
