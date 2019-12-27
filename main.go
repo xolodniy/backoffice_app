@@ -437,7 +437,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg, context.Background(), &sync.WaitGroup{})
 					application.CheckForgottenGitPullRequests(channel)
 				},
 			},
@@ -452,7 +452,7 @@ func main() {
 						logrus.Println("Empty channel flag!")
 						return
 					}
-					application := app.New(cfg)
+					application := initAppWithDB(cfg, context.Background(), &sync.WaitGroup{})
 					application.CheckForgottenGitBranches(channel)
 				},
 			},
