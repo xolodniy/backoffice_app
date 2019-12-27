@@ -222,7 +222,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 		for _, issue := range issues {
 			if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds && issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
 				worklogString := fmt.Sprintf(" time spent is %s instead %s", issue.Fields.TimeTracking.TimeSpent, issue.Fields.TimeTracking.OriginalEstimate)
-				message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_%[4]s\n",
+				message += fmt.Sprintf("<https://atnr.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_%[4]s\n",
 					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, worklogString)
 			}
 		}
@@ -449,7 +449,7 @@ func (a *App) stringFromCurrentActivitiesWithNotes(activitiesList []hubstaff.Las
 	for _, activity := range activitiesList {
 		usersAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
 		if activity.TaskJiraKey != "" {
-			usersAtWork += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
+			usersAtWork += fmt.Sprintf(" <https://atnr.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
 				activity.TaskJiraKey, activity.TaskSummary)
 		}
 		note, err := a.Hubstaff.LastUserNote(strconv.Itoa(activity.User.ID), strconv.Itoa(activity.LastProjectID))
@@ -712,7 +712,7 @@ func (a *App) ReportSprintStatus(channel string) {
 					continue
 				}
 				if issue.Fields.Parent != nil {
-					message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s> / ", issue.Fields.Parent.Key)
+					message += fmt.Sprintf("<https://atnr.atlassian.net/browse/%[1]s|%[1]s> / ", issue.Fields.Parent.Key)
 				}
 				message += issue.String()
 				developerIssues = append(developerIssues, issue.Key)

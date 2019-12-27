@@ -87,18 +87,18 @@ const (
 )
 
 func (i Issue) String() string {
-	message := fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+	message := fmt.Sprintf("<https://atnr.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 		i.Key, i.Fields.Summary, i.Fields.Status.Name)
 	return message
 }
 
 func (i Issue) Link() string {
-	message := fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s>", i.Key)
+	message := fmt.Sprintf("<https://atnr.atlassian.net/browse/%[1]s|%[1]s>", i.Key)
 	return message
 }
 
 func (i Issue) LinkWithDescription() string {
-	message := fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>", i.Key, i.Fields.Summary)
+	message := fmt.Sprintf("<https://atnr.atlassian.net/browse/%[1]s|%[1]s - %[2]s>", i.Key, i.Fields.Summary)
 	return message
 }
 
