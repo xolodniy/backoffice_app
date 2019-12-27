@@ -74,3 +74,10 @@ type ForgottenBranch struct {
 	RepoSlug  string
 	CreatedAt time.Time
 }
+
+// OnDutyUser struct contains users on duty by team
+type OnDutyUser struct {
+	ID          int
+	SlackUserID string
+	Team        string
+}

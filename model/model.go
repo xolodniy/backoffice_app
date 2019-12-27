@@ -26,6 +26,34 @@ func New(db *gorm.DB) Model {
 	}
 }
 
+// StartTransaction initiate model layer as single transaction, you need to commit your changes at the end
+func (m *Model) StartTransaction() (Model, error) {
+	tx := Model{db: m.db.Begin()}
+	if tx.db.Error != nil {
+		logrus.WithError(tx.db.Error).Error("can't initiate database transaction")
+		return Model{}, common.ErrInternal
+	}
+	return tx, nil
+}
+
+// CommitTransaction stories changes of transaction
+func (m *Model) CommitTransaction() error {
+	if err := m.db.Commit().Error; err != nil {
+		logrus.WithError(err).Error("can't commit transaction")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// RollBackTransaction skips changes from transaction exempts connection
+func (m *Model) RollBackTransaction() error {
+	if err := m.db.Rollback().Error; err != nil {
+		logrus.WithError(err).Error("can't rollback transaction")
+		return common.ErrInternal
+	}
+	return nil
+}
+
 // CheckMigrations validates database condition
 func (m *Model) CheckMigrations() error {
 	driver := darwin.NewGenericDriver(m.db.DB(), darwin.PostgresDialect{})
@@ -303,4 +331,32 @@ func (m *Model) DeleteForgottenBranch(branchName, repoSlug string) error {
 		return common.ErrInternal
 	}
 	return nil
+}
+
+// CreateOnDutyUser creates user on duty
+func (m *Model) CreateOnDutyUser(onDutyUser OnDutyUser) error {
+	if err := m.db.Create(&onDutyUser).Error; err != nil {
+		logrus.WithError(err).WithField("onDutyUser", fmt.Sprintf("%+v", onDutyUser)).Error("can't create onDutyUser")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// DeleteOnDutyUsersByTeam deletes users on duty by team
+func (m *Model) DeleteOnDutyUsersByTeam(team string) error {
+	if err := m.db.Where(OnDutyUser{Team: team}).Delete(&[]OnDutyUser{}).Error; err != nil {
+		logrus.WithError(err).WithField("team", team).Error("can't delete users on duty by team")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// GetOnDutyUsersByTeam retrieves users on duty by team
+func (m *Model) GetOnDutyUsersByTeam(team string) ([]OnDutyUser, error) {
+	var res []OnDutyUser
+	if err := m.db.Where(OnDutyUser{Team: team}).Find(&res).Error; err != nil {
+		logrus.WithError(err).Error("can't get users on duty by team")
+		return nil, common.ErrInternal
+	}
+	return res, nil
 }
