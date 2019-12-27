@@ -215,18 +215,18 @@ func (c *Controller) vacation(ctx *gin.Context) {
 }
 
 func (c *Controller) setOnDutyBackend(ctx *gin.Context) {
+	dump, err := httputil.DumpRequest(ctx.Request, true)
+	if err != nil {
+		logrus.WithError(err).Error("Can't get dump of request")
+		ctx.String(http.StatusOK, common.ErrInternal.Error())
+		return
+	}
 	request := struct {
 		Text   string `form:"text" binding:"required"`
 		UserId string `form:"user_id" binding:"required"`
 	}{}
-	err := ctx.ShouldBindWith(&request, binding.FormPost)
+	err = ctx.ShouldBindWith(&request, binding.FormPost)
 	if err != nil {
-		dump, err := httputil.DumpRequest(ctx.Request, true)
-		if err != nil {
-			logrus.WithError(err).Error("Can't get dump of request")
-			ctx.String(http.StatusOK, common.ErrInternal.Error())
-			return
-		}
 		logrus.WithError(err).WithField("dump", dump).Error("Can't parse request by struct")
 		ctx.String(http.StatusOK, common.ErrInternal.Error())
 		return
