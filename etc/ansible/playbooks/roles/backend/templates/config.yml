@@ -286,3 +286,6 @@ users:
     slackid: UP39RQ5J8
     slackname: mikhail.gaidadym
     slackrealname: "Mikhail Gaidadym"
+
+telegram:
+  releasebotapikey: 937067416:AAGfe1kKUrpBkRvnQB35fSOaKhIEnq3lj-Q

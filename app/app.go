@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"backoffice_app/app/tg_bot"
 	"backoffice_app/common"
 	"backoffice_app/config"
 	"backoffice_app/model"
@@ -27,7 +29,6 @@ import (
 	"backoffice_app/services/slack"
 	"backoffice_app/types"
 
-	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/now"
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
@@ -42,13 +43,14 @@ type CommitsCache struct {
 
 // App is main App implementation
 type App struct {
-	Hubstaff  hubstaff.Hubstaff
-	Slack     slack.Slack
-	Jira      jira.Jira
-	Bitbucket bitbucket.Bitbucket
-	Config    config.Main
-	AfkTimer  AfkTimer
-	model     model.Model
+	Hubstaff   hubstaff.Hubstaff
+	Slack      slack.Slack
+	Jira       jira.Jira
+	Bitbucket  bitbucket.Bitbucket
+	Config     config.Main
+	AfkTimer   AfkTimer
+	model      *model.Model
+	ReleaseBot tg_bot.ReleaseBot
 }
 
 // Tags for user map of account info
@@ -68,27 +70,17 @@ type AfkTimer struct {
 }
 
 // New is main App constructor
-func New(conf *config.Main) *App {
-	db, err := gorm.Open("postgres", conf.Database.ConnURL())
-	if err != nil {
-		logrus.WithError(err).Fatal("can't open connection with a database")
-	}
-	if err := db.DB().Ping(); err != nil {
-		logrus.WithError(err).Fatal("can't ping connection with a database")
-	}
-
-	model := model.New(db)
-	if err := model.CheckMigrations(); err != nil {
-		logrus.WithError(err).Fatal("invalid database condition")
-	}
+func New(conf *config.Main, m *model.Model, ctx context.Context, wg *sync.WaitGroup) *App {
+	j := jira.New(&conf.Jira)
 	return &App{
-		Hubstaff:  hubstaff.New(&conf.Hubstaff),
-		Slack:     slack.New(&conf.Slack),
-		Jira:      jira.New(&conf.Jira),
-		Bitbucket: bitbucket.New(&conf.Bitbucket),
-		Config:    *conf,
-		AfkTimer:  AfkTimer{Mutex: &sync.Mutex{}, UserDurationMap: make(map[string]time.Duration)},
-		model:     model,
+		Hubstaff:   hubstaff.New(&conf.Hubstaff),
+		Slack:      slack.New(&conf.Slack),
+		Jira:       j,
+		ReleaseBot: tg_bot.NewReleaseBot(ctx, wg, conf.Telegram.ReleaseBotAPIKey, m, &j),
+		Bitbucket:  bitbucket.New(&conf.Bitbucket),
+		Config:     *conf,
+		AfkTimer:   AfkTimer{Mutex: &sync.Mutex{}, UserDurationMap: make(map[string]time.Duration)},
+		model:      m,
 	}
 }
 
@@ -1564,7 +1556,9 @@ func (a *App) ReportIssuesLockedByLowPriority(channel string) {
 			}
 		}
 	}
-	a.Slack.SendMessage(msg, channel)
+	if msg != "" {
+		a.Slack.SendMessage(msg, channel)
+	}
 }
 
 func (a *App) getNearestFixVersionDate(issue jira.Issue) time.Time {

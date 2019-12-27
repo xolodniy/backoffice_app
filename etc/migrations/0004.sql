@@ -1,15 +1,11 @@
-CREATE TABLE forgotten_pull_requests
+CREATE TABLE rb_auth
 (
-    pull_request_id INT                         NOT NULL,
-    repo_slug       VARCHAR                     NOT NULL,
-    created_at      TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (pull_request_id, repo_slug)
-);
-
-CREATE TABLE forgotten_branches
-(
-    name       VARCHAR                     NOT NULL,
-    repo_slug  VARCHAR                     NOT NULL,
-    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (name, repo_slug)
-);
+    tg_user_id BIGINT                      NOT NULL PRIMARY KEY,
+    username   TEXT                        NOT NULL,
+    first_name TEXT                        NOT NULL,
+    last_name  TEXT                        NOT NULL,
+    title      TEXT                        NOT NULL,
+    projects   TEXT[]                      NOT NULL DEFAULT '{}'::TEXT[],
+    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL
+)
+;

@@ -3,6 +3,7 @@ module backoffice_app
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/GuiaBolso/darwin v0.0.0-20170210191649-86919dfcf808
+	github.com/Syfaro/telegram-bot-api v4.6.4+incompatible
 	github.com/andygrunwald/go-jira v1.10.0
 	github.com/banzaicloud/logrus-runtime-formatter v0.0.0-20180617171254-12df4a18567f
 	github.com/cznic/ql v1.2.0 // indirect
@@ -12,6 +13,7 @@ require (
 	github.com/gin-contrib/sse v0.0.0-20170109093832-22d885f9ecc7 // indirect
 	github.com/gin-gonic/gin v1.3.0
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
+	github.com/go-telegram-bot-api/telegram-bot-api v4.6.4+incompatible // indirect
 	github.com/gobuffalo/packr v1.24.1
 	github.com/gofrs/uuid v3.2.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
@@ -26,6 +28,7 @@ require (
 	github.com/robfig/cron v0.0.0-20180505203441-b41be1df6967
 	github.com/sirupsen/logrus v1.4.1
 	github.com/stretchr/testify v1.3.0
+	github.com/technoweenie/multipartstreamer v1.0.1 // indirect
 	github.com/trivago/tgo v1.0.5 // indirect
 	github.com/ugorji/go/codec v0.0.0-20181209151446-772ced7fd4c2 // indirect
 	github.com/urfave/cli v1.20.0
