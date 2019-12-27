@@ -220,7 +220,8 @@ func (c *Controller) setOnDutyBackend(ctx *gin.Context) {
 	}{}
 	err := ctx.ShouldBindWith(&request, binding.FormPost)
 	if err != nil {
-		ctx.String(http.StatusOK, "Failed! User mention is empty! Please, type /set-onduty-be @Name")
+		logrus.WithError(err).Error("Can't parse request by struct")
+		ctx.String(http.StatusOK, common.ErrInternal.Error())
 		return
 	}
 	usersMentions := strings.Split(request.Text, " ")
