@@ -291,8 +291,8 @@ func (s *Slack) UploadFile(channel, contentType string, file *bytes.Buffer) erro
 	return nil
 }
 
-// usersSlice retrieves slice of all slack members
-func (s *Slack) usersSlice() ([]Member, error) {
+// UsersSlice retrieves slice of all slack members
+func (s *Slack) UsersSlice() ([]Member, error) {
 	var allUsers []Member
 	for i := 0; ; i++ {
 		urlStr := fmt.Sprintf("%s/users.list?token=%s&page=%v", s.APIURL, s.InToken, i)
@@ -332,7 +332,7 @@ func (s *Slack) usersSlice() ([]Member, error) {
 func (s *Slack) checkChannelOnUserRealName(channel string) (string, error) {
 	userNameSlice := strings.Split(channel, " ")
 	if len(userNameSlice) > 1 {
-		allMembers, err := s.usersSlice()
+		allMembers, err := s.UsersSlice()
 		if err != nil {
 			return "", err
 		}
