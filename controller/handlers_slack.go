@@ -225,10 +225,6 @@ func (c *Controller) setOnDutyBackend(ctx *gin.Context) {
 		return
 	}
 	usersMentions := strings.Split(request.Text, " ")
-	if len(usersMentions) == 0 {
-		ctx.String(http.StatusOK, "Failed! Format error! Please, type /set-onduty-be @Name")
-		return
-	}
 	if err := c.App.SetOnDutyUsers(common.DevTeamBackend, usersMentions); err != nil {
 		ctx.String(http.StatusOK, fmt.Sprintf("Failed with error: %s! Please, type /set-onduty-be @Name", err.Error()))
 		return
@@ -247,10 +243,6 @@ func (c *Controller) setOnDutyFrontend(ctx *gin.Context) {
 		return
 	}
 	usersMentions := strings.Split(request.Text, " ")
-	if len(usersMentions) == 0 {
-		ctx.String(http.StatusOK, "Failed! Format error! Please, type /set-onduty-fe @Name")
-		return
-	}
 	if err := c.App.SetOnDutyUsers(common.DevTeamFrontend, usersMentions); err != nil {
 		ctx.String(http.StatusOK, fmt.Sprintf("Failed with error: %s! Please, type /set-onduty-fe @Name", err.Error()))
 		return
