@@ -85,7 +85,7 @@ Now you can clone the application and prepare it for running:
 #### Jira
 * ##### apiurl
   API URL is always is on https://{orgname}.atlassian.net
-  For "The flow" it will be https://theflow.atlassian.net
+  For "The flow" it will be https://atnr.atlassian.net
 * ##### username and password
   It's org maintainer or special account requisites that can view projects (but can't change them (more secured way))
 
@@ -260,7 +260,7 @@ You may use one of several pre-defined schedules in place of a cron expression.
 #### Config.yml variables for Jira 
     
     jira:
-      apiurl: https://theflow.atlassian.net  - url of jira cloud
+      apiurl: https://atnr.atlassian.net  - url of jira cloud
       auth:
         username: {{ jira_login }}           - user login
         token: {{ jira_token }}        - user token for app https://id.atlassian.com/manage/api-tokens?_ga=2.197139692.2116077052.1563351418-1201316844.1557426941

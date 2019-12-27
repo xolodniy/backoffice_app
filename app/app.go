@@ -214,7 +214,7 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 		for _, issue := range issues {
 			if issue.Fields.TimeTracking.TimeSpentSeconds > issue.Fields.TimeTracking.OriginalEstimateSeconds && issue.Fields.TimeTracking.RemainingEstimateSeconds == 0 {
 				worklogString := fmt.Sprintf(" time spent is %s instead %s", issue.Fields.TimeTracking.TimeSpent, issue.Fields.TimeTracking.OriginalEstimate)
-				message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_%[4]s\n",
+				message += fmt.Sprintf("<https://atnr.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_%[4]s\n",
 					issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, worklogString)
 			}
 		}
@@ -441,7 +441,7 @@ func (a *App) stringFromCurrentActivitiesWithNotes(activitiesList []hubstaff.Las
 	for _, activity := range activitiesList {
 		usersAtWork += fmt.Sprintf("\n\n*%s*\n%s", activity.User.Name, activity.ProjectName)
 		if activity.TaskJiraKey != "" {
-			usersAtWork += fmt.Sprintf(" <https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
+			usersAtWork += fmt.Sprintf(" <https://atnr.atlassian.net/browse/%[1]s|%[1]s - %[2]s>",
 				activity.TaskJiraKey, activity.TaskSummary)
 		}
 		note, err := a.Hubstaff.LastUserNote(strconv.Itoa(activity.User.ID), strconv.Itoa(activity.LastProjectID))
@@ -704,7 +704,7 @@ func (a *App) ReportSprintStatus(channel string) {
 					continue
 				}
 				if issue.Fields.Parent != nil {
-					message += fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s> / ", issue.Fields.Parent.Key)
+					message += fmt.Sprintf("<https://atnr.atlassian.net/browse/%[1]s|%[1]s> / ", issue.Fields.Parent.Key)
 				}
 				message += issue.String()
 				developerIssues = append(developerIssues, issue.Key)
@@ -1951,4 +1951,36 @@ func (a *App) CheckForgottenGitBranches(channel string) {
 		}
 		a.Slack.SendMessage("Удалены(фактически нет):\n"+thirdAttention, channel)
 	}
+}
+
+// SendJiraMention sends message to DM in slack for mentioned users
+func (a *App) SendJiraMention(comment jira.Comment, issue jira.Issue) {
+	if !strings.Contains(comment.Body, "[~accountid:") {
+		return
+	}
+	ids := getUniqueJiraAccountIDsFromText(comment.Body)
+	for _, id := range ids {
+		slackID := a.GetUserInfoByTagValue(TagUserJiraAccountID, id)[TagUserSlackID]
+		if slackID == "" {
+			logrus.WithField("jiraAccountID", id).Error("Can't find slack id for user from jira")
+			continue
+		}
+		a.Slack.SendMessage("Вас упомянули в комментарии к задаче:\n"+issue.LinkWithDescription(), slackID)
+	}
+}
+
+// getUniqueJiraAccountIDsFromText returns unique ids of mentioned users in jira issue comment text
+func getUniqueJiraAccountIDsFromText(text string) []string {
+	accountIDs := make([]string, 0)
+	r, err := regexp.Compile(`(\[~accountid):[\w]*:*[\w]*-*[\w]*-*[\w]*-*[\w]*-*[\w]*]`)
+	if err != nil {
+		logrus.WithError(err).Error("Can't compile regexp")
+		return []string{}
+	}
+	accountIDs = r.FindAllString(text, -1)
+	for i := 0; i < len(accountIDs); i++ {
+		accountIDs[i] = strings.TrimLeft(strings.TrimRight(accountIDs[i], "]"), "[~accountid:")
+	}
+	accountIDs = common.RemoveDuplicates(accountIDs)
+	return accountIDs
 }

@@ -28,6 +28,11 @@ type Changelog struct {
 	Items []jira.ChangelogItems `json:"items"`
 }
 
+// Comment struct don't let go-jira dependency on Controller level
+type Comment struct {
+	jira.Comment
+}
+
 // New creates new jira
 func New(config *config.Jira) Jira {
 	auth := jira.BasicAuthTransport{Username: config.Auth.Username, Password: config.Auth.Token}
@@ -83,13 +88,18 @@ const (
 )
 
 func (i Issue) String() string {
-	message := fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
+	message := fmt.Sprintf("<https://atnr.atlassian.net/browse/%[1]s|%[1]s - %[2]s>: _%[3]s_\n",
 		i.Key, i.Fields.Summary, i.Fields.Status.Name)
 	return message
 }
 
 func (i Issue) Link() string {
-	message := fmt.Sprintf("<https://theflow.atlassian.net/browse/%[1]s|%[1]s>", i.Key)
+	message := fmt.Sprintf("<https://atnr.atlassian.net/browse/%[1]s|%[1]s>", i.Key)
+	return message
+}
+
+func (i Issue) LinkWithDescription() string {
+	message := fmt.Sprintf("<https://atnr.atlassian.net/browse/%[1]s|%[1]s - %[2]s>", i.Key, i.Fields.Summary)
 	return message
 }
 
