@@ -40,13 +40,15 @@ func New(config *config.Bitbucket) Bitbucket {
 func (b *Bitbucket) do(request *http.Request) ([]byte, error) {
 	resp, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return nil, err
+		logrus.WithError(err).WithField("request", request).Error("Can't do http request")
+		return nil, common.ErrInternal
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		logrus.WithError(err).WithField("request", request).Error("Can't read response body")
+		return nil, common.ErrInternal
 	}
 
 	var CheckResponse = struct {
@@ -65,7 +67,8 @@ func (b *Bitbucket) do(request *http.Request) ([]byte, error) {
 	}
 	if CheckResponse.Type == "error" {
 		if CheckResponse.Error.Message != "There are no changes to be pulled" && CheckResponse.Error.Data.Key != "BRANCH_ALREADY_EXISTS" {
-			return nil, fmt.Errorf("Request was done with error: %s ", CheckResponse.Error.Message)
+			logrus.WithField("request", request).Errorf("Request was done with error: %s ", CheckResponse.Error.Message)
+			return nil, common.ErrInternal
 		}
 	}
 	return body, nil
@@ -75,7 +78,8 @@ func (b *Bitbucket) do(request *http.Request) ([]byte, error) {
 func (b *Bitbucket) get(urlStr string) ([]byte, error) {
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
-		return nil, err
+		logrus.WithError(err).WithField("url", urlStr).Error("Can't create http request")
+		return nil, common.ErrInternal
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.SetBasicAuth(b.Auth.user, b.Auth.password)
@@ -86,7 +90,8 @@ func (b *Bitbucket) get(urlStr string) ([]byte, error) {
 func (b *Bitbucket) post(urlStr string, jsonBody []byte) ([]byte, error) {
 	req, err := http.NewRequest("POST", urlStr, bytes.NewReader(jsonBody))
 	if err != nil {
-		return nil, err
+		logrus.WithError(err).WithField("url", urlStr).Error("Can't create http request")
+		return nil, common.ErrInternal
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.SetBasicAuth(b.Auth.user, b.Auth.password)
@@ -97,7 +102,8 @@ func (b *Bitbucket) post(urlStr string, jsonBody []byte) ([]byte, error) {
 func (b *Bitbucket) delete(urlStr string) ([]byte, error) {
 	req, err := http.NewRequest("DELETE", urlStr, nil)
 	if err != nil {
-		return nil, err
+		logrus.WithError(err).WithField("url", urlStr).Error("Can't create http request")
+		return nil, common.ErrInternal
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.SetBasicAuth(b.Auth.user, b.Auth.password)
@@ -114,13 +120,13 @@ func (b *Bitbucket) RepositoriesList() ([]repository, error) {
 	for i := 0; i <= 500; i++ {
 		res, err := b.get(repos.Next)
 		if err != nil {
-			logrus.WithError(err).Error("can't send  get request for repository list")
-			return []repository{}, common.ErrInternal
+			return []repository{}, err
 		}
 		var nextRepositories repositories
 		err = json.Unmarshal(res, &nextRepositories)
 		if err != nil {
-			logrus.WithError(err).Error("can't  unmarshal get request body for repository list")
+			logrus.WithError(err).WithField("res", string(res)).
+				Error("can't unmarshal response body for repository list")
 			return []repository{}, common.ErrInternal
 		}
 		for _, repository := range nextRepositories.Values {
@@ -148,13 +154,13 @@ func (b *Bitbucket) PullRequestsList(repoSlug string) ([]pullRequest, error) {
 	for i := 0; i <= 500; i++ {
 		res, err := b.get(pr.Next)
 		if err != nil {
-			logrus.WithError(err).WithField("repoSlug", repoSlug).Error("can't send get request for pull requests list")
-			return []pullRequest{}, common.ErrInternal
+			return []pullRequest{}, err
 		}
 		var nextPullRequests pullRequests
 		err = json.Unmarshal(res, &nextPullRequests)
 		if err != nil {
-			logrus.WithError(err).WithField("repoSlug", repoSlug).Error("can't unmarshal get request body for pull requests list")
+			logrus.WithError(err).WithFields(logrus.Fields{"repoSlug": repoSlug, "res": string(res)}).
+				Error("can't unmarshal response body for pull requests list")
 			return []pullRequest{}, common.ErrInternal
 		}
 		for _, pullRequest := range nextPullRequests.Values {
@@ -179,7 +185,7 @@ func (b *Bitbucket) PullRequestCommits(repoSlug, prID string) ([]Commit, error) 
 		Values []Commit `json:"values"`
 	}
 	var prCommits = commits{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + prID + "/commits"}
-	for {
+	for i := 0; i <= 500; i++ {
 		res, err := b.get(prCommits.Next)
 		if err != nil {
 			return []Commit{}, err
@@ -187,7 +193,9 @@ func (b *Bitbucket) PullRequestCommits(repoSlug, prID string) ([]Commit, error) 
 		var nextCommits commits
 		err = json.Unmarshal(res, &nextCommits)
 		if err != nil {
-			return []Commit{}, err
+			logrus.WithError(err).WithFields(logrus.Fields{"repoSlug": repoSlug, "prID": prID, "res": string(res)}).
+				Error("can't unmarshal response body for pull requests commits list")
+			return []Commit{}, common.ErrInternal
 		}
 		for _, commit := range nextCommits.Values {
 			prCommits.Values = append(prCommits.Values, commit)
@@ -196,6 +204,10 @@ func (b *Bitbucket) PullRequestCommits(repoSlug, prID string) ([]Commit, error) 
 			break
 		}
 		prCommits.Next = nextCommits.Next
+		// warning message about big pull requests list or endless cycle
+		if i == 500 {
+			logrus.Warn("Pull requests commits list exceed count of 500")
+		}
 	}
 	return prCommits.Values, nil
 }
@@ -207,7 +219,7 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 		Values []diffStat `json:"values"`
 	}
 	var diff = diffStats{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/diffstat/" + spec}
-	for {
+	for i := 0; i <= 1000; i++ {
 		res, err := b.get(diff.Next)
 		if err != nil {
 			return []diffStat{}, err
@@ -215,7 +227,9 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 		var nextDiffStats diffStats
 		err = json.Unmarshal(res, &nextDiffStats)
 		if err != nil {
-			return []diffStat{}, err
+			logrus.WithError(err).WithFields(logrus.Fields{"repoSlug": repoSlug, "spec": spec, "res": string(res)}).
+				Error("can't unmarshal response body for commits diff stats list")
+			return []diffStat{}, common.ErrInternal
 		}
 		for _, pullRequest := range nextDiffStats.Values {
 			diff.Values = append(diff.Values, pullRequest)
@@ -224,6 +238,10 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 			break
 		}
 		diff.Next = nextDiffStats.Next
+		// warning message about big pull requests list or endless cycle
+		if i == 1000 {
+			logrus.Warn("Commits diff stats list exceed count of 1000")
+		}
 	}
 	return diff.Values, nil
 }
@@ -308,10 +326,13 @@ func (b *Bitbucket) repoSlugByProjectKey(projectKey string) (string, error) {
 	}
 	err = json.Unmarshal(res, &repositoryInfo)
 	if err != nil {
-		return "", err
+		logrus.WithError(err).WithFields(logrus.Fields{"projectKey": projectKey, "res": string(res)}).
+			Error("can't unmarshal response body for repo slug by project key")
+		return "", common.ErrInternal
 	}
 	if len(repositoryInfo.Values) == 0 {
-		return "", fmt.Errorf("There are no projects with \"%s\" project key ", projectKey)
+		logrus.Errorf("There are no projects with \"%s\" project key ", projectKey)
+		return "", common.ErrNotFound{fmt.Sprintf("There are no projects with \"%s\" project key ", projectKey)}
 	}
 	return repositoryInfo.Values[0].Slug, nil
 }
@@ -332,7 +353,9 @@ func (b *Bitbucket) branchTargetCommitHash(repoSlug, branchName string) (string,
 	}
 	err = json.Unmarshal(res, &branchInfo)
 	if err != nil {
-		return "", err
+		logrus.WithError(err).WithFields(logrus.Fields{"repoSlug": repoSlug, "branchName": branchName, "res": string(res)}).
+			Error("can't unmarshal response body for branch target commit hash")
+		return "", common.ErrInternal
 	}
 	return branchInfo.Target.Hash, nil
 }
@@ -341,7 +364,9 @@ func (b *Bitbucket) branchTargetCommitHash(repoSlug, branchName string) (string,
 func (b *Bitbucket) CreateBranch(issueKey, branchName, branchParentName string) error {
 	issueKeySlice := strings.Split(issueKey, "-")
 	if len(issueKeySlice) != 2 {
-		return fmt.Errorf("can't take project key from issue key \"%s\", format must be KEY-1", issueKey)
+		logrus.WithFields(logrus.Fields{"issueKey": issueKey, "branchName": branchName, "branchParentName": branchParentName}).
+			Errorf("can't take project key from issue key \"%s\", format must be KEY-1", issueKey)
+		return common.ErrInternal
 	}
 	repoSlug, err := b.repoSlugByProjectKey(issueKeySlice[0])
 	if err != nil {
@@ -354,9 +379,7 @@ func (b *Bitbucket) CreateBranch(issueKey, branchName, branchParentName string) 
 
 	requestBody := []byte(fmt.Sprintf(`{"name":"%s","target":{"hash":"%s"}}`, branchName, targetHash))
 	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/refs/branches"
-	res, err := b.post(urlStr, requestBody)
-	if err != nil {
-		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", res)).Error("can't create branch in bitbucket")
+	if _, err := b.post(urlStr, requestBody); err != nil {
 		return err
 	}
 	return nil
@@ -377,10 +400,8 @@ func (b *Bitbucket) CreatePullRequestIfNotExist(repoSlug, branchName, branchPare
 	requestBody := []byte(fmt.Sprintf(`{"title": "%[1]s", "source":{"branch":{"name": "%[1]s"}}, "destination":{"branch":{"name": "%[2]s"}}}`,
 		branchName, branchParentName))
 	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests"
-	res, err := b.post(urlStr, requestBody)
-	if err != nil {
-		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", res)).Error("can't create pull request in bitbucket")
-		return common.ErrInternal
+	if _, err := b.post(urlStr, requestBody); err != nil {
+		return err
 	}
 	return nil
 }
@@ -395,15 +416,13 @@ func (b *Bitbucket) pullRequestActivity(repoSlug, pullRequestID string) ([]pullR
 	for i := 0; i <= 500; i++ {
 		res, err := b.get(pr.Next)
 		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{"repoSlug": repoSlug, "pullRequestID": pullRequestID}).
-				Error("can't send get request for pull request activity in bitbucket")
-			return []pullRequestActivity{}, common.ErrInternal
+			return []pullRequestActivity{}, err
 		}
 		var nextPullRequests pullRequestActivities
 		err = json.Unmarshal(res, &nextPullRequests)
 		if err != nil {
 			logrus.WithError(err).WithFields(logrus.Fields{"repoSlug": repoSlug, "pullRequestID": pullRequestID}).
-				Error("can't unmarshal body of request for pull request activity in bitbucket")
+				Error("can't unmarshal body of response for pull request activity in bitbucket")
 			return []pullRequestActivity{}, common.ErrInternal
 		}
 		pr.Values = append(pr.Values, nextPullRequests.Values...)
@@ -448,31 +467,8 @@ func (b *Bitbucket) PullRequestsActivity() ([]pullRequest, error) {
 // DeclinePullRequest declines pull request
 func (b *Bitbucket) DeclinePullRequest(repoSlug string, pullRequestID int64) error {
 	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests/" + strconv.FormatInt(pullRequestID, 10) + "/decline"
-	res, err := b.post(urlStr, []byte{})
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"repoSlug": repoSlug, "pullRequestID": pullRequestID}).
-			Error("can't send post request for declining pull request in bitbucket")
-		return common.ErrInternal
-	}
-	var checkResponse = struct {
-		Type  string `json:"type"`
-		Error struct {
-			Message string `json:"message"`
-			Data    struct {
-				Key string `json:"key"`
-			} `json:"data"`
-		} `json:"error"`
-	}{}
-	err = json.Unmarshal(res, &checkResponse)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"repoSlug": repoSlug, "pullRequestID": pullRequestID}).
-			Error("can't unmarshal post request body for declining pull request in bitbucket")
-		return common.ErrInternal
-	}
-	if checkResponse.Error.Message != "" {
-		logrus.WithFields(logrus.Fields{"repoSlug": repoSlug, "pullRequestID": pullRequestID}).
-			Error(checkResponse.Error.Message)
-		return common.ErrInternal
+	if _, err := b.post(urlStr, []byte{}); err != nil {
+		return err
 	}
 	return nil
 }
@@ -517,15 +513,13 @@ func (b *Bitbucket) BranchesList(repoSlug string) ([]branch, error) {
 	for i := 0; i <= 500; i++ {
 		res, err := b.get(pb.Next)
 		if err != nil {
-			logrus.WithError(err).WithField("repoSlug", repoSlug).
-				Error("can't send get request for branches list in bitbucket")
-			return []branch{}, common.ErrInternal
+			return []branch{}, err
 		}
 		var paginatedBranches paginatedBranches
 		err = json.Unmarshal(res, &paginatedBranches)
 		if err != nil {
 			logrus.WithError(err).WithField("repoSlug", repoSlug).
-				Error("can't unmarshal get request body for branches list in bitbucket")
+				Error("can't unmarshal response body for branches list in bitbucket")
 			return []branch{}, common.ErrInternal
 		}
 		for _, branch := range paginatedBranches.Values {
@@ -546,31 +540,8 @@ func (b *Bitbucket) BranchesList(repoSlug string) ([]branch, error) {
 // DeleteBranch deletes branch
 func (b *Bitbucket) DeleteBranch(repoSlug, branchName string) error {
 	urlStr := b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/refs/branches/" + branchName
-	res, err := b.delete(urlStr)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"repoSlug": repoSlug, "branchName": branchName}).
-			Error("can't send delete request for deleting branch in bitbucket")
-		return common.ErrInternal
-	}
-	var checkResponse = struct {
-		Type  string `json:"type"`
-		Error struct {
-			Message string `json:"message"`
-			Data    struct {
-				Key string `json:"key"`
-			} `json:"data"`
-		} `json:"error"`
-	}{}
-	err = json.Unmarshal(res, &checkResponse)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"repoSlug": repoSlug, "branchName": branchName}).
-			Error("can't unmarshal delete request body for deleting branch in bitbucket")
-		return common.ErrInternal
-	}
-	if checkResponse.Error.Message != "" {
-		logrus.WithFields(logrus.Fields{"repoSlug": repoSlug, "branchName": branchName}).
-			Error(checkResponse.Error.Message)
-		return common.ErrInternal
+	if _, err := b.delete(urlStr); err != nil {
+		return err
 	}
 	return nil
 }

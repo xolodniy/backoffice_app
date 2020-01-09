@@ -104,7 +104,6 @@ func (a *App) MakeWorkersWorkedReportYesterday(mode, channel string) {
 func (a *App) ReportUsersWorkedTimeByMember(prefix, channel string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
 	usersReports, err := a.Hubstaff.UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd)
 	if err != nil {
-		logrus.WithError(err).Error("can't get workers worked time by member from Hubstaff")
 		return
 	}
 	var message = fmt.Sprintf(
@@ -122,7 +121,6 @@ func (a *App) ReportUsersWorkedTimeByMember(prefix, channel string, dateOfWorkda
 func (a *App) ReportUsersWorkedTimeByDate(prefix, channel string, dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time) {
 	datesReports, err := a.Hubstaff.UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd)
 	if err != nil {
-		logrus.WithError(err).Error("can't get workers worked tim from Hubstaff")
 		return
 	}
 	var message = prefix + "\n"
@@ -139,7 +137,6 @@ func (a *App) ReportUsersWorkedTimeByDate(prefix, channel string, dateOfWorkdays
 func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 	issues, err := a.Jira.IssuesWithClosedSubtasks()
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about closed subtasks from jira")
 		return
 	}
 	if len(issues) == 0 {
@@ -152,10 +149,7 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 	)
 	for _, issue := range issues {
 		if issue.Fields.Status.Name != jira.StatusCloseLastTask {
-			err := a.Jira.IssueSetStatusTransition(issue.Key, jira.StatusCloseLastTask)
-			if err != nil {
-				logrus.WithError(err).Errorf("can't set close last task transition for issue %s", issue.Key)
-			}
+			a.Jira.IssueSetStatusTransition(issue.Key, jira.StatusCloseLastTask)
 		}
 		switch {
 		case issue.Fields.Status.Name == jira.StatusDesignReview:
@@ -182,7 +176,6 @@ func (a *App) ReportIsuuesWithClosedSubtasks(channel string) {
 func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 	issues, err := a.Jira.AssigneeOpenIssues()
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about exceeded tasks of employees from jira")
 		return
 	}
 	if len(issues) == 0 {
@@ -241,7 +234,6 @@ func (a *App) ReportEmployeesHaveExceededTasks(channel string) {
 func (a *App) ReportIssuesAfterSecondReview(channel string, issueTypes ...string) {
 	issues, err := a.Jira.IssuesAfterSecondReview(issueTypes)
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about issues after second review from jira")
 		return
 	}
 	if len(issues) == 0 {
@@ -259,7 +251,6 @@ func (a *App) ReportIssuesAfterSecondReview(channel string, issueTypes ...string
 func (a *App) ReportSlackEndingFreeSpace(channel string) {
 	size, err := a.Slack.FilesSize()
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about files size from slack")
 		return
 	}
 	if a.Slack.TotalVolume-size > a.Slack.RestVolume {
@@ -273,7 +264,6 @@ func (a *App) ReportSlackEndingFreeSpace(channel string) {
 func (a *App) ReportGitMigrations(channel string) {
 	messages, err := a.MigrationMessages()
 	if err != nil {
-		logrus.WithError(err).Error("can't take information git migrations from bitbucket")
 		return
 	}
 	for _, message := range messages {
@@ -287,13 +277,11 @@ func (a *App) ReportGitMigrations(channel string) {
 func (a *App) FillCache() {
 	migrationCommits, err := a.model.GetCommitsByType(common.CommitTypeMigration)
 	if err != nil {
-		logrus.WithError(err).Error("can't take commits cache from database")
 		return
 	}
 
 	ansibleCommits, err := a.model.GetCommitsByType(common.CommitTypeAnsible)
 	if err != nil {
-		logrus.WithError(err).Error("can't take commits cache from database")
 		return
 	}
 	// if commits cache is not empty return
@@ -302,19 +290,16 @@ func (a *App) FillCache() {
 	}
 	commits, err := a.Bitbucket.CommitsOfOpenedPRs()
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
 		return
 	}
 
 	if len(migrationCommits) == 0 {
 		SQLCommits, err := a.SQLCommitsCache(commits)
 		if err != nil {
-			logrus.WithError(err).Error("can't take diff information from bitbucket")
 			return
 		}
 		err = a.CreateCommitsCache(SQLCommits)
 		if err != nil {
-			logrus.WithError(err).Error("can't create commits cache in database")
 			return
 		}
 	}
@@ -322,15 +307,10 @@ func (a *App) FillCache() {
 	if len(ansibleCommits) == 0 {
 		AnsibleCommits, err := a.AnsibleCommitsCache(commits)
 		if err != nil {
-			logrus.WithError(err).Error("can't take diff information from bitbucket")
 			return
 		}
 
-		err = a.CreateCommitsCache(AnsibleCommits)
-		if err != nil {
-			logrus.WithError(err).Error("can't create commits cache in database")
-			return
-		}
+		a.CreateCommitsCache(AnsibleCommits)
 	}
 }
 
@@ -338,40 +318,30 @@ func (a *App) FillCache() {
 func (a *App) MigrationMessages() ([]string, error) {
 	commits, err := a.Bitbucket.CommitsOfOpenedPRs()
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
 		return []string{}, err
 	}
 
 	newCommitsCache, err := a.SQLCommitsCache(commits)
 	if err != nil {
-		logrus.WithError(err).Error("can't take diff information from bitbucket")
 		return nil, err
 	}
 	var files []string
 	for _, commit := range newCommitsCache {
 		_, err := a.model.GetCommitByHash(commit.Hash)
-		if err == common.ErrNotFound {
+		if err == common.ErrModelNotFound {
 			file, err := a.Bitbucket.SrcFile(commit.Repository, commit.Hash, commit.Path)
 			if err != nil {
-				logrus.WithError(err).Error("can't take information about file from bitbucket")
 				return []string{}, err
 			}
 			files = append(files, commit.Message+"\n```"+file+"```\n")
 			continue
 		}
 		if err != nil {
-			logrus.WithError(err).Error("can't take commit from database")
 			return nil, err
 		}
 	}
-	err = a.model.DeleteCommitsByType(common.CommitTypeMigration)
-	if err != nil {
-		logrus.WithError(err).Error("can't clear old commits cache from database")
-	}
-	err = a.CreateCommitsCache(newCommitsCache)
-	if err != nil {
-		logrus.WithError(err).Error("can't create commits cache in database")
-	}
+	a.model.DeleteCommitsByType(common.CommitTypeMigration)
+	a.CreateCommitsCache(newCommitsCache)
 	return files, nil
 }
 
@@ -402,7 +372,6 @@ func (a *App) SQLCommitsCache(commits []bitbucket.Commit) ([]model.Commit, error
 func (a *App) ReportCurrentActivityWithCallback(callbackURL string) {
 	activitiesList, err := a.Hubstaff.CurrentActivity()
 	if err != nil {
-		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
 	message := a.stringFromCurrentActivitiesWithNotes(activitiesList)
@@ -428,7 +397,6 @@ func (a *App) ReportCurrentActivityWithCallback(callbackURL string) {
 func (a *App) ReportCurrentActivity(channel string) {
 	activitiesList, err := a.Hubstaff.CurrentActivity()
 	if err != nil {
-		logrus.WithError(err).Error("Can't get last activity report from Hubstaff.")
 		return
 	}
 	message := a.stringFromCurrentActivitiesWithNotes(activitiesList)
@@ -446,7 +414,6 @@ func (a *App) stringFromCurrentActivitiesWithNotes(activitiesList []hubstaff.Las
 		}
 		note, err := a.Hubstaff.LastUserNote(strconv.Itoa(activity.User.ID), strconv.Itoa(activity.LastProjectID))
 		if err != nil {
-			logrus.WithError(err).Error("Can't get user last note for report from Hubstaff.")
 			continue
 		}
 		if note.Description == "" {
@@ -465,22 +432,18 @@ func (a *App) stringFromCurrentActivitiesWithNotes(activitiesList []hubstaff.Las
 func (a *App) ReportSprintsIsuues(project, channel string) error {
 	issuesWithClosedStatus, err := a.Jira.IssuesClosedFromOpenSprint(project)
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about issues with closed status from jira")
 		return err
 	}
 	issuesWithClosedSubtasks, err := a.Jira.IssuesClosedSubtasksFromOpenSprint(project)
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about issues with closed subtasks from jira")
 		return err
 	}
 	issuesForNextSprint, err := a.Jira.IssuesForNextSprint(project)
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about issues stands for next sprint from jira")
 		return err
 	}
 	issuesFromFutureSprint, err := a.Jira.IssuesFromFutureSprint(project)
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about issues from future sprint from jira")
 		return err
 	}
 	var textIssuesReport string
@@ -492,17 +455,16 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 
 	issuesBugStoryOfOpenSprint, err := a.Jira.IssuesStoryBugOfOpenSprints(project)
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about issues of open sprint from jira")
 		return err
 	}
 	sprintInterface, ok := issuesBugStoryOfOpenSprint[0].Fields.Unknowns[jira.FieldSprintInfo].([]interface{})
 	if !ok {
-		logrus.WithError(err).Error("can't parse interface from map")
-		return fmt.Errorf("can't parse to interface: %v", issuesWithClosedSubtasks[0].Fields.Unknowns[jira.FieldSprintInfo])
+		logrus.WithFields(logrus.Fields{"project": project, "channel": channel}).
+			Errorf("can't parse to interface: %v", issuesWithClosedSubtasks[0].Fields.Unknowns[jira.FieldSprintInfo])
+		return common.ErrInternal
 	}
 	sprintSequence, err := a.FindLastSprintSequence(sprintInterface)
 	if err != nil {
-		logrus.WithError(err).Error("can't find sprint of closed subtasks")
 		return err
 	}
 	for _, issue := range issuesFromFutureSprint {
@@ -510,7 +472,6 @@ func (a *App) ReportSprintsIsuues(project, channel string) error {
 	}
 	err = a.CreateIssuesCsvReport(issuesForNextSprint, fmt.Sprintf("Sprint %v Open", sprintSequence), channel, false)
 	if err != nil {
-		logrus.WithError(err).Error("can't create report of issues stands for next sprint from jira")
 		return err
 	}
 	return nil
@@ -538,14 +499,23 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 	}
 	file, err := os.Create(filename + ".csv")
 	if err != nil {
-		return err
+		logrus.WithError(err).WithFields(logrus.Fields{"issues": issues, "filename": filename, "channel": channel, "withAdditionalInfo": withAdditionalInfo}).
+			Error("can't create file")
+		return common.ErrInternal
 	}
 
 	writer := csv.NewWriter(file)
 	if withAdditionalInfo {
 		err = writer.Write([]string{"Type", "Key", "Summary", "Status", "Epic"})
 		if err != nil {
-			return err
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"issues":             issues,
+				"filename":           filename,
+				"channel":            channel,
+				"withAdditionalInfo": withAdditionalInfo,
+				"raw":                []string{"Type", "Key", "Summary", "Status", "Epic"},
+			}).Error("can't create raw in csv")
+			return common.ErrInternal
 		}
 		for _, issue := range issues {
 			epicName := "empty"
@@ -557,19 +527,40 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 			}
 			err = writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName})
 			if err != nil {
-				return err
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"issues":             issues,
+					"filename":           filename,
+					"channel":            channel,
+					"withAdditionalInfo": withAdditionalInfo,
+					"raw":                []string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName},
+				}).Error("can't create raw in csv")
+				return common.ErrInternal
 			}
 		}
 	}
 	if !withAdditionalInfo {
 		err = writer.Write([]string{"Type", "Key", "Summary"})
 		if err != nil {
-			return err
+			logrus.WithError(err).WithFields(logrus.Fields{
+				"issues":             issues,
+				"filename":           filename,
+				"channel":            channel,
+				"withAdditionalInfo": withAdditionalInfo,
+				"raw":                []string{"Type", "Key", "Summary"},
+			}).Error("can't create raw in csv")
+			return common.ErrInternal
 		}
 		for _, issue := range issues {
 			err = writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary})
 			if err != nil {
-				return err
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"issues":             issues,
+					"filename":           filename,
+					"channel":            channel,
+					"withAdditionalInfo": withAdditionalInfo,
+					"raw":                []string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary},
+				}).Error("can't create raw in csv")
+				return common.ErrInternal
 			}
 		}
 	}
@@ -583,12 +574,14 @@ func (a *App) FindLastSprintSequence(sprints []interface{}) (int, error) {
 	var lastSequence = 0
 	rSeq, err := regexp.Compile(`sequence=(\d+)`)
 	if err != nil {
-		return 0, err
+		logrus.WithError(err).WithFields(logrus.Fields{"regexp": `sequence=(\d+)`, "sprints": sprints}).Error("can't find by regexp")
+		return 0, common.ErrInternal
 	}
 	for i := range sprints {
 		s, ok := sprints[i].(string)
 		if !ok {
-			return 0, fmt.Errorf("can't parse to string: %v", sprints[i])
+			logrus.WithField("sprints", sprints).Errorf("can't find sprint of closed subtasks")
+			return 0, common.ErrInternal
 		}
 		// Find string submatch and get slice of match string and this sequence
 		// For example, one of sprint:
@@ -597,11 +590,13 @@ func (a *App) FindLastSprintSequence(sprints []interface{}) (int, error) {
 		// we get string submatch of slice ["sequence=47" "47"] and then parse "47" as integer number to find the biggest one
 		m := rSeq.FindStringSubmatch(s)
 		if len(m) != 2 {
-			return 0, fmt.Errorf("can't find submatch string to sequence: %v", sprints[i])
+			logrus.WithField("sprints", sprints).Errorf("can't find submatch string to sequence: %v", sprints[i])
+			return 0, common.ErrInternal
 		}
 		n, err := strconv.Atoi(m[1])
 		if err != nil {
-			return 0, err
+			logrus.WithError(err).WithFields(logrus.Fields{"value": m[1], "sprints": sprints}).Error("can't parse to int")
+			return 0, common.ErrInternal
 		}
 		if n > lastSequence {
 			lastSequence = n
@@ -614,23 +609,39 @@ func (a *App) FindLastSprintSequence(sprints []interface{}) (int, error) {
 func (a *App) SendFileToSlack(channel, fileName string) error {
 	fileDir, err := os.Getwd()
 	if err != nil {
-		return err
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"filename": fileName,
+			"channel":  channel,
+		}).Error("can't find file")
+		return common.ErrInternal
 	}
 	filePath := path.Join(fileDir, fileName)
 	file, err := os.Open(filePath)
 	if err != nil {
-		return err
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"filename": fileName,
+			"channel":  channel,
+		}).Error("can't open file")
+		return common.ErrInternal
 	}
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
 	if err != nil {
-		return err
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"filename": fileName,
+			"channel":  channel,
+		}).Error("can't create multipart from file file")
+		return common.ErrInternal
 	}
 	_, err = io.Copy(part, file)
 	if err != nil {
-		return err
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"filename": fileName,
+			"channel":  channel,
+		}).Error("can't copy multipart from file")
+		return common.ErrInternal
 	}
 	writer.Close()
 	err = a.Slack.UploadFile(channel, writer.FormDataContentType(), body)
@@ -646,22 +657,19 @@ func (a *App) SendFileToSlack(channel, fileName string) error {
 func (a *App) ReportSprintStatus(channel string) {
 	openIssues, err := a.Jira.OpenIssuesOfOpenSprints()
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about issues of open sprint from jira")
 		return
 	}
 	sprintInterface, ok := openIssues[0].Fields.Unknowns[jira.FieldSprintInfo].([]interface{})
 	if !ok {
-		logrus.WithError(err).Error("can't parse interface from map")
+		logrus.WithError(err).WithField("map", openIssues[0].Fields.Unknowns[jira.FieldSprintInfo]).Error("can't parse interface from map")
 		return
 	}
 	startDate, endDate, err := a.FindLastSprintDates(sprintInterface)
 	if err != nil {
-		logrus.WithError(err).Error("can't find sprint of open issue")
 		return
 	}
 	closedIssues, err := a.Jira.IssuesClosedInInterim(startDate.AddDate(0, 0, -1), endDate.AddDate(0, 0, +1))
 	if err != nil {
-		logrus.WithError(err).Error("can't get closed issues of open sprint from jira")
 		return
 	}
 	msgBody := "*Sprint status*\n"
@@ -730,7 +738,6 @@ func (a *App) ReportSprintStatus(channel string) {
 func (a *App) ReportClarificationIssues() {
 	issues, err := a.Jira.ClarificationIssuesOfOpenSprints()
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about issues with clarification status from jira")
 		return
 	}
 	var assignees = make(map[string][]jira.Issue)
@@ -748,7 +755,7 @@ func (a *App) ReportClarificationIssues() {
 				continue
 			}
 			if userInfo[TagUserSlackID] == "" {
-				logrus.WithError(err).WithField("accountID", accountID).Error("can't take user id by accountID from vocabulary")
+				logrus.WithField("accountID", accountID).Error("can't take user id by accountID from vocabulary")
 				continue
 			}
 			a.Slack.SendMessage("Issues with clarification status assigned to you:\n\n"+message, userInfo[TagUserSlackID])
@@ -761,12 +768,22 @@ func (a *App) ReportClarificationIssues() {
 func (a *App) PersonActivityByDate(userName, date, channel string) error {
 	userInfo := a.GetUserInfoByTagValue(TagUserSlackName, strings.TrimPrefix(userName, "@"))
 	if userInfo[TagUserEmail] == "" {
-		return fmt.Errorf("Данные пользователя не были найдены в словаре")
+		logrus.WithFields(logrus.Fields{
+			"userName": userName,
+			"date":     date,
+			"channel":  channel,
+		}).Error("Can't find user's data in vocabulary")
+		return common.ErrInternal
 	}
 	layout := "2006-01-02"
 	t, err := time.Parse(layout, date)
 	if err != nil {
-		return err
+		logrus.WithFields(logrus.Fields{
+			"userName": userName,
+			"date":     date,
+			"channel":  channel,
+		}).Error("Can't parse date")
+		return common.ErrInternal
 	}
 	userReport, err := a.Hubstaff.UserWorkTimeByDate(t, t, userInfo[TagUserEmail])
 	if err != nil {
@@ -784,7 +801,6 @@ func (a *App) PersonActivityByDate(userName, date, channel string) error {
 func (a *App) Report24HoursReviewIssues() {
 	issues, err := a.Jira.IssuesOnReview()
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about not closed issues from jira")
 		return
 	}
 	var assignees = make(map[string][]jira.Issue)
@@ -822,39 +838,29 @@ func (a *App) Report24HoursReviewIssues() {
 func (a *App) ReportGitAnsibleChanges(channel string) {
 	commits, err := a.Bitbucket.CommitsOfOpenedPRs()
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about opened commits from bitbucket")
 		return
 	}
 	newAnsibleCache, err := a.AnsibleCommitsCache(commits)
 	if err != nil {
-		logrus.WithError(err).Error("can't take diff information from bitbucket")
 		return
 	}
 	var files []string
 	for _, commit := range newAnsibleCache {
 		_, err := a.model.GetCommitByHash(commit.Hash)
-		if err == common.ErrNotFound {
+		if err == common.ErrModelNotFound {
 			file, err := a.Bitbucket.SrcFile(commit.Repository, commit.Hash, commit.Path)
 			if err != nil {
-				logrus.WithError(err).Error("can't take information about file from bitbucket")
 				return
 			}
 			files = append(files, commit.Message+"\n```"+file+"```\n")
 			continue
 		}
 		if err != nil {
-			logrus.WithError(err).Error("can't take commit from database")
 			return
 		}
 	}
-	err = a.model.DeleteCommitsByType(common.CommitTypeAnsible)
-	if err != nil {
-		logrus.WithError(err).Error("can't clear old commits cache from database")
-	}
-	err = a.CreateCommitsCache(newAnsibleCache)
-	if err != nil {
-		logrus.WithError(err).Error("can't create commits cache in database")
-	}
+	a.model.DeleteCommitsByType(common.CommitTypeAnsible)
+	a.CreateCommitsCache(newAnsibleCache)
 	for _, message := range files {
 		a.Slack.SendMessage(message, channel)
 	}
@@ -894,7 +900,6 @@ func (a *App) MakeWorkersLessWorkedReportYesterday(channel string) {
 func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, channel string) {
 	usersReports, err := a.Hubstaff.UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd)
 	if err != nil {
-		logrus.WithError(err).Error("can't get workers worked time by member from Hubstaff")
 		return
 	}
 	var users = make(map[string]string)
@@ -943,10 +948,7 @@ func (a *App) ReportUsersLessWorked(dateOfWorkdaysStart, dateOfWorkdaysEnd time.
 
 // StartAfkTimer starts timer while user is afk
 func (a *App) StartAfkTimer(userDuration time.Duration, userID string) {
-	err := a.model.CreateAfkTimer(model.AfkTimer{UserID: userID, Duration: userDuration.String()})
-	if err != nil {
-		logrus.WithError(err).Errorf("can't create afk timer in database")
-	}
+	a.model.CreateAfkTimer(model.AfkTimer{UserID: userID, Duration: userDuration.String()})
 	a.AfkTimer.UserDurationMap[userID] = userDuration
 	ticker := time.NewTicker(time.Second)
 	go func() {
@@ -956,10 +958,7 @@ func (a *App) StartAfkTimer(userDuration time.Duration, userID string) {
 			a.AfkTimer.Unlock()
 			if a.AfkTimer.UserDurationMap[userID] <= 0 {
 				ticker.Stop()
-				err = a.model.DeleteAfkTimer(userID)
-				if err != nil {
-					logrus.WithError(err).Errorf("can't delete afk timer from database")
-				}
+				a.model.DeleteAfkTimer(userID)
 			}
 		}
 	}()
@@ -980,10 +979,7 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 
 	vacations, err := a.model.GetActualVacations()
 	if err != nil {
-		if err == common.ErrNotFound {
-			return
-		}
-		logrus.WithError(err).Errorf("can't take information about vacations from database")
+		return
 	}
 	for _, vacation := range vacations {
 		if strings.Contains(message, vacation.UserID) {
@@ -1025,7 +1021,6 @@ func (a *App) MessageIssueAfterSecondTLReview(issue jira.Issue) {
 	}
 	reviewCount, err := a.Jira.RejectedIssueTLReviewCount(issue)
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about review count after tl review from jira")
 		return
 	}
 	if reviewCount < 2 {
@@ -1070,7 +1065,6 @@ func (a *App) CreateCommitsCache(commits []model.Commit) error {
 func (a *App) CheckAfkTimers() {
 	afkTimers, err := a.model.GetAfkTimers()
 	if err != nil {
-		logrus.WithError(err).Errorf("can't take information about afk timers from database")
 		return
 	}
 	for _, afkTimer := range afkTimers {
@@ -1084,10 +1078,7 @@ func (a *App) CheckAfkTimers() {
 			go a.StartAfkTimer(duration-difference, afkTimer.UserID)
 			continue
 		}
-		err = a.model.DeleteAfkTimer(afkTimer.UserID)
-		if err != nil {
-			logrus.WithError(err).Errorf("can't delete afk timer")
-		}
+		a.model.DeleteAfkTimer(afkTimer.UserID)
 	}
 }
 
@@ -1097,7 +1088,6 @@ func (a *App) ReportOverworkedIssues(channel string) {
 		now.BeginningOfWeek().AddDate(0, 0, -8),
 		now.EndOfWeek().AddDate(0, 0, -6))
 	if err != nil {
-		logrus.WithError(err).Error("can't get closed issues in interom from jira")
 		return
 	}
 	// sort by overwork %
@@ -1148,16 +1138,19 @@ func (a *App) FindLastSprintDates(sprints []interface{}) (time.Time, time.Time, 
 	)
 	sDate, err := regexp.Compile(`startDate=(\d{4}-\d{2}-\d{2})`)
 	if err != nil {
-		return time.Time{}, time.Time{}, err
+		logrus.WithError(err).WithField("sprints", sprints).Error("can't compile regexp")
+		return time.Time{}, time.Time{}, common.ErrInternal
 	}
 	eDate, err := regexp.Compile(`endDate=(\d{4}-\d{2}-\d{2})`)
 	if err != nil {
-		return time.Time{}, time.Time{}, err
+		logrus.WithError(err).WithField("sprints", sprints).Error("can't compile regexp")
+		return time.Time{}, time.Time{}, common.ErrInternal
 	}
 	for i := range sprints {
 		s, ok := sprints[i].(string)
 		if !ok {
-			return time.Time{}, time.Time{}, fmt.Errorf("can't parse to string: %v", sprints[i])
+			logrus.WithError(err).WithField("date", sprints[i]).Error("can't parse to string")
+			return time.Time{}, time.Time{}, common.ErrInternal
 		}
 		// Find string submatch and get slice of match string and this startDate
 		// For example, one of sprint:
@@ -1166,20 +1159,24 @@ func (a *App) FindLastSprintDates(sprints []interface{}) (time.Time, time.Time, 
 		// we get string submatch of slice ["startDate=2019-02-20" "2019-02-20"] and then parse "2019-02-20" as time to find the biggest one
 		sd := sDate.FindStringSubmatch(s)
 		if len(sd) != 2 {
-			return time.Time{}, time.Time{}, fmt.Errorf("can't find submatch string to startDate: %v", sprints[i])
+			logrus.WithError(err).WithField("startDate", sprints[i]).Error("can't find submatch string to start date")
+			return time.Time{}, time.Time{}, common.ErrInternal
 		}
 		ts, err := time.Parse("2006-01-02", sd[1])
 		if err != nil {
-			return time.Time{}, time.Time{}, err
+			logrus.WithError(err).WithField("date", sd[1]).Error("can't parse date")
+			return time.Time{}, time.Time{}, common.ErrInternal
 		}
 
 		ed := eDate.FindStringSubmatch(s)
 		if len(ed) != 2 {
-			return time.Time{}, time.Time{}, fmt.Errorf("can't find submatch string to endDate: %v", sprints[i])
+			logrus.WithError(err).WithField("endDate", sprints[i]).Error("can't find submatch string to end date")
+			return time.Time{}, time.Time{}, common.ErrInternal
 		}
 		te, err := time.Parse("2006-01-02", ed[1])
 		if err != nil {
-			return time.Time{}, time.Time{}, err
+			logrus.WithError(err).WithField("date", sd[1]).Error("can't parse date")
+			return time.Time{}, time.Time{}, common.ErrInternal
 		}
 
 		if ts.After(startDate) {
@@ -1194,25 +1191,25 @@ func (a *App) FindLastSprintDates(sprints []interface{}) (time.Time, time.Time, 
 func (a *App) SetVacationPeriod(dateStart, dateEnd, message, userID string) error {
 	dStart, err := time.Parse("02.01.2006", dateStart)
 	if err != nil {
-		return err
+		logrus.WithError(err).WithField("dateStart", dateStart).Error("can't parse start date")
+		return common.ErrInternal
 	}
 	dEnd, err := time.Parse("02.01.2006", dateEnd)
 	if err != nil {
-		return err
+		logrus.WithError(err).WithField("dateEnd", dateEnd).Error("can't parse end date")
+		return common.ErrInternal
 	}
 	if dStart.After(dEnd) {
-		return fmt.Errorf("Date of start vacation bigger then data of end")
+		logrus.WithFields(logrus.Fields{"dateStart": dateStart, "dateEnd": dateEnd}).Error("Date of start vacation bigger then data of end")
+		return common.ErrConflict{"Date of start vacation bigger then data of end"}
 	}
 
-	err = a.model.SaveVacation(model.Vacation{
+	a.model.SaveVacation(model.Vacation{
 		UserID:    userID,
 		DateStart: dStart,
 		DateEnd:   dEnd,
 		Message:   message,
 	})
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -1244,25 +1241,14 @@ func (a *App) CreateIssueBranches(issue jira.Issue) {
 		return
 	}
 	if issue.Fields.Parent == nil {
-		err := a.Bitbucket.CreateBranch(issue.Key, issue.Key, "master")
-		if err != nil {
-			logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
-				Error("can't create branch")
-		}
+		a.Bitbucket.CreateBranch(issue.Key, issue.Key, "master")
 		return
 	}
 	err := a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key, "master")
 	if err != nil {
-		logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
-			Error("can't create branch")
 		return
 	}
-	err = a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key+">"+issue.Key, issue.Fields.Parent.Key)
-	if err != nil {
-		logrus.WithError(err).WithField("issueKey", fmt.Sprintf("%+v", issue.Key)).
-			Error("can't create branch")
-		return
-	}
+	a.Bitbucket.CreateBranch(issue.Key, issue.Fields.Parent.Key+">"+issue.Key, issue.Fields.Parent.Key)
 }
 
 // CreateBranchPullRequest create pull request for first branch commit
@@ -1272,14 +1258,7 @@ func (a *App) CreateBranchPullRequest(repoPushPayload bitbucket.RepoPushPayload)
 		return
 	}
 	if !strings.Contains(repoPushPayload.Push.Changes[0].New.Name, ">") {
-		err := a.Bitbucket.CreatePullRequestIfNotExist(repoPushPayload.Repository.Name, repoPushPayload.Push.Changes[0].New.Name, "master")
-		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{
-				"repoSlug":         repoPushPayload.Repository.Name,
-				"branchName":       repoPushPayload.Push.Changes[0].New.Name,
-				"parentBranchName": "master",
-			}).Error("can't create pull request of branch")
-		}
+		a.Bitbucket.CreatePullRequestIfNotExist(repoPushPayload.Repository.Name, repoPushPayload.Push.Changes[0].New.Name, "master")
 		return
 	}
 
@@ -1291,11 +1270,6 @@ func (a *App) CreateBranchPullRequest(repoPushPayload bitbucket.RepoPushPayload)
 	}
 	err := a.Bitbucket.CreatePullRequestIfNotExist(repoPushPayload.Repository.Name, repoPushPayload.Push.Changes[0].New.Name, issuesKey[0])
 	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"repoSlug":         repoPushPayload.Repository.Name,
-			"branchName":       repoPushPayload.Push.Changes[0].New.Name,
-			"parentBranchName": issuesKey[0],
-		}).Error("can't create pull request of branch")
 		return
 	}
 }
@@ -1304,7 +1278,6 @@ func (a *App) CreateBranchPullRequest(repoPushPayload bitbucket.RepoPushPayload)
 func (a *App) ReportEpicsWithClosedIssues(channel string) {
 	epics, err := a.Jira.EpicsWithClosedIssues()
 	if err != nil {
-		logrus.WithError(err).Error("can't take information about epics with closed issues from jira")
 		return
 	}
 	if len(epics) == 0 {
@@ -1314,10 +1287,7 @@ func (a *App) ReportEpicsWithClosedIssues(channel string) {
 	var msgBody string
 	for _, epic := range epics {
 		if epic.Fields.Status.Name != jira.StatusInArtDirectorReview {
-			err := a.Jira.IssueSetStatusTransition(epic.Key, jira.StatusInArtDirectorReview)
-			if err != nil {
-				logrus.WithError(err).Errorf("can't set close last task transition for issue %s", epic.Key)
-			}
+			a.Jira.IssueSetStatusTransition(epic.Key, jira.StatusInArtDirectorReview)
 		}
 		msgBody += epic.String()
 	}
@@ -1386,14 +1356,12 @@ func (a *App) MoveJiraStatuses(issue jira.Issue) {
 func (a *App) CheckPullRequestsConflicts(pullRequestPayload bitbucket.PullRequestMergedPayload) {
 	pullRequests, err := a.Bitbucket.PullRequestsList(pullRequestPayload.Repository.Name)
 	if err != nil {
-		logrus.WithError(err).Errorf("Can't get pull requests list")
 		return
 	}
 	var authorPullRequests = make(map[string][]string)
 	for _, pullRequest := range pullRequests {
 		diff, err := a.Bitbucket.PullRequestDiff(pullRequestPayload.Repository.Name, pullRequest.ID)
 		if err != nil {
-			logrus.WithError(err).Errorf("Can't get pull request diff")
 			return
 		}
 		if strings.Contains(diff, "<<<<<<< destination") {
@@ -1453,7 +1421,6 @@ func (a *App) ReportLowPriorityIssuesStarted(channel string) {
 	// get all opened and started issues with one last worklog activity, sorted by priority from highest
 	issues, err := a.Jira.OpenedIssuesWithLastWorklogActivity()
 	if err != nil {
-		logrus.WithError(err).Error("Can't get issue from Jira with last worklog activity")
 		return
 	}
 	// sort by assignee
@@ -1589,7 +1556,6 @@ func (a *App) CheckNeedReplyMessages() {
 	oldestUnix := time.Now().Add(-11 * time.Hour).Unix()
 	channelsList, err := a.Slack.ChannelsList()
 	if err != nil {
-		logrus.WithError(err).Error("Can not get channels list")
 		return
 	}
 	for _, channel := range channelsList {
@@ -1599,7 +1565,6 @@ func (a *App) CheckNeedReplyMessages() {
 		channel.RemoveBotMembers(a.Config.BotIDs...)
 		channelMessages, err := a.Slack.ChannelMessageHistory(channel.ID, oldestUnix, latestUnix)
 		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "latestUnix": latestUnix, "oldestUnix": oldestUnix}).Error("Can not get messages from channel")
 			return
 		}
 		for _, channelMessage := range channelMessages {
@@ -1609,7 +1574,6 @@ func (a *App) CheckNeedReplyMessages() {
 			for _, reply := range channelMessage.Replies {
 				replyMessage, err := a.Slack.ChannelMessage(channel.ID, reply.Ts)
 				if err != nil {
-					logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": reply.Ts}).Error("Can not get reply for message from channel")
 					return
 				}
 				if replyMessage.IsMessageFromBot() {
@@ -1663,7 +1627,6 @@ func (a *App) sendMessageToNotReactedUsers(channelMessage slack.Message, channel
 	}
 	afkUsers, err := a.getAfkUsersIDs()
 	if err != nil {
-		logrus.WithError(err).Error("Can't get afk users ids")
 		return
 	}
 	var message string
@@ -1690,14 +1653,12 @@ func (a *App) sendMessageToMentionedUsers(channelMessage slack.Message, channel 
 	}
 	afkUsers, err := a.getAfkUsersIDs()
 	if err != nil {
-		logrus.WithError(err).Error("Can't get afk users ids")
 		return
 	}
 	messages := make(map[string]string)
 	for userID, replyTs := range mentionedUsers {
 		replyPermalink, err := a.Slack.MessagePermalink(channel.ID, replyTs)
 		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{"channelID": channel.ID, "ts": replyTs}).Error("Can not get permalink for message from channel")
 			return
 		}
 		if common.ValueIn(userID, afkUsers...) {
@@ -1744,7 +1705,6 @@ func (a *App) getAfkUsersIDs() ([]string, error) {
 func (a *App) SendReminders() {
 	afkUsers, err := a.getAfkUsersIDs()
 	if err != nil {
-		logrus.WithError(err).Error("Can't get afk users ids")
 		return
 	}
 	reminders, err := a.model.GetReminders()
@@ -1757,8 +1717,6 @@ func (a *App) SendReminders() {
 		}
 		message, err := a.Slack.ChannelMessage(reminder.ChannelID, reminder.ThreadTs)
 		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{"channelID": reminder.ChannelID, "ts": reminder.ThreadTs}).
-				Error("Can not get message from channel")
 			return
 		}
 		newReplies := message.Replies[reminder.ReplyCount-1:]
@@ -1882,7 +1840,7 @@ func (a *App) CheckForgottenGitBranches(channel string) {
 	)
 	r, err := regexp.Compile("^(release|hotfix)/[0-9]{8}")
 	if err != nil {
-		logrus.WithError(err).Error("Can't compile regexp")
+		logrus.WithError(err).WithField("regexp", "^(release|hotfix)/[0-9]{8}").Error("Can't compile regexp")
 		return
 	}
 	for _, branch := range branchesWithoutPRs {
@@ -1974,7 +1932,7 @@ func getUniqueJiraAccountIDsFromText(text string) []string {
 	accountIDs := make([]string, 0)
 	r, err := regexp.Compile(`(\[~accountid):[\w]*:*[\w]*-*[\w]*-*[\w]*-*[\w]*-*[\w]*]`)
 	if err != nil {
-		logrus.WithError(err).Error("Can't compile regexp")
+		logrus.WithError(err).WithField("regexp", `(\[~accountid):[\w]*:*[\w]*-*[\w]*-*[\w]*-*[\w]*-*[\w]*]`).Error("Can't compile regexp")
 		return []string{}
 	}
 	accountIDs = r.FindAllString(text, -1)
@@ -1996,7 +1954,6 @@ func (a *App) SetOnDutyUsers(team string, userMentions []string) error {
 	}
 	users, err := a.Slack.UsersSlice()
 	if err != nil {
-		logrus.WithError(err).Error("can't get users slice from slack")
 		return err
 	}
 	var usersOnDuty []slack.Member
@@ -2005,12 +1962,14 @@ func (a *App) SetOnDutyUsers(team string, userMentions []string) error {
 			continue
 		}
 		if common.ValueIn(user.Id, usersIDsOnVacation...) {
-			return fmt.Errorf("User <@%s> is on vacation!", user.Id)
+			logrus.WithField("userMentions", userMentions).Errorf("User <@%s> is on vacation!", user.Id)
+			return common.ErrConflict{fmt.Sprintf("User <@%s> is on vacation!", user.Id)}
 		}
 		usersOnDuty = append(usersOnDuty, user)
 	}
 	if len(usersOnDuty) == 0 {
-		return fmt.Errorf("There aren't real users for adding on duty")
+		logrus.WithField("userMentions", userMentions).Error("There aren't real users for adding on duty")
+		return common.ErrConflict{"There aren't real users for adding on duty"}
 	}
 	tx, err := a.model.StartTransaction()
 	if err != nil {

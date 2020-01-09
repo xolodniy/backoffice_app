@@ -1,6 +1,7 @@
 package jira
 
 import (
+	"backoffice_app/common"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -156,8 +157,9 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 		)
 
 		if err != nil {
-			logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira all not closed issues")
-			return nil, err
+			logrus.WithError(err).WithFields(logrus.Fields{"jqlRequest": jqlRequest, "response": fmt.Sprintf("%+v", resp)}).
+				Error("can't find in jira issues by jql request")
+			return nil, common.ErrInternal
 		}
 
 		if len(allIssues) == 0 {
@@ -176,7 +178,7 @@ func (j *Jira) AssigneeOpenIssues() ([]Issue, error) {
 	request := fmt.Sprintf(`assignee != %s AND Sprint IN openSprints() AND (status NOT IN ("%s")) AND issuetype IN subTaskIssueTypes()`, StatusEmptyAssignee, StatusClosed)
 	issues, err := j.issues(request)
 	if err != nil {
-		return nil, fmt.Errorf("can't take open jira issues type in subtasks of open sprints: %s", err)
+		return nil, err
 	}
 	return issues, nil
 }
@@ -228,8 +230,9 @@ func (j *Jira) IssuesAfterSecondReview(typeNames []string) ([]Issue, error) {
 			UpdateHistory: true,
 		})
 		if err != nil {
-			logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira this jira issue")
-			return nil, err
+			logrus.WithError(err).WithFields(logrus.Fields{"typeNames": typeNames, "response": fmt.Sprintf("%+v", resp)}).
+				Error("can't take from jira this jira issue")
+			return nil, common.ErrInternal
 		}
 		if len(issue.Changelog.Histories) == 0 {
 			continue
@@ -329,7 +332,7 @@ func (j *Jira) IssuesStoryBugOfOpenSprints(project string) ([]Issue, error) {
 	request := fmt.Sprintf(`project = %s AND type in (story, bug) AND Sprint IN openSprints() ORDER BY cf[10008] ASC, cf[10026] ASC`, project)
 	issues, err := j.issues(request)
 	if err != nil {
-		return nil, fmt.Errorf("can't take jira issues with type in (story, bug) of open sprints: %s", err)
+		return nil, err
 	}
 	return issues, nil
 }
@@ -339,7 +342,7 @@ func (j *Jira) IssuesOfOpenSprints() ([]Issue, error) {
 	request := fmt.Sprintf(`Sprint IN openSprints() ORDER BY project, key ASC`)
 	issues, err := j.issues(request)
 	if err != nil {
-		return nil, fmt.Errorf("can't take jira issues of open sprints: %s", err.Error())
+		return nil, err
 	}
 	return issues, nil
 }
@@ -349,8 +352,9 @@ func (j *Jira) EpicName(issueKey string) (string, error) {
 	options := jira.GetQueryOptions{}
 	epicIssue, resp, err := j.Issue.Get(issueKey, &options)
 	if err != nil {
-		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira this jira issue")
-		return "", err
+		logrus.WithError(err).WithFields(logrus.Fields{"issueKey": issueKey, "response": fmt.Sprintf("%+v", resp)}).
+			Error("can't take from jira this jira issue")
+		return "", common.ErrInternal
 	}
 
 	return fmt.Sprint(epicIssue.Fields.Unknowns[FieldEpicName]), nil
@@ -361,7 +365,7 @@ func (j *Jira) OpenIssuesOfOpenSprints() ([]Issue, error) {
 	request := fmt.Sprintf(`type not in (story, bug) AND status NOT IN ("%s") AND Sprint IN openSprints()`, StatusClosed)
 	issues, err := j.issues(request)
 	if err != nil {
-		return nil, fmt.Errorf("can't take jira issues with type not in (story, bug) of open sprints: %s", err)
+		return nil, err
 	}
 	return issues, nil
 }
@@ -370,15 +374,17 @@ func (j *Jira) OpenIssuesOfOpenSprints() ([]Issue, error) {
 func (j *Jira) IssueSetStatusTransition(issueKey, transitionName string) error {
 	transitions, resp, err := j.Issue.GetTransitions(issueKey)
 	if err != nil {
-		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't take from jira transisions list of issue")
-		return err
+		logrus.WithError(err).WithFields(logrus.Fields{"issueKey": issueKey, "transitionName": transitionName, "response": fmt.Sprintf("%+v", resp)}).
+			Error("can't take from jira transisions list of issue")
+		return common.ErrInternal
 	}
 	for _, transition := range transitions {
 		if transition.Name == transitionName {
 			resp, err := j.Issue.DoTransition(issueKey, transition.ID)
 			if err != nil {
-				logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Error("can't do transition from transisions list of issue")
-				return err
+				logrus.WithError(err).WithFields(logrus.Fields{"issueKey": issueKey, "transitionName": transitionName, "response": fmt.Sprintf("%+v", resp)}).
+					Error("can't do transition from transisions list of issue")
+				return common.ErrInternal
 			}
 			break
 		}
@@ -391,7 +397,7 @@ func (j *Jira) ClarificationIssuesOfOpenSprints() ([]Issue, error) {
 	request := fmt.Sprintf(`assignee != %s AND status IN ("%s")`, StatusEmptyAssignee, StatusInClarification)
 	issues, err := j.issues(request)
 	if err != nil {
-		return nil, fmt.Errorf("can't take jira issues with type not in (story, bug) of open sprints: %s", err)
+		return nil, err
 	}
 	return issues, nil
 }
@@ -402,7 +408,7 @@ func (j *Jira) IssuesOnReview() ([]Issue, error) {
 		StatusEmptyAssignee, StatusPeerReview, StatusTlReview, StatusDesignReview, StatusCTOReview, StatusFEReview)
 	issues, err := j.issues(request)
 	if err != nil {
-		return nil, fmt.Errorf("can't take jira not closed issues: %s", err)
+		return nil, err
 	}
 	var issuesOnReview []Issue
 	for _, issue := range issues {
@@ -459,11 +465,13 @@ func (j *Jira) getIssueChangelog(issue Issue) (Issue, error) {
 		url := fmt.Sprintf("/rest/api/2/issue/%s/changelog?maxResults=100&startAt=%v", issue.Key, index)
 		req, err := j.NewRequest("GET", url, nil)
 		if err != nil {
-			return Issue{}, fmt.Errorf("can't create request of changelog enpoint: %s", err)
+			logrus.WithError(err).WithField("url", url).Error("Can't create http request of changelog enpoint")
+			return Issue{}, common.ErrInternal
 		}
 		_, err = j.Do(req, changeLog)
 		if err != nil {
-			return Issue{}, fmt.Errorf("can't take jira changelog of issue: %s", err)
+			logrus.WithError(err).WithField("request", req).Error("Can't do http request of changelog enpoint")
+			return Issue{}, common.ErrInternal
 		}
 		for _, history := range changeLog.Values {
 			issue.Changelog.Histories = append(issue.Changelog.Histories, history)
@@ -483,8 +491,7 @@ func (j *Jira) IssuesClosedInInterim(dateStart, dateEnd time.Time) ([]Issue, err
 		StatusClosed, dateStart.Format("2006-01-02"), dateEnd.Format("2006-01-02"))
 	issues, err := j.issues(request)
 	if err != nil {
-		return nil, fmt.Errorf("can't take jira issues closed after %s before %s with error: %s",
-			dateStart.Format("2006-01-02"), dateEnd.Format("2006-01-02"), err)
+		return nil, err
 	}
 	return issues, nil
 }
@@ -509,8 +516,9 @@ func (j *Jira) EpicsWithClosedIssues() ([]Issue, error) {
 func (j *Jira) IssueType(issueID string) (string, error) {
 	issue, resp, err := j.Issue.Get(issueID, &jira.GetQueryOptions{})
 	if err != nil {
-		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", resp)).Errorf("can't take from jira issue '%s' info", issueID)
-		return "", err
+		logrus.WithError(err).WithFields(logrus.Fields{"issueID": issueID, "response": fmt.Sprintf("%+v", resp)}).
+			Error("can't take from jira issue info")
+		return "", common.ErrInternal
 	}
 	return issue.Fields.Type.Name, nil
 }
@@ -562,13 +570,18 @@ func (j *Jira) UpdateIssueFixVersion(issueKey, fromFixVersion, toFixVersion stri
 	}
 	var dat map[string]interface{}
 	if err := json.Unmarshal(byt, &dat); err != nil {
-		logrus.WithError(err).Error("can't unmarshal byte data for update fix version")
-		return err
+		logrus.WithError(err).WithField("date", string(byt)).Error("can't unmarshal byte data for update fix version")
+		return common.ErrInternal
 	}
 	res, err := j.Issue.UpdateIssue(issueKey, dat)
 	if err != nil {
-		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", res)).Error("can't update issue fix version")
-		return err
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"issueKey":       issueKey,
+			"fromFixVersion": fromFixVersion,
+			"toFixVersion":   toFixVersion,
+			"response":       fmt.Sprintf("%+v", res),
+		}).Error("can't update issue fix version")
+		return common.ErrInternal
 	}
 	return nil
 }
@@ -578,13 +591,17 @@ func (j *Jira) SetIssuePriority(issueKey, priority string) error {
 	byt := []byte(fmt.Sprintf(`{"update":{"priority":[{"set":{"name" : "%s"}}]}}`, priority))
 	var dat map[string]interface{}
 	if err := json.Unmarshal(byt, &dat); err != nil {
-		logrus.WithError(err).Error("can't unmarshal byte data for set priority")
-		return err
+		logrus.WithError(err).WithField("date", string(byt)).Error("can't unmarshal byte data for set priority")
+		return common.ErrInternal
 	}
 	res, err := j.Issue.UpdateIssue(issueKey, dat)
 	if err != nil {
-		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", res)).Error("can't set issue priority")
-		return err
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"issueKey": issueKey,
+			"priority": priority,
+			"response": fmt.Sprintf("%+v", res),
+		}).Error("can't set issue priority")
+		return common.ErrInternal
 	}
 	return nil
 }
@@ -594,13 +611,17 @@ func (j *Jira) SetIssueDueDate(issueKey, dueDate string) error {
 	byt := []byte(fmt.Sprintf(`{"fields":{"duedate":"%s"}}`, dueDate))
 	var dat map[string]interface{}
 	if err := json.Unmarshal(byt, &dat); err != nil {
-		logrus.WithError(err).Error("can't unmarshal byte data for set priority")
-		return err
+		logrus.WithError(err).WithField("date", string(byt)).Error("can't unmarshal byte data for set priority")
+		return common.ErrInternal
 	}
 	res, err := j.Issue.UpdateIssue(issueKey, dat)
 	if err != nil {
-		logrus.WithError(err).WithField("response", fmt.Sprintf("%+v", res)).Error("can't set issue due date")
-		return err
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"issueKey": issueKey,
+			"dueDate":  dueDate,
+			"response": fmt.Sprintf("%+v", res),
+		}).Error("can't set issue due date")
+		return common.ErrInternal
 	}
 	return nil
 }
@@ -610,7 +631,7 @@ func (j *Jira) OpenedIssuesWithLastWorklogActivity() ([]Issue, error) {
 	request := fmt.Sprintf(`status in (%s, %s) AND Developer is not EMPTY ORDER BY priority DESC`, StatusOpen, StatusStarted)
 	issues, err := j.issues(request)
 	if err != nil {
-		return nil, fmt.Errorf("can't take open jira issues type in subtasks of open sprints: %s", err)
+		return nil, err
 	}
 	for _, issue := range issues {
 		lastWorklog, err := j.getIssueLastWorkLogActivity(issue.Key, issue.Fields.Worklog.Total)
@@ -628,11 +649,13 @@ func (j *Jira) getIssueLastWorkLogActivity(issueKey string, totalCount int) (jir
 	url := fmt.Sprintf("/rest/api/2/issue/%s/worklog?startAt=%v", issueKey, totalCount-1)
 	req, err := j.NewRequest("GET", url, nil)
 	if err != nil {
-		return *workLog, fmt.Errorf("can't create request of worklog enpoint: %s", err)
+		logrus.WithError(err).WithField("url", url).Error("Can't create http request of jira worklog")
+		return *workLog, common.ErrInternal
 	}
 	_, err = j.Do(req, workLog)
 	if err != nil {
-		return *workLog, fmt.Errorf("can't take jira worklog of issue: %s", err)
+		logrus.WithError(err).WithField("request", req).Error("Can't do http request of jira worklog")
+		return *workLog, common.ErrInternal
 	}
 	if len(workLog.Worklogs) == 0 {
 		return *workLog, nil
@@ -648,13 +671,13 @@ func (j *Jira) UnreleasedFixVersionsByProjectKey(projectKey string) ([]jira.Vers
 	url := fmt.Sprintf("/rest/api/2/project/%s/version?status=%s", projectKey, ReleaseStatusUnreleased)
 	req, err := j.NewRequest("GET", url, nil)
 	if err != nil {
-		logrus.WithError(err).WithField("projectKey", projectKey).Error("can't make req versions by project")
-		return nil, err
+		logrus.WithError(err).WithField("url", url).Error("can't create http request for versions by project")
+		return nil, common.ErrInternal
 	}
 	_, err = j.Do(req, fixVersions)
 	if err != nil {
-		logrus.WithError(err).WithField("projectKey", projectKey).Error("can't do req versions by project")
-		return nil, err
+		logrus.WithError(err).WithField("request", req).Error("can't do http request for versions by project")
+		return nil, common.ErrInternal
 	}
 	return fixVersions.Values, nil
 }
@@ -668,13 +691,13 @@ func (j *Jira) VersionIssuesCount(releaseID int) (int, int, error) {
 	url := fmt.Sprintf("/rest/api/2/version/%d/unresolvedIssueCount", releaseID)
 	req, err := j.NewRequest("GET", url, nil)
 	if err != nil {
-		logrus.WithError(err).WithField("releaseID", releaseID).Error("cant make req release counts from jira")
-		return 0, 0, fmt.Errorf("can't create request of versions issues count enpoint: %s", err)
+		logrus.WithError(err).WithField("url", url).Error("can't create http request for release counts from jira")
+		return 0, 0, common.ErrInternal
 	}
 	_, err = j.Do(req, result)
 	if err != nil {
-		logrus.WithError(err).WithField("releaseID", releaseID).Error("cant do req release counts from jira")
-		return 0, 0, fmt.Errorf("can't take jira version issues count: %s", err)
+		logrus.WithError(err).WithField("req", req).Error("can't do http request for release counts from jira")
+		return 0, 0, common.ErrInternal
 	}
 	return result.IssuesCount, result.IssuesUnresolvedCount, nil
 }

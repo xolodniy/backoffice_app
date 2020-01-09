@@ -170,7 +170,7 @@ func (c *Controller) vacation(ctx *gin.Context) {
 	case request.Text == "cancel":
 		err := c.App.CancelVacation(request.UserId)
 		switch {
-		case err == common.ErrNotFound:
+		case err == common.ErrModelNotFound:
 			ctx.String(http.StatusOK, "You have no activated vacation autoreply yet")
 		case err != nil:
 			ctx.String(http.StatusOK, err.Error())
@@ -180,7 +180,7 @@ func (c *Controller) vacation(ctx *gin.Context) {
 	case request.Text == "status":
 		vacation, err := c.App.CheckVacationSatus(request.UserId)
 		switch {
-		case err == common.ErrNotFound:
+		case err == common.ErrModelNotFound:
 			ctx.String(http.StatusOK, "You have no activated vacation autoreply yet")
 		case err != nil:
 			ctx.String(http.StatusOK, err.Error())

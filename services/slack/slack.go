@@ -1,6 +1,7 @@
 package slack
 
 import (
+	"backoffice_app/common"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -152,18 +153,21 @@ func (s *Slack) SendToThread(text, channel, threadId string) {
 func (s *Slack) jsonRequest(endpoint string, jsonData []byte) ([]byte, error) {
 	req, err := http.NewRequest("POST", s.APIURL+"/"+endpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return nil, err
+		logrus.WithError(err).WithFields(logrus.Fields{"url": endpoint}).Error("Can't create http request")
+		return nil, common.ErrInternal
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.OutToken))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		logrus.WithError(err).WithField("request", req).Error("Can't do http request")
+		return nil, common.ErrInternal
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		logrus.WithError(err).WithField("request", req).Error("Can't read response body")
+		return nil, common.ErrInternal
 	}
 	var responseBody struct {
 		Ok      bool   `json:"ok"`
@@ -189,24 +193,30 @@ func (s *Slack) Files() ([]Files, error) {
 
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
-			return nil, err
+			logrus.WithError(err).WithFields(logrus.Fields{"url": urlStr}).Error("Can't create http request")
+			return nil, common.ErrInternal
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		filesResp := FilesResponse{}
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			return nil, err
+			logrus.WithError(err).WithField("request", req).Error("Can't do http request")
+			return nil, common.ErrInternal
 		}
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return nil, err
+			logrus.WithError(err).WithField("request", req).Error("Can't read response body")
+			return nil, common.ErrInternal
 		}
 		if err := json.Unmarshal(body, &filesResp); err != nil {
-			return nil, err
+			logrus.WithError(err).WithField("res", string(body)).
+				Error("can't unmarshal response body")
+			return nil, common.ErrInternal
 		}
 		if !filesResp.Ok {
-			return nil, fmt.Errorf(filesResp.Error)
+			logrus.WithField("filesResp", filesResp).Error(filesResp.Error)
+			return nil, common.ErrInternal
 		}
 		for _, file := range filesResp.Files {
 			files = append(files, file)
@@ -233,23 +243,24 @@ func (s *Slack) FilesSize() (float64, error) {
 
 // DeleteFile deletes file from slack by id
 func (s *Slack) DeleteFile(id string) error {
-	b, err := json.Marshal(types.DeleteFileMessage{
+	file := types.DeleteFileMessage{
 		Token: s.InToken,
 		File:  id,
-	})
-	if err != nil {
-		return err
 	}
-
+	b, err := json.Marshal(file)
+	if err != nil {
+		logrus.WithError(err).WithField("reqBody", file).Error("can't narshal request body")
+		return common.ErrInternal
+	}
 	respBody, err := s.jsonRequest("files.delete", b)
 	if err != nil {
 		logrus.WithError(err).WithFields(logrus.Fields{
 			"fileId":       id,
 			"responseBody": respBody,
 		}).Error("can't delete file")
+		return common.ErrInternal
 	}
-
-	return err
+	return nil
 }
 
 // UploadFile uploads file to slack channel
@@ -261,20 +272,23 @@ func (s *Slack) UploadFile(channel, contentType string, file *bytes.Buffer) erro
 
 	req, err := http.NewRequest("POST", urlStr, file)
 	if err != nil {
-		return err
+		logrus.WithError(err).WithFields(logrus.Fields{"url": urlStr}).Error("Can't create http request")
+		return common.ErrInternal
 	}
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.OutToken))
 	req.URL.RawQuery = v.Encode()
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		logrus.WithError(err).WithField("request", req).Error("Can't do http request")
+		return common.ErrInternal
 	}
 	defer resp.Body.Close()
 
 	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		logrus.WithError(err).WithField("request", req).Error("Can't read response body")
+		return common.ErrInternal
 	}
 	var responseBody struct {
 		Ok      bool   `json:"ok"`
@@ -282,10 +296,13 @@ func (s *Slack) UploadFile(channel, contentType string, file *bytes.Buffer) erro
 		Warning string `json:"warning"`
 	}
 	if err := json.Unmarshal(respBody, &responseBody); err != nil {
-		return err
+		logrus.WithError(err).WithField("res", string(respBody)).
+			Error("can't unmarshal response body for upload file")
+		return common.ErrInternal
 	}
 	if !responseBody.Ok {
-		return fmt.Errorf(responseBody.Error)
+		logrus.WithField("response", responseBody).Error(responseBody.Error)
+		return common.ErrInternal
 	}
 
 	return nil
@@ -299,24 +316,30 @@ func (s *Slack) UsersSlice() ([]Member, error) {
 
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
-			return []Member{}, err
+			logrus.WithError(err).WithFields(logrus.Fields{"url": urlStr}).Error("Can't create http request")
+			return []Member{}, common.ErrInternal
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		usersResp := UsersResponse{}
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			return []Member{}, err
+			logrus.WithError(err).WithField("request", req).Error("Can't do http request")
+			return []Member{}, common.ErrInternal
 		}
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return []Member{}, err
+			logrus.WithError(err).WithField("request", req).Error("Can't read response body")
+			return []Member{}, common.ErrInternal
 		}
 		if err := json.Unmarshal(body, &usersResp); err != nil {
-			return []Member{}, err
+			logrus.WithError(err).WithField("res", string(body)).
+				Error("can't unmarshal response body for user slice")
+			return []Member{}, common.ErrInternal
 		}
 		if !usersResp.Ok {
-			return []Member{}, fmt.Errorf(usersResp.Error)
+			logrus.WithField("response", usersResp).Error(usersResp.Error)
+			return []Member{}, common.ErrInternal
 		}
 		for _, member := range usersResp.Members {
 			allUsers = append(allUsers, member)
@@ -357,23 +380,29 @@ func (s *Slack) ChannelMessageHistory(channelID string, latest, oldest int64) ([
 
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
-			return []Message{}, err
+			logrus.WithError(err).WithFields(logrus.Fields{"url": urlStr}).Error("Can't create http request")
+			return []Message{}, common.ErrInternal
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		res := MessagesHistory{}
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			return []Message{}, err
+			logrus.WithError(err).WithField("request", req).Error("Can't do http request")
+			return []Message{}, common.ErrInternal
 		}
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return []Message{}, err
+			logrus.WithError(err).WithField("request", req).Error("Can't read response body")
+			return []Message{}, common.ErrInternal
 		}
 		if err := json.Unmarshal(body, &res); err != nil {
-			return []Message{}, err
+			logrus.WithError(err).WithField("res", string(body)).
+				Error("can't unmarshal response body for channel messages history")
+			return []Message{}, common.ErrInternal
 		}
 		if !res.Ok {
-			return []Message{}, fmt.Errorf(res.Error)
+			logrus.WithField("response", res).Error(res.Error)
+			return []Message{}, common.ErrInternal
 		}
 		channelMessages = append(channelMessages, res.Messages...)
 		if !res.HasMore {
@@ -396,24 +425,30 @@ func (s *Slack) ChannelMessage(channelID, ts string) (Message, error) {
 
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
-		return Message{}, err
+		logrus.WithError(err).WithFields(logrus.Fields{"url": urlStr}).Error("Can't create http request")
+		return Message{}, common.ErrInternal
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	res := MessagesHistory{}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return Message{}, err
+		logrus.WithError(err).WithField("request", req).Error("Can't do http request")
+		return Message{}, common.ErrInternal
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return Message{}, err
+		logrus.WithError(err).WithField("request", req).Error("Can't read response body")
+		return Message{}, common.ErrInternal
 	}
 	if err := json.Unmarshal(body, &res); err != nil {
-		return Message{}, err
+		logrus.WithError(err).WithField("res", string(body)).
+			Error("can't unmarshal response body for channel message")
+		return Message{}, common.ErrInternal
 	}
 	if !res.Ok {
-		return Message{}, fmt.Errorf(res.Error)
+		logrus.WithField("response", res).Error(res.Error)
+		return Message{}, common.ErrInternal
 	}
 	if len(res.Messages) == 0 {
 		return Message{}, nil
@@ -428,7 +463,8 @@ func (s *Slack) MessagePermalink(channelID, ts string) (string, error) {
 
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
-		return "", err
+		logrus.WithError(err).WithFields(logrus.Fields{"url": urlStr}).Error("Can't create http request")
+		return "", common.ErrInternal
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	var res struct {
@@ -438,18 +474,23 @@ func (s *Slack) MessagePermalink(channelID, ts string) (string, error) {
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		logrus.WithError(err).WithField("request", req).Error("Can't do http request")
+		return "", common.ErrInternal
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		logrus.WithError(err).WithField("request", req).Error("Can't read response body")
+		return "", common.ErrInternal
 	}
 	if err := json.Unmarshal(body, &res); err != nil {
-		return "", err
+		logrus.WithError(err).WithField("res", string(body)).
+			Error("can't unmarshal response body for channel message permalink")
+		return "", common.ErrInternal
 	}
 	if !res.Ok {
-		return "", fmt.Errorf(res.Error)
+		logrus.WithField("response", res).Error(res.Error)
+		return "", common.ErrInternal
 	}
 	return res.Permalink, nil
 }
@@ -466,23 +507,29 @@ func (s *Slack) ChannelsList() ([]Channel, error) {
 
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
-			return []Channel{}, err
+			logrus.WithError(err).WithFields(logrus.Fields{"url": urlStr}).Error("Can't create http request")
+			return []Channel{}, common.ErrInternal
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		res := ChannelList{}
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			return []Channel{}, err
+			logrus.WithError(err).WithField("request", req).Error("Can't do http request")
+			return []Channel{}, common.ErrInternal
 		}
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return []Channel{}, err
+			logrus.WithError(err).WithField("request", req).Error("Can't read response body")
+			return []Channel{}, common.ErrInternal
 		}
 		if err := json.Unmarshal(body, &res); err != nil {
-			return []Channel{}, err
+			logrus.WithError(err).WithField("res", string(body)).
+				Error("can't unmarshal response body for channels list")
+			return []Channel{}, common.ErrInternal
 		}
 		if !res.Ok {
-			return []Channel{}, fmt.Errorf(res.Error)
+			logrus.WithField("response", res).Error(res.Error)
+			return []Channel{}, common.ErrInternal
 		}
 		channels = append(channels, res.Channels...)
 		if res.ResponseMetadata.NextCursor == "" {

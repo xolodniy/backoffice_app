@@ -1,6 +1,6 @@
 package common
 
-import "fmt"
+import "errors"
 
 const (
 	CommitTypeMigration = "migration"
@@ -13,7 +13,33 @@ const (
 	OnDutyFe = "ondutyfe"
 )
 
+// ErrConflict implements error for HTTP 409
+type ErrConflict struct {
+	Msg string
+}
+
+// Error implements error interface
+func (err ErrConflict) Error() string {
+	if err.Msg == "" {
+		return "Ошибка состояния данных"
+	}
+	return err.Msg
+}
+
+// ErrNotFound implements errpr for HTTP 404
+type ErrNotFound struct {
+	Msg string
+}
+
+// Error implements error interface
+func (err ErrNotFound) Error() string {
+	if err.Msg == "" {
+		return "Запись не найдена"
+	}
+	return err.Msg
+}
+
 var (
-	ErrInternal = fmt.Errorf("Внутренняя ошибка сервера, повторите попытку позже или обратитесь к системному администратору")
-	ErrNotFound = fmt.Errorf("Запись не найдена")
+	ErrInternal      = errors.New("Внутренняя ошибка сервера, повторите попытку позже или обратитесь к системному администратору")
+	ErrModelNotFound = errors.New("Запись не найдена")
 )
