@@ -1190,12 +1190,14 @@ func (a *App) SetVacationPeriod(dateStart, dateEnd, message, userID string) erro
 		return common.ErrConflict{"Date of start vacation bigger then data of end"}
 	}
 
-	a.model.SaveVacation(model.Vacation{
+	if err := a.model.SaveVacation(model.Vacation{
 		UserID:    userID,
 		DateStart: dStart,
 		DateEnd:   dEnd,
 		Message:   message,
-	})
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
