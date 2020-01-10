@@ -99,13 +99,14 @@ slack:
       - 'Stepan Morozov'
       - 'Arthur Danilevskiy'
       - 'Roman Vlasenko'
-      - 'Muzafar Muradov'
     feteam:
       - 'Andrey Solovyov'
       - 'Denis Kolosov'
       - 'Dmitrii Tkachenko'
     design:
       - 'Vadim Zaripov'
+    qateam:
+      - 'Galina Gulidova'
     devops:
       - 'Denis Yudin'
   botids:

@@ -11,6 +11,10 @@ const (
 
 	OnDutyBe = "ondutybe"
 	OnDutyFe = "ondutyfe"
+
+	FETeam = "feteam"
+	BETeam = "beteam"
+	QATeam = "qateam"
 )
 
 var (

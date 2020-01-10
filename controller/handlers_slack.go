@@ -132,6 +132,10 @@ func (c *Controller) messagesCheck(ctx *gin.Context) {
 	case request.Event.ThreadTs != "":
 		go c.App.CheckUserAfkVacation(request.Event.Text, request.Event.ThreadTs, request.Event.Channel)
 		go c.App.SendMentionUsersOnDuty(request.Event.Text, request.Event.ThreadTs, request.Event.Channel)
+		// only for messages in thread
+		if request.Event.ThreadTs != request.Event.Ts {
+			go c.App.SendMentionUsersInTeam(request.Event.Text, request.Event.ThreadTs, request.Event.Channel)
+		}
 	case request.Event.Text != "":
 		go c.App.CheckUserAfkVacation(request.Event.Text, request.Event.Ts, request.Event.Channel)
 		go c.App.SendMentionUsersOnDuty(request.Event.Text, request.Event.Ts, request.Event.Channel)
