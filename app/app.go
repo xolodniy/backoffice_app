@@ -2069,20 +2069,22 @@ func (a *App) SendMentionUsersInTeam(message, ts, channel string) {
 	if strings.Contains(strings.ToLower(message), common.SlackKeyWordFETeam) {
 		var message string
 		for _, member := range a.Config.Slack.Employees.FeTeam {
-			if a.GetUserInfoByTagValue(TagUserSlackRealName, member)[TagUserSlackID] == "" {
+			userSlackID := a.GetUserInfoByTagValue(TagUserSlackRealName, member)[TagUserSlackID]
+			if userSlackID == "" {
 				continue
 			}
-			message += "<@" + a.GetUserInfoByTagValue(TagUserSlackRealName, member)[TagUserSlackID] + "> "
+			message += "<@" + userSlackID + "> "
 		}
 		a.Slack.SendToThread(message+" "+a.Slack.Employees.TeamLeaderFE, channel, ts)
 	}
 	if strings.Contains(strings.ToLower(message), common.SlackKeyWordQATeam) {
 		var message string
 		for _, member := range a.Config.Slack.Employees.QATeam {
-			if a.GetUserInfoByTagValue(TagUserSlackRealName, member)[TagUserSlackID] == "" {
+			userSlackID := a.GetUserInfoByTagValue(TagUserSlackRealName, member)[TagUserSlackID]
+			if userSlackID == "" {
 				continue
 			}
-			message += "<@" + a.GetUserInfoByTagValue(TagUserSlackRealName, member)[TagUserSlackID] + "> "
+			message += "<@" + userSlackID + "> "
 		}
 		a.Slack.SendToThread(message, channel, ts)
 	}
