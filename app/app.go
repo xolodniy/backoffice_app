@@ -992,7 +992,8 @@ func (a *App) CheckUserAfkVacation(message, threadId, channel string) {
 				logrus.Errorf("can't take information about user name from vocabulary with id: %v", vacation.UserID)
 				userInfo[TagUserSlackRealName] = "This user"
 			}
-			a.Slack.SendToThread(fmt.Sprintf("*%s* is on vacation, his message is: \n\n'%s'", userInfo[TagUserSlackRealName], vacation.Message), channel, threadId)
+			a.Slack.SendToThread(fmt.Sprintf("*%s* is on vacation until %s, his message is: \n\n'%s'",
+				userInfo[TagUserSlackRealName], vacation.DateEnd.Format("02.01.2006"), vacation.Message), channel, threadId)
 		}
 	}
 }
