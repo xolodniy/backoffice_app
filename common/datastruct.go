@@ -11,6 +11,10 @@ const (
 
 	OnDutyBe = "ondutybe"
 	OnDutyFe = "ondutyfe"
+
+	SlackKeyWordFETeam = "feteam"
+	SlackKeyWordBETeam = "beteam"
+	SlackKeyWordQATeam = "qateam"
 )
 
 var (
