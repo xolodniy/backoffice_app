@@ -503,18 +503,19 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 			Error("can't create file")
 		return common.ErrInternal
 	}
-
+	logFields := logrus.Fields{
+		"issues":             issues,
+		"filename":           filename,
+		"channel":            channel,
+		"withAdditionalInfo": withAdditionalInfo,
+		"raw":                []string{},
+	}
 	writer := csv.NewWriter(file)
 	if withAdditionalInfo {
 		err = writer.Write([]string{"Type", "Key", "Summary", "Status", "Epic"})
 		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{
-				"issues":             issues,
-				"filename":           filename,
-				"channel":            channel,
-				"withAdditionalInfo": withAdditionalInfo,
-				"raw":                []string{"Type", "Key", "Summary", "Status", "Epic"},
-			}).Error("can't create raw in csv")
+			logFields["raw"] = []string{"Type", "Key", "Summary", "Status", "Epic"}
+			logrus.WithError(err).WithFields(logFields).Error("can't create raw in csv")
 			return common.ErrInternal
 		}
 		for _, issue := range issues {
@@ -527,13 +528,8 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 			}
 			err = writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName})
 			if err != nil {
-				logrus.WithError(err).WithFields(logrus.Fields{
-					"issues":             issues,
-					"filename":           filename,
-					"channel":            channel,
-					"withAdditionalInfo": withAdditionalInfo,
-					"raw":                []string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName},
-				}).Error("can't create raw in csv")
+				logFields["raw"] = []string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary, issue.Fields.Status.Name, epicName}
+				logrus.WithError(err).WithFields(logFields).Error("can't create raw in csv")
 				return common.ErrInternal
 			}
 		}
@@ -541,25 +537,15 @@ func (a *App) CreateIssuesCsvReport(issues []jira.Issue, filename, channel strin
 	if !withAdditionalInfo {
 		err = writer.Write([]string{"Type", "Key", "Summary"})
 		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{
-				"issues":             issues,
-				"filename":           filename,
-				"channel":            channel,
-				"withAdditionalInfo": withAdditionalInfo,
-				"raw":                []string{"Type", "Key", "Summary"},
-			}).Error("can't create raw in csv")
+			logFields["raw"] = []string{"Type", "Key", "Summary"}
+			logrus.WithError(err).WithFields(logFields).Error("can't create raw in csv")
 			return common.ErrInternal
 		}
 		for _, issue := range issues {
 			err = writer.Write([]string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary})
 			if err != nil {
-				logrus.WithError(err).WithFields(logrus.Fields{
-					"issues":             issues,
-					"filename":           filename,
-					"channel":            channel,
-					"withAdditionalInfo": withAdditionalInfo,
-					"raw":                []string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary},
-				}).Error("can't create raw in csv")
+				logFields["raw"] = []string{issue.Fields.Type.Name, issue.Key, issue.Fields.Summary}
+				logrus.WithError(err).WithFields(logFields).Error("can't create raw in csv")
 				return common.ErrInternal
 			}
 		}
