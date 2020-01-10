@@ -2055,7 +2055,7 @@ func (a *App) SendMentionUsersOnDuty(message, ts, channel string) {
 }
 
 func (a *App) SendMentionUsersInTeam(message, ts, channel string) {
-	if strings.Contains(strings.ToLower(message), common.SlackKeyWordBETeam) {
+	if strings.Contains(strings.ToLower(message), common.BETeam) {
 		var message string
 		for _, member := range a.Config.Slack.Employees.BeTeam {
 			userSlackID := a.GetUserInfoByTagValue(TagUserSlackRealName, member)[TagUserSlackID]
@@ -2066,7 +2066,7 @@ func (a *App) SendMentionUsersInTeam(message, ts, channel string) {
 		}
 		a.Slack.SendToThread(message+" "+a.Slack.Employees.TeamLeaderBE, channel, ts)
 	}
-	if strings.Contains(strings.ToLower(message), common.SlackKeyWordFETeam) {
+	if strings.Contains(strings.ToLower(message), common.FETeam) {
 		var message string
 		for _, member := range a.Config.Slack.Employees.FeTeam {
 			userSlackID := a.GetUserInfoByTagValue(TagUserSlackRealName, member)[TagUserSlackID]
@@ -2077,7 +2077,7 @@ func (a *App) SendMentionUsersInTeam(message, ts, channel string) {
 		}
 		a.Slack.SendToThread(message+" "+a.Slack.Employees.TeamLeaderFE, channel, ts)
 	}
-	if strings.Contains(strings.ToLower(message), common.SlackKeyWordQATeam) {
+	if strings.Contains(strings.ToLower(message), common.QATeam) {
 		var message string
 		for _, member := range a.Config.Slack.Employees.QATeam {
 			userSlackID := a.GetUserInfoByTagValue(TagUserSlackRealName, member)[TagUserSlackID]
