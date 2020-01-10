@@ -126,7 +126,8 @@ func (c *Controller) messagesCheck(ctx *gin.Context) {
 	switch {
 	case err != nil:
 		logrus.WithError(err).Errorf("Can't bind json from slack afk check request")
-	case request.Event.Subtype == "message_deleted", request.Event.Subtype == "message_changed":
+	case request.Event.Subtype == "message_deleted", request.Event.Subtype == "message_changed",
+		request.Event.BotID != "" || request.Event.Subtype != "":
 		break
 	case request.Event.ThreadTs != "":
 		go c.App.CheckUserAfkVacation(request.Event.Text, request.Event.ThreadTs, request.Event.Channel)
