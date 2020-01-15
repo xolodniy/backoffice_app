@@ -9,7 +9,7 @@ backend_port: 23799
 nginx_port: 80
 nginx_hosts: ["back-office-app.demo.atnr.pro"]
 
-bitbucket_private_token: c3RlcGFuLm1vcm96b3ZAdGhlZmxvdy5nbG9iYWw6MTIzMTIzMTIz # login:password in base64 TODO: Encrypt it.
+bitbucket_private_token: c3RlcGFuLm1vcm96b3ZAYXRuci5wcm86YnVnaXZ1Z2k= # login:password in base64 TODO: Encrypt it.
 
 jira_login: stepan.morozov@atnr.pro # TODO: special account with full read access
 jira_token: GaQ1oimS8bWXNdqcFyRG492D
