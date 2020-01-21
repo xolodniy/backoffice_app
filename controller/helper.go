@@ -32,11 +32,17 @@ func (c *Controller) respondError(ctx *gin.Context, err error) {
 		return
 	}
 
+	_, isErrConflict := err.(common.ErrConflict)
+	_, isErrNotFound := err.(common.ErrNotFound)
+
 	h := gin.H{"error": err.Error()}
 	if err == common.ErrInternal {
 		ctx.JSON(http.StatusInternalServerError, h)
-	} else if err == common.ErrNotFound {
+	} else if err == common.ErrModelNotFound ||
+		isErrNotFound {
 		ctx.JSON(http.StatusNotFound, h)
+	} else if isErrConflict {
+		ctx.JSON(http.StatusConflict, h)
 	} else {
 		ctx.JSON(http.StatusBadRequest, h)
 	}

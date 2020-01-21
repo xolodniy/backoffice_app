@@ -1,13 +1,17 @@
 package hubstaff
 
 import (
+	"backoffice_app/common"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"backoffice_app/config"
 )
@@ -78,7 +82,8 @@ func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
 
 	request, err := http.NewRequest("POST", h.APIURL+"/v1/auth", strings.NewReader(form.Encode()))
 	if err != nil {
-		return "", fmt.Errorf("can't create http POST Request: %s", err)
+		logrus.WithError(err).WithField("request", request).Error("can't create http POST Request")
+		return "", common.ErrInternal
 	}
 	if err != nil {
 		return "", err
@@ -89,10 +94,18 @@ func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return "", fmt.Errorf("can't send http Request: %s", err)
+		logrus.WithError(err).WithField("request", request).Error("can't send http POST Request")
+		return "", common.ErrInternal
+	}
+	dump, err := httputil.DumpResponse(response, true)
+	if err != nil {
+		logrus.WithError(err).Errorf("can't dump response for logging")
+		return "", common.ErrInternal
 	}
 	if response.StatusCode != 200 {
-		return "", fmt.Errorf("invalid response code: %d", response.StatusCode)
+		logrus.WithError(err).WithFields(logrus.Fields{"request": request, "responseCode": response.StatusCode, "responseBody": string(dump)}).
+			Error("invalid response code")
+		return "", common.ErrInternal
 	}
 	defer response.Body.Close()
 
@@ -105,7 +118,9 @@ func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
 		} `json:"user"`
 	}{}
 	if err := json.NewDecoder(response.Body).Decode(&t); err != nil {
-		return "", fmt.Errorf("can't decode response: %s", err)
+		logrus.WithError(err).WithFields(logrus.Fields{"request": request, "responseCode": response.StatusCode, "responseBody": string(dump)}).
+			Error("can't decode response")
+		return "", common.ErrInternal
 	}
 	return t.User.AuthToken, nil
 }
@@ -114,35 +129,51 @@ func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
 func (h *Hubstaff) do(path string) ([]byte, error) {
 	request, err := http.NewRequest("GET", h.APIURL+path, nil)
 	if err != nil {
-		return nil, fmt.Errorf("can't create http GET Request: %s", err)
+		logrus.WithError(err).WithField("path", path).Error("Can't create http request")
+		return nil, common.ErrInternal
 	}
 
 	request.Header.Set("App-Token", h.AppToken)
 	request.Header.Set("Auth-Token", h.AuthToken)
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		return nil, fmt.Errorf("can't send http Request: %s", err)
+		logrus.WithError(err).WithField("request", request).Error("Can't do http request")
+		return nil, common.ErrInternal
 	}
 	if response.StatusCode != 200 {
-		return nil, fmt.Errorf("invalid response code: %d", response.StatusCode)
+		dump, err := httputil.DumpResponse(response, true)
+		if err != nil {
+			logrus.WithError(err).Errorf("can't dump response for logging")
+			return nil, common.ErrInternal
+		}
+		logrus.WithError(err).WithFields(logrus.Fields{"request": request, "responseCode": response.StatusCode, "responseBody": string(dump)}).
+			Error("invalid response code")
+		return nil, common.ErrInternal
 	}
-	return ioutil.ReadAll(response.Body)
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		logrus.WithError(err).WithField("request", request).Error("Can't read response body")
+		return nil, common.ErrInternal
+	}
+	return body, nil
 }
 
 // HubstaffUsers returns a slice of Hubstaff users
 func (h *Hubstaff) HubstaffUsers() ([]UserReport, error) {
 	apiURL := "/v1/users"
-	orgsRaw, err := h.do(apiURL)
+	res, err := h.do(apiURL)
 	if err != nil {
-		return nil, fmt.Errorf("error on getting workers list: %v", err)
+		return nil, err
 	}
 
 	usersSlice := struct {
 		List []UserReport `json:"users"`
 	}{}
 
-	if err = json.Unmarshal(orgsRaw, &usersSlice); err != nil {
-		return nil, fmt.Errorf("can't decode response: %s", err)
+	if err = json.Unmarshal(res, &usersSlice); err != nil {
+		logrus.WithError(err).WithField("res", string(res)).
+			Error("can't  unmarshal response body for hubstaff users")
+		return nil, common.ErrInternal
 	}
 	return usersSlice.List, nil
 }
@@ -151,14 +182,16 @@ func (h *Hubstaff) HubstaffUsers() ([]UserReport, error) {
 func (h *Hubstaff) CurrentActivity() ([]LastActivity, error) {
 	rawResponse, err := h.do(fmt.Sprintf("/v1/organizations/%d/last_activity?include_removed=false", h.OrgID))
 	if err != nil {
-		return []LastActivity{}, fmt.Errorf("error on getting last activities data: %v", err)
+		return []LastActivity{}, err
 	}
 	activities := struct {
 		List []LastActivity `json:"last_activities"`
 	}{}
 
 	if err = json.Unmarshal(rawResponse, &activities); err != nil {
-		return []LastActivity{}, fmt.Errorf("can't decode response: %s", err)
+		logrus.WithError(err).WithField("res", string(rawResponse)).
+			Error("can't  unmarshal response body for hubstaff users")
+		return []LastActivity{}, common.ErrInternal
 	}
 	if len(activities.List) == 0 {
 		return []LastActivity{}, nil
@@ -204,10 +237,13 @@ func (h *Hubstaff) getProjectNameByID(projectID int) (string, error) {
 	}{}
 
 	if err = json.Unmarshal(rawResponse, &response); err != nil {
-		return "", err
+		logrus.WithError(err).WithField("res", string(rawResponse)).
+			Error("can't  unmarshal response body for project name by id")
+		return "", common.ErrInternal
 	}
 	if response.Project.Name == "" {
-		return "", fmt.Errorf("No projects have found by id: %d", projectID)
+		logrus.WithError(err).WithField("projectID", projectID).Error("No projects have found by id")
+		return "", common.ErrNotFound{"No projects have found by id"}
 	}
 	return response.Project.Name, nil
 }
@@ -228,10 +264,13 @@ func (h *Hubstaff) getJiraTaskKeyByID(taskID int) (string, string, error) {
 	}{}
 
 	if err = json.Unmarshal(rawResponse, &response); err != nil {
-		return "", "", err
+		logrus.WithError(err).WithField("res", string(rawResponse)).
+			Error("can't  unmarshal response body for jira task key by id")
+		return "", "", common.ErrInternal
 	}
 	if response.Task.JiraKey == "" {
-		return "", "", fmt.Errorf("No tasks have found by id: %d", taskID)
+		logrus.WithError(err).WithField("taskID", taskID).Error("No tasks have found by id")
+		return "", "", common.ErrNotFound{"No tasks have found by id"}
 	}
 	return response.Task.JiraKey, response.Task.Summary, nil
 }
@@ -245,7 +284,7 @@ func (h *Hubstaff) UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd 
 
 	orgsRaw, err := h.do(apiURL)
 	if err != nil {
-		return []UserReport{}, fmt.Errorf("error on getting workers worked time: %v", err)
+		return []UserReport{}, err
 	}
 	orgs := struct {
 		List []struct {
@@ -254,20 +293,26 @@ func (h *Hubstaff) UsersWorkTimeByMember(dateOfWorkdaysStart, dateOfWorkdaysEnd 
 	}{}
 
 	if err = json.Unmarshal(orgsRaw, &orgs); err != nil {
-		return []UserReport{}, fmt.Errorf("can't decode response: %s", err)
+		logrus.WithError(err).WithField("res", string(orgsRaw)).
+			Error("can't  unmarshal response body for users work time by member")
+		return []UserReport{}, common.ErrInternal
 	}
 
 	if len(orgs.List) == 0 {
-		return []UserReport{}, fmt.Errorf("No tracked time for now or no organization found")
+		logrus.WithError(err).WithFields(logrus.Fields{"dateOfWorkdaysStart": dateOfWorkdaysStart, "dateOfWorkdaysEnd": dateOfWorkdaysEnd}).
+			Error("No tracked time for now or no organization found")
+		return []UserReport{}, common.ErrNotFound{"No tracked time for now or no organization found"}
 	}
 	if len(orgs.List[0].Users) == 0 {
-		return []UserReport{}, fmt.Errorf("No workers found")
+		logrus.WithError(err).WithFields(logrus.Fields{"dateOfWorkdaysStart": dateOfWorkdaysStart, "dateOfWorkdaysEnd": dateOfWorkdaysEnd}).
+			Error("No workers found")
+		return []UserReport{}, common.ErrNotFound{"No workers found"}
 	}
 
 	//get hubstaff's user list to add emails
 	hubstaffUsers, err := h.HubstaffUsers()
 	if err != nil {
-		return []UserReport{}, fmt.Errorf("failed to fetch data from hubstaff")
+		return []UserReport{}, err
 	}
 	for i, userReport := range orgs.List[0].Users {
 		for _, user := range hubstaffUsers {
@@ -289,7 +334,7 @@ func (h *Hubstaff) UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd ti
 
 	orgsRaw, err := h.do(apiURL)
 	if err != nil {
-		return []DateReport{}, fmt.Errorf("error on getting workers worked time: %v", err)
+		return []DateReport{}, err
 	}
 	orgs := struct {
 		List []struct {
@@ -298,14 +343,19 @@ func (h *Hubstaff) UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd ti
 	}{}
 
 	if err = json.Unmarshal(orgsRaw, &orgs); err != nil {
-		return []DateReport{}, fmt.Errorf("can't decode response: %s", err)
+		logrus.WithError(err).WithField("res", string(orgsRaw)).
+			Error("can't  unmarshal response body for users work time by date")
+		return []DateReport{}, common.ErrInternal
 	}
-
 	if len(orgs.List) == 0 {
-		return []DateReport{}, fmt.Errorf("No tracked time for now or no organization found")
+		logrus.WithError(err).WithFields(logrus.Fields{"dateOfWorkdaysStart": dateOfWorkdaysStart, "dateOfWorkdaysEnd": dateOfWorkdaysEnd}).
+			Error("No tracked time for now or no organization found")
+		return []DateReport{}, common.ErrNotFound{"No tracked time for now or no organization found"}
 	}
 	if len(orgs.List[0].Dates) == 0 {
-		return []DateReport{}, fmt.Errorf("No tracked time for now found")
+		logrus.WithError(err).WithFields(logrus.Fields{"dateOfWorkdaysStart": dateOfWorkdaysStart, "dateOfWorkdaysEnd": dateOfWorkdaysEnd}).
+			Error("No tracked time for now found")
+		return []DateReport{}, common.ErrNotFound{"No tracked time for now found"}
 	}
 	return orgs.List[0].Dates, nil
 }
@@ -314,7 +364,7 @@ func (h *Hubstaff) UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd ti
 func (h *Hubstaff) UserWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd time.Time, email string) (DateReport, error) {
 	users, err := h.HubstaffUsers()
 	if err != nil {
-		return DateReport{}, fmt.Errorf("error on getting workers from hubstaff: %v", err)
+		return DateReport{}, err
 	}
 	var userName string
 	for _, user := range users {
@@ -324,11 +374,13 @@ func (h *Hubstaff) UserWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd tim
 		}
 	}
 	if userName == "" {
-		return DateReport{}, fmt.Errorf("user was not found in Hubstaff by email: %v", email)
+		logrus.WithError(err).WithFields(logrus.Fields{"dateOfWorkdaysStart": dateOfWorkdaysStart, "dateOfWorkdaysEnd": dateOfWorkdaysEnd, "email": email}).
+			Error("User was not found in Hubstaff by email")
+		return DateReport{}, common.ErrNotFound{"User was not found in Hubstaff by email"}
 	}
 	dateReports, err := h.UsersWorkTimeByDate(dateOfWorkdaysStart, dateOfWorkdaysEnd)
 	if err != nil {
-		return DateReport{}, fmt.Errorf("error on getting workers worked time: %v", err)
+		return DateReport{}, err
 	}
 	var userWorkReport DateReport
 	for _, dateReport := range dateReports {
@@ -351,14 +403,16 @@ func (h *Hubstaff) LastUserNote(userID, projectID string) (Note, error) {
 	params.Add("projects", projectID)
 	rawResponse, err := h.do(fmt.Sprintf("/v1/notes/?%s", params.Encode()))
 	if err != nil {
-		return Note{}, fmt.Errorf("error on getting users notes data: %v", err)
+		return Note{}, err
 	}
 	notesList := struct {
 		Notes []Note `json:"notes"`
 	}{}
 
 	if err = json.Unmarshal(rawResponse, &notesList); err != nil {
-		return Note{}, fmt.Errorf("can't decode response: %s", err)
+		logrus.WithError(err).WithField("res", string(rawResponse)).
+			Error("can't  unmarshal response body for last user note")
+		return Note{}, common.ErrInternal
 	}
 	if len(notesList.Notes) == 0 {
 		return Note{}, nil

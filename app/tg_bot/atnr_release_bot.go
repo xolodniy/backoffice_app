@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Syfaro/telegram-bot-api"
+	tgbotapi "github.com/Syfaro/telegram-bot-api"
 	"github.com/sirupsen/logrus"
 
 	"backoffice_app/common"
@@ -119,7 +119,7 @@ func (rb *ReleaseBot) answerEmptyCallback(callbackQueryID string) {
 
 func (rb *ReleaseBot) processRegistration(chat *tgbotapi.Chat) {
 	_, err := rb.m.GetRbAuthByTgUserID(chat.ID)
-	if err != common.ErrNotFound {
+	if err != common.ErrModelNotFound {
 		rb.sendText(chat.ID, alreadyRegistered)
 		return
 	}

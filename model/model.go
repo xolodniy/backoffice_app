@@ -133,7 +133,7 @@ func (m *Model) GetCommitByHash(hash string) (Commit, error) {
 	var res Commit
 	if err := m.db.Where(Commit{Hash: hash}).First(&res).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			return Commit{}, common.ErrNotFound
+			return Commit{}, common.ErrModelNotFound
 		}
 		logrus.WithError(err).WithField("hash", hash).Error("can't get commit")
 		return Commit{}, common.ErrInternal
@@ -208,7 +208,7 @@ func (m *Model) GetVacation(userID string) (Vacation, error) {
 	var res Vacation
 	if err := m.db.Find(&res).Where(Vacation{UserID: userID}).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			return Vacation{}, common.ErrNotFound
+			return Vacation{}, common.ErrModelNotFound
 		}
 		logrus.WithError(err).WithField("userID", userID).Error("can't get vacation")
 		return Vacation{}, common.ErrInternal
@@ -266,7 +266,7 @@ func (m *Model) GetRbAuthByTgUserID(TgUserID int64) (RbAuth, error) {
 	var res RbAuth
 	err := m.db.Take(&res, RbAuth{TgUserID: TgUserID}).Error
 	if err == gorm.ErrRecordNotFound {
-		return RbAuth{}, common.ErrNotFound
+		return RbAuth{}, common.ErrModelNotFound
 	}
 	if err != nil {
 		logrus.WithError(err).WithField("TgUserID", TgUserID).Error("can't get rb auth by user id")
