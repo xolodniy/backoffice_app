@@ -97,12 +97,12 @@ func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
 		logrus.WithError(err).WithField("request", request).Error("can't send http POST Request")
 		return "", common.ErrInternal
 	}
+	dump, err := httputil.DumpResponse(response, true)
+	if err != nil {
+		logrus.WithError(err).Errorf("can't dump response for logging")
+		return "", common.ErrInternal
+	}
 	if response.StatusCode != 200 {
-		dump, err := httputil.DumpResponse(response, true)
-		if err != nil {
-			logrus.WithError(err).Errorf("can't dump response for logging")
-			return "", common.ErrInternal
-		}
 		logrus.WithError(err).WithFields(logrus.Fields{"request": request, "responseCode": response.StatusCode, "responseBody": string(dump)}).
 			Error("invalid response code")
 		return "", common.ErrInternal
@@ -118,11 +118,6 @@ func (h *Hubstaff) ObtainAuthToken(auth HubstaffAuth) (string, error) {
 		} `json:"user"`
 	}{}
 	if err := json.NewDecoder(response.Body).Decode(&t); err != nil {
-		dump, err := httputil.DumpResponse(response, true)
-		if err != nil {
-			logrus.WithError(err).Errorf("can't dump response for logging")
-			return "", common.ErrInternal
-		}
 		logrus.WithError(err).WithFields(logrus.Fields{"request": request, "responseCode": response.StatusCode, "responseBody": string(dump)}).
 			Error("can't decode response")
 		return "", common.ErrInternal
@@ -153,7 +148,6 @@ func (h *Hubstaff) do(path string) ([]byte, error) {
 		}
 		logrus.WithError(err).WithFields(logrus.Fields{"request": request, "responseCode": response.StatusCode, "responseBody": string(dump)}).
 			Error("invalid response code")
-		fmt.Println(string(dump))
 		return nil, common.ErrInternal
 	}
 	body, err := ioutil.ReadAll(response.Body)

@@ -1950,7 +1950,6 @@ func (a *App) SetOnDutyUsers(team string, userMentions []string) error {
 			continue
 		}
 		if common.ValueIn(user.Id, usersIDsOnVacation...) {
-			logrus.WithField("userMentions", userMentions).Errorf("User <@%s> is on vacation!", user.Id)
 			return common.ErrConflict{fmt.Sprintf("User <@%s> is on vacation!", user.Id)}
 		}
 		usersOnDuty = append(usersOnDuty, user)
