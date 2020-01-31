@@ -77,7 +77,7 @@ bitbucket:
   owner: atnrpro
   auth:
     username: stepan.morozov@atnr.pro
-    password: 123123123
+    password: bugivugi
 
 slack:
   apiurl: https://slack.com/api
