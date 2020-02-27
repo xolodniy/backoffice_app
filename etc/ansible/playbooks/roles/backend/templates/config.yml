@@ -143,7 +143,7 @@ database:
 amplify:
   notifychannelid: CKBT66G5A
   channelstag: '#cdto-staging'
-  channelprod: '#cdto'
+  channelprod: '#monitoring'
   mention:
     - U97DJLL11
     - UG47GFL92
