@@ -261,3 +261,28 @@ func (c *Controller) setOnDutyFrontend(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, "Success! These users are on duty for frontend team!")
 }
+
+func (c *Controller) workRatioReport(ctx *gin.Context) {
+
+	request := struct {
+		Text   string `form:"text" binding:"required"`
+		UserId string `form:"user_id" binding:"required"`
+	}{}
+	errWrongFormat := `Failed! Format is wrong! Please, type /work-ratio 02.01.1970 02.01.1970`
+	err := ctx.ShouldBindWith(&request, binding.FormPost)
+	if err != nil {
+		ctx.String(http.StatusOK, errWrongFormat)
+		logrus.WithError(err).Error("can't parse request to json")
+		return
+	}
+	datesSlice := strings.Split(request.Text, " ")
+	if len(datesSlice) != 2 {
+		ctx.String(http.StatusOK, errWrongFormat)
+		logrus.WithField("datesSlice", datesSlice).Error(`datesSlice has count of elements != 2`)
+		return
+	}
+	go c.App.WorkRatioReport(datesSlice[0], datesSlice[1], request.UserId)
+	ctx.JSON(http.StatusOK, gin.H{
+		"text": "Report is preparing. Your request will be processed soon.",
+	})
+}

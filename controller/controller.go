@@ -81,6 +81,7 @@ func (c *Controller) initRoutes() {
 	slack.POST("/api/v1/slack/vacation", c.vacation)
 	slack.POST("/api/v1/slack/set-onduty-be", c.setOnDutyBackend)
 	slack.POST("/api/v1/slack/set-onduty-fe", c.setOnDutyFrontend)
+	slack.POST("/api/v1/slack/work-ratio", c.workRatioReport)
 }
 
 func (c *Controller) checkSignature(ctx *gin.Context) {

@@ -2036,3 +2036,110 @@ func (a *App) SendMentionUsersInTeam(message, ts, channel string) {
 		a.Slack.SendToThread(message, channel, ts)
 	}
 }
+
+func (a *App) WorkRatioReport(dateStart, dateEnd, channel string) {
+	dStart, err := time.Parse("02.01.2006", dateStart)
+	if err != nil {
+		logrus.WithError(err).WithField("dateStart", dateStart).Error("can't parse start date")
+		a.Slack.SendMessage("*Generating work reatio report was failed with err*:\n"+err.Error(), channel)
+		return
+	}
+	dEnd, err := time.Parse("02.01.2006", dateEnd)
+	if err != nil {
+		logrus.WithError(err).WithField("dateEnd", dateEnd).Error("can't parse end date")
+		a.Slack.SendMessage("*Generating work reatio report was failed with err*:\n"+err.Error(), channel)
+		return
+	}
+	issues, err := a.Jira.IssuesClosedInInterim(dStart, dEnd)
+	if err != nil {
+		a.Slack.SendMessage("*Generating work reatio report was failed with err*:\n"+err.Error(), channel)
+		return
+	}
+	// sort by overwork %
+	sort.SliceStable(issues, func(i, j int) bool {
+		iEstimate := issues[i].Fields.TimeTracking.OriginalEstimateSeconds
+		jEstimate := issues[j].Fields.TimeTracking.OriginalEstimateSeconds
+		if iEstimate/100 == 0 || jEstimate/100 == 0 {
+			return false
+		}
+		iTimeSpent := issues[i].Fields.TimeTracking.TimeSpentSeconds
+		jTimeSpent := issues[j].Fields.TimeTracking.TimeSpentSeconds
+		return (iTimeSpent-iEstimate)/(iEstimate/100) <
+			(jTimeSpent - jEstimate/(jEstimate/100))
+	})
+	var workRatio []WorkRatioDTO
+	for _, issue := range issues {
+		developer := issue.DeveloperMap(jira.TagDeveloperName)
+		if developer == "" {
+			developer = jira.NoDeveloper
+		}
+		if common.ValueIn(developer, a.Slack.IgnoreList...) {
+			continue
+		}
+		overWorkedDuration := issue.Fields.TimeTracking.TimeSpentSeconds - issue.Fields.TimeTracking.OriginalEstimateSeconds
+		if overWorkedDuration < issue.Fields.TimeTracking.OriginalEstimateSeconds/10 ||
+			issue.Fields.TimeTracking.RemainingEstimateSeconds != 0 ||
+			issue.Fields.TimeTracking.OriginalEstimateSeconds == 0 || overWorkedDuration < 60*60 ||
+			issue.Fields.TimeTracking.OriginalEstimateSeconds/100 == 0 {
+			continue
+		}
+		workRatio = append(workRatio, WorkRatioDTO{
+			DeveloperName:    developer,
+			ResolutionDate:   time.Time(issue.Fields.Resolutiondate),
+			IssueLink:        fmt.Sprintf("https://atnr.atlassian.net/browse/%[1]s", issue.Key),
+			IssueType:        issue.Fields.Type.Name,
+			OriginalEstimate: issue.Fields.TimeTracking.OriginalEstimate,
+			TimeSpent:        issue.Fields.TimeTracking.TimeSpent,
+			DiffHours:        time.Duration(overWorkedDuration).Hours(),
+			DiffProcent:      overWorkedDuration / (issue.Fields.TimeTracking.OriginalEstimateSeconds / 100),
+		})
+	}
+	if err := a.CreateWorkRatioCsvReport(workRatio, channel); err != nil {
+		a.Slack.SendMessage("*Generating work reatio report was failed with err*:\n"+err.Error(), channel)
+	}
+}
+
+type WorkRatioDTO struct {
+	DeveloperName    string
+	ResolutionDate   time.Time
+	IssueType        string
+	IssueLink        string
+	OriginalEstimate string
+	TimeSpent        string
+	DiffHours        float64
+	DiffProcent      int
+}
+
+// CreateWorkRatioCsvReport create csv file with report about work ratio
+func (a *App) CreateWorkRatioCsvReport(workRatio []WorkRatioDTO, channel string) error {
+	if len(workRatio) == 0 {
+		a.Slack.SendMessage("There are no issues for workRatioReport.csv file", channel)
+		return nil
+	}
+	file, err := os.Create("workRatioReport.csv")
+	if err != nil {
+		logrus.WithError(err).Error("can't create file")
+		return common.ErrInternal
+	}
+	writer := csv.NewWriter(file)
+	err = writer.Write([]string{"Developer", "Resolution date", "Issue link", "Issue type", "Original estimate, h", "Time spent, h", "Diff, h", "Diff, %"})
+	if err != nil {
+		raw := []string{"Developer", "Resolution date", "Issue link", "Issue type", "Original estimate, h", "Time spent, h", "Diff, h", "Diff, %"}
+		logrus.WithError(err).WithField("raw", raw).Error("can't create raw in csv")
+		return common.ErrInternal
+	}
+	for _, issue := range workRatio {
+		err = writer.Write([]string{issue.DeveloperName, issue.ResolutionDate.String(), issue.IssueLink, issue.IssueType,
+			issue.OriginalEstimate, issue.TimeSpent, fmt.Sprintf("%.0f", issue.DiffHours), strconv.Itoa(issue.DiffProcent)})
+		if err != nil {
+			raw := []string{issue.DeveloperName, issue.ResolutionDate.String(), issue.IssueLink, issue.IssueType,
+				issue.OriginalEstimate, issue.TimeSpent, fmt.Sprintf("%.0f", issue.DiffHours), strconv.Itoa(issue.DiffProcent)}
+			logrus.WithError(err).WithField("raw", raw).Error("can't create raw in csv")
+			return common.ErrInternal
+		}
+	}
+
+	writer.Flush()
+	file.Close()
+	return a.SendFileToSlack(channel, "workRatioReport.csv")
+}
