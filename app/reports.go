@@ -5,6 +5,7 @@ import (
 	"backoffice_app/services/jira"
 	"bytes"
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"time"
@@ -49,7 +50,8 @@ func (a *App) WorkRatioReport(dateStart, dateEnd, channel string) {
 		if developer == "" {
 			developer = jira.NoDeveloper
 		}
-		if common.ValueIn(developer, a.Slack.IgnoreList...) {
+		if common.ValueIn(developer, a.Slack.IgnoreList...) ||
+			!common.ValueIn(issue.Fields.Type.Name, jira.TypeBETask, jira.TypeFETask, jira.TypeBESubTask, jira.TypeFESubTask, jira.TypeDesignTask) {
 			continue
 		}
 		overWorkedDuration := issue.Fields.TimeTracking.TimeSpentSeconds - issue.Fields.TimeTracking.OriginalEstimateSeconds
@@ -61,59 +63,62 @@ func (a *App) WorkRatioReport(dateStart, dateEnd, channel string) {
 		}
 		workRatio = append(workRatio, WorkRatioDTO{
 			DeveloperName:    developer,
-			ResolutionDate:   time.Time(issue.Fields.Resolutiondate),
+			ResolutionDate:   time.Time(issue.Fields.Resolutiondate).Format(time.RFC822Z),
 			IssueLink:        fmt.Sprintf("https://atnr.atlassian.net/browse/%[1]s", issue.Key),
 			IssueType:        issue.Fields.Type.Name,
-			OriginalEstimate: issue.Fields.TimeTracking.OriginalEstimate,
-			TimeSpent:        issue.Fields.TimeTracking.TimeSpent,
-			DiffHours:        time.Duration(overWorkedDuration).Hours(),
+			OriginalEstimate: fmt.Sprintf("%v", issue.Fields.TimeTracking.OriginalEstimateSeconds/60),
+			TimeSpent:        fmt.Sprintf("%v", issue.Fields.TimeTracking.TimeSpentSeconds/60),
+			DiffHours:        fmt.Sprintf("%.f", time.Duration(time.Duration(overWorkedDuration)*time.Second).Hours()),
 			DiffProcent:      overWorkedDuration / (issue.Fields.TimeTracking.OriginalEstimateSeconds / 100),
 		})
 	}
-	if err := a.CreateWorkRatioCsvReport(workRatio, channel); err != nil {
+	if err := a.CreateWorkRatioXlsxReport(workRatio, channel); err != nil {
 		a.Slack.SendMessage("*Generating work reatio report was failed with err*:\n"+err.Error(), channel)
 	}
 }
 
 type WorkRatioDTO struct {
 	DeveloperName    string
-	ResolutionDate   time.Time
+	ResolutionDate   string
 	IssueType        string
 	IssueLink        string
 	OriginalEstimate string
 	TimeSpent        string
-	DiffHours        float64
+	DiffHours        string
 	DiffProcent      int
 }
 
-// CreateWorkRatioCsvReport create csv file with report about work ratio
-func (a *App) CreateWorkRatioCsvReport(workRatio []WorkRatioDTO, channel string) error {
+// CreateWorkRatioXlsxReport create csv file with report about work ratio
+func (a *App) CreateWorkRatioXlsxReport(workRatio []WorkRatioDTO, channel string) error {
 	if len(workRatio) == 0 {
 		a.Slack.SendMessage("There are no issues for workRatioReport.csv file", channel)
 		return nil
 	}
 	var sheetRows [][]string
-	sheetRows = append(sheetRows, []string{"Developer", "Resolution date", "Issue link", "Issue type", "Original estimate, h", "Time spent, h", "Diff, h", "Diff, %"})
+	sheetRows = append(sheetRows, []string{""}) // for unlicensed message
+	sheetRows = append(sheetRows, []string{"Developer", "Resolution date", "Issue link", "Issue type", "Original estimate,h", "Time spent,h", "Diff,h", "Diff, %"})
 
 	for _, issue := range workRatio {
-		sheetRows = append(sheetRows, []string{issue.DeveloperName, issue.ResolutionDate.String(), issue.IssueLink, issue.IssueType,
-			issue.OriginalEstimate, issue.TimeSpent, fmt.Sprintf("%.0f", issue.DiffHours), strconv.Itoa(issue.DiffProcent)})
+		sheetRows = append(sheetRows, []string{issue.DeveloperName, issue.ResolutionDate, issue.IssueLink, issue.IssueType,
+			issue.OriginalEstimate, issue.TimeSpent, issue.DiffHours, strconv.Itoa(issue.DiffProcent)})
 
 	}
-	body, err := a.CreateExcel(sheetRows)
-	if err != nil {
-		return err
+	fileName := "workRatio.xlsx"
+	if err := a.CreateExcel(fileName, sheetRows); err != nil {
+		a.Slack.SendMessage("*Generating work reatio report was failed with err*:\n"+err.Error(), channel)
 	}
-	buffer := bytes.NewBuffer(body)
-	//contentType := http.DetectContentType(body)
-	return a.Slack.UploadFile(channel, "application/x-www-form-urlencoded", buffer)
+	return a.SendFileToSlack(channel, fileName)
 }
 
 // CreateExcel creates XLSX from 2-dimensional slice
-func (a *App) CreateExcel(sheetRows [][]string) ([]byte, error) {
+func (a *App) CreateExcel(fileName string, sheetRows [][]string) error {
 	ss := spreadsheet.New()
 	sheet := ss.AddSheet()
-
+	file, err := os.Create(fileName)
+	if err != nil {
+		logrus.WithError(err).Error("can't create file")
+		return common.ErrInternal
+	}
 	for rowIndex, rowStrings := range sheetRows {
 		row := sheet.AddNumberedRow(uint32(rowIndex + 1))
 		for _, columnValue := range rowStrings {
@@ -122,13 +127,18 @@ func (a *App) CreateExcel(sheetRows [][]string) ([]byte, error) {
 	}
 	if err := ss.Validate(); err != nil {
 		logrus.WithError(err).Error("xlsx generic form validation error")
-		return nil, common.ErrInternal
+		return common.ErrInternal
 	}
 	var data []byte
 	buf := bytes.NewBuffer(data)
 	if err := ss.Save(buf); err != nil {
 		logrus.WithError(err).Error("can't write xlsx generic form")
-		return nil, common.ErrInternal
+		return common.ErrInternal
 	}
-	return buf.Bytes(), nil
+	if _, err := file.Write(buf.Bytes()); err != nil {
+		logrus.WithError(err).Error("can't write xlsx file")
+		return common.ErrInternal
+	}
+	file.Close()
+	return nil
 }

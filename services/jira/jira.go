@@ -70,6 +70,7 @@ const (
 	TypeBETask                         = "BE Task"
 	TypeFESubTask                      = "FE Sub-Task"
 	TypeFETask                         = "FE Task"
+	TypeDesignTask                     = "Design Task"
 	TypeStory                          = "Story"
 	TypeBug                            = "Bug"
 	TransitionCreatingDevSubtasks      = "Creating Dev Subtasks"
@@ -152,6 +153,7 @@ func (j *Jira) issues(jqlRequest string) ([]Issue, error) {
 					"priority",
 					"fixVersions",
 					"issuelinks",
+					"resolutiondate",
 				},
 			},
 		)
