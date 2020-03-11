@@ -54,14 +54,14 @@ func (a *App) WorkRatioReport(dateStart, dateEnd time.Time, channel string) {
 			ResolutionDate:   time.Time(issue.Fields.Resolutiondate).Format(time.RFC822Z),
 			IssueLink:        fmt.Sprintf("https://atnr.atlassian.net/browse/%[1]s", issue.Key),
 			IssueType:        issue.Fields.Type.Name,
-			OriginalEstimate: fmt.Sprintf("%v", issue.Fields.TimeTracking.OriginalEstimateSeconds/60),
-			TimeSpent:        fmt.Sprintf("%v", issue.Fields.TimeTracking.TimeSpentSeconds/60),
-			DiffHours:        fmt.Sprintf("%.f", time.Duration(time.Duration(overWorkedDuration)*time.Second).Hours()),
+			OriginalEstimate: fmt.Sprintf("%v", issue.Fields.TimeTracking.OriginalEstimateSeconds/3600),
+			TimeSpent:        fmt.Sprintf("%v", issue.Fields.TimeTracking.TimeSpentSeconds/3600),
+			DiffHours:        fmt.Sprintf("%.f", (time.Duration(overWorkedDuration) * time.Second).Hours()),
 			DiffProcent:      overWorkedDuration / (issue.Fields.TimeTracking.OriginalEstimateSeconds / 100),
 		})
 	}
 	if err := a.CreateWorkRatioXlsxReport(workRatio, channel); err != nil {
-		a.Slack.SendMessage("*Generating work reatio report was failed with err*:\n"+err.Error(), channel)
+		a.Slack.SendMessage("*Generating work ratio report was failed with err*:\n"+err.Error(), channel)
 	}
 }
 
@@ -79,8 +79,7 @@ type WorkRatioDTO struct {
 // CreateWorkRatioXlsxReport create csv file with report about work ratio
 func (a *App) CreateWorkRatioXlsxReport(workRatio []WorkRatioDTO, channel string) error {
 	if len(workRatio) == 0 {
-		a.Slack.SendMessage("There are no issues for workRatioReport.csv file", channel)
-		return nil
+		return fmt.Errorf("There are no issues for workRatioReport.csv file")
 	}
 	var sheetRows [][]string
 	sheetRows = append(sheetRows, []string{""}) // for unlicensed message
@@ -93,7 +92,7 @@ func (a *App) CreateWorkRatioXlsxReport(workRatio []WorkRatioDTO, channel string
 	}
 	fileName := "workRatio.xlsx"
 	if err := a.CreateExcel(fileName, sheetRows); err != nil {
-		a.Slack.SendMessage("*Generating work reatio report was failed with err*:\n"+err.Error(), channel)
+		a.Slack.SendMessage("*Generating work ratio report was failed with err*:\n"+err.Error(), channel)
 	}
 	return a.SendFileToSlack(channel, fileName)
 }
