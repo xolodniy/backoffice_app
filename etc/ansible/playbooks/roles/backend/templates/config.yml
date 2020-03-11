@@ -149,6 +149,13 @@ amplify:
     - UG47GFL92
     - U9FDU5W4D
 
+sentry: ц
+  enableSentry: {{ sentry_enable }}
+    dsn: {{ sentry_dsn }}
+    logLevel: {{ sentry_log_level }}
+    loggingHTTPRequests: {{ sentry_logging_http_requests }}
+    sentry_env: {{ sentry_enable }}
+
 users:
   - jiraaccountid: 5a2575776a747c0e71ab2972
     email: andrey.solovyov@atnr.pro
