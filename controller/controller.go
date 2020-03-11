@@ -12,14 +12,12 @@ import (
 	"net/http/httputil"
 	"time"
 
-	"github.com/getsentry/raven-go"
-
-	"github.com/sirupsen/logrus"
-
 	"backoffice_app/app"
 	"backoffice_app/config"
 
+	"github.com/getsentry/raven-go"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 // this variables should be specified by '--ldflags' on the building stage
