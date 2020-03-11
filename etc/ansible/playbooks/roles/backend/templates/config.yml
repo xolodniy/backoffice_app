@@ -149,12 +149,12 @@ amplify:
     - UG47GFL92
     - U9FDU5W4D
 
-sentry: ц
-  enableSentry: {{ sentry_enable }}
-    dsn: {{ sentry_dsn }}
-    logLevel: {{ sentry_log_level }}
-    loggingHTTPRequests: {{ sentry_logging_http_requests }}
-    sentry_env: {{ sentry_enable }}
+sentry:
+  enablesentry: {{ sentry_enable }}
+  dsn: {{ sentry_dsn }}
+  loglevel: {{ sentry_log_level }}
+  logginghttprequests: {{ sentry_logging_http_requests }}
+  env: {{ sentry_env }}
 
 users:
   - jiraaccountid: 5a2575776a747c0e71ab2972
