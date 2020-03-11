@@ -281,7 +281,20 @@ func (c *Controller) workRatioReport(ctx *gin.Context) {
 		logrus.WithField("datesSlice", datesSlice).Error(`datesSlice has count of elements != 2`)
 		return
 	}
-	go c.App.WorkRatioReport(datesSlice[0], datesSlice[1], request.UserId)
+
+	dStart, err := time.Parse("02.01.2006", datesSlice[0])
+	if err != nil {
+		ctx.String(http.StatusOK, errWrongFormat)
+		logrus.WithError(err).WithField("dateStart", datesSlice[0]).Error("can't parse start date")
+		return
+	}
+	dEnd, err := time.Parse("02.01.2006", datesSlice[1])
+	if err != nil {
+		ctx.String(http.StatusOK, errWrongFormat)
+		logrus.WithError(err).WithField("dateEnd", datesSlice[1]).Error("can't parse end date")
+		return
+	}
+	go c.App.WorkRatioReport(dStart, dEnd, request.UserId)
 	ctx.JSON(http.StatusOK, gin.H{
 		"text": "Report is preparing. Your request will be processed soon.",
 	})

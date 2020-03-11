@@ -14,20 +14,8 @@ import (
 	"github.com/unidoc/unioffice/spreadsheet"
 )
 
-func (a *App) WorkRatioReport(dateStart, dateEnd, channel string) {
-	dStart, err := time.Parse("02.01.2006", dateStart)
-	if err != nil {
-		logrus.WithError(err).WithField("dateStart", dateStart).Error("can't parse start date")
-		a.Slack.SendMessage("*Generating work reatio report was failed with err*:\n"+err.Error(), channel)
-		return
-	}
-	dEnd, err := time.Parse("02.01.2006", dateEnd)
-	if err != nil {
-		logrus.WithError(err).WithField("dateEnd", dateEnd).Error("can't parse end date")
-		a.Slack.SendMessage("*Generating work reatio report was failed with err*:\n"+err.Error(), channel)
-		return
-	}
-	issues, err := a.Jira.IssuesClosedInInterim(dStart, dEnd)
+func (a *App) WorkRatioReport(dateStart, dateEnd time.Time, channel string) {
+	issues, err := a.Jira.IssuesClosedInInterim(dateStart, dateEnd)
 	if err != nil {
 		a.Slack.SendMessage("*Generating work reatio report was failed with err*:\n"+err.Error(), channel)
 		return
