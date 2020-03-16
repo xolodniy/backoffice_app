@@ -438,7 +438,7 @@ func main() {
 						return
 					}
 					application := initAppWithDB(cfg, context.Background(), &sync.WaitGroup{})
-					application.CheckForgottenGitPullRequests(channel)
+					application.Reports.ForgottenPoolRequests.Run(channel)
 				},
 			},
 			{
@@ -624,7 +624,7 @@ func initCronTasks(ctx context.Context, wg *sync.WaitGroup, cfg *config.Main, ap
 	}
 
 	err = tm.AddTask(cfg.Reports.ReportForgottenPRs.Schedule, func() {
-		application.CheckForgottenGitPullRequests(cfg.Reports.ReportForgottenPRs.Channel)
+		application.Reports.ForgottenPoolRequests.Run(cfg.Reports.ReportForgottenPRs.Channel)
 	})
 	if err != nil {
 		panic(err)

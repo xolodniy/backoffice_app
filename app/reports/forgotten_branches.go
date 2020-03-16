@@ -45,8 +45,8 @@ func (fb ForgottenBranches) Run(channel string) {
 	if err != nil {
 		return
 	}
-	var protectedBranches []model.Protected
-	if err := fb.model.Find(&protectedBranches); err != nil {
+	var protected []model.Protected
+	if err := fb.model.Find(&protected); err != nil {
 		return
 	}
 	var (
@@ -64,7 +64,7 @@ func (fb ForgottenBranches) Run(channel string) {
 			continue
 		}
 		var flag bool
-		for _, pb := range protectedBranches {
+		for _, pb := range protected {
 			if branch.Name == pb.Name {
 				// FIXME: testing protected branch. Remove after tests
 				fb.slack.SendMessage(fmt.Sprintf("Ветка %s защищена", branch.Name), "U8A004WK0")
