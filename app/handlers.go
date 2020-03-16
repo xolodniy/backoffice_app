@@ -10,7 +10,7 @@ import (
 )
 
 func (a *App) ProtectBranch(userID, branchName, comment string) error {
-	return a.model.Save(model.ProtectedBranch{
+	return a.model.Save(&model.ProtectedBranch{
 		Name:    branchName,
 		Comment: comment,
 		UserID:  userID,
@@ -19,7 +19,7 @@ func (a *App) ProtectBranch(userID, branchName, comment string) error {
 
 func (a *App) UnprotectBranch(userID, branchName string) error {
 	now := time.Now()
-	return a.model.Save(model.ProtectedBranch{
+	return a.model.Save(&model.ProtectedBranch{
 		Name:      branchName,
 		UserID:    userID,
 		DeletedAt: &now,
