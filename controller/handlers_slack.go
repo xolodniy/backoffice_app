@@ -267,15 +267,14 @@ func (c *Controller) protect(ctx *gin.Context) {
 		Text   string `form:"text"    binding:"required"`
 		UserId string `form:"user_id" binding:"required"`
 	}
-	if err := ctx.ShouldBindWith(&request, binding.FormPost); err != nil {
-		logrus.WithError(err).Error("can't parse slack webhook")
-		ctx.String(http.StatusOK, common.ErrInternal.Error())
-		return
-	}
-	message := strings.Split(request.Text, "\"")
 	errMessage := `Invalid request. 
 			Please specify a both branch/PR name and comment with reason why need to protect it.
 			For example /protect test-branch "will be need after new year"`
+	if err := ctx.ShouldBindWith(&request, binding.FormPost); err != nil {
+		ctx.String(http.StatusOK, errMessage)
+		return
+	}
+	message := strings.Split(request.Text, "\"")
 
 	if len(message) != 3 {
 		ctx.String(http.StatusOK, errMessage)
@@ -300,7 +299,6 @@ func (c *Controller) unprotect(ctx *gin.Context) {
 		Text string `form:"text"    binding:"required"`
 	}
 	if err := ctx.ShouldBindWith(&request, binding.FormPost); err != nil {
-		logrus.WithError(err).Error("can't parse slack webhook")
 		ctx.String(http.StatusOK, "Invalid request. Please specify name of protected branch or pool request")
 		return
 	}

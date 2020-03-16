@@ -91,3 +91,7 @@ type Protected struct {
 	UpdatedAt time.Time
 	DeletedAt *time.Time
 }
+
+func (Protected) TableName() string {
+	return "protected"
+}
