@@ -189,3 +189,13 @@ func (c *Database) ConnURL() string {
 	}
 	return url
 }
+
+// GetUserInfoByTagValue retrieve user info by value of tag in map
+func (c Main) GetUserInfoByTagValue(tag, value string) User {
+	for _, a := range c.Users {
+		if a[tag] != "" && a[tag] == value {
+			return a
+		}
+	}
+	return make(User, 0)
+}

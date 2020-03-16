@@ -73,6 +73,8 @@ type ForgottenBranch struct {
 	Name      string
 	RepoSlug  string
 	CreatedAt time.Time
+	Protected bool
+	Comment   string
 }
 
 // OnDutyUser struct contains users on duty by team
