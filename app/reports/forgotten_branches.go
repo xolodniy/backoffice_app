@@ -45,7 +45,7 @@ func (fb ForgottenBranches) Run(channel string) {
 	if err != nil {
 		return
 	}
-	var protectedBranches []model.ProtectedBranch
+	var protectedBranches []model.Protected
 	if err := fb.model.Find(&protectedBranches); err != nil {
 		return
 	}

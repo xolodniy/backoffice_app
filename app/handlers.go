@@ -9,9 +9,10 @@ import (
 	"backoffice_app/model"
 )
 
-func (a *App) ProtectBranch(userID, branchName, comment string) error {
-	var b model.ProtectedBranch
-	err := a.model.First(&b, model.ProtectedBranch{Name: branchName})
+// Protect branch or pool request for prevent show it in report
+func (a *App) Protect(userID, name, comment string) error {
+	var b model.Protected
+	err := a.model.First(&b, model.Protected{Name: name})
 	if err == common.ErrInternal {
 		return err
 	}
@@ -24,19 +25,19 @@ func (a *App) ProtectBranch(userID, branchName, comment string) error {
 			b.Name, userName, b.Comment)
 	}
 
-	return a.model.Create(&model.ProtectedBranch{
-		Name:    branchName,
+	return a.model.Create(&model.Protected{
+		Name:    name,
 		Comment: comment,
 		UserID:  userID,
 	})
 }
 
-func (a *App) UnprotectBranch(userID, branchName string) error {
-	return a.model.Delete(&model.ProtectedBranch{Name: branchName})
+func (a *App) Unprotect(userID, branchName string) error {
+	return a.model.Delete(&model.Protected{Name: branchName})
 }
 
-func (a *App) ShowProtectedBranches(channel string) {
-	var branches []model.ProtectedBranch
+func (a *App) ShowProtected(channel string) {
+	var branches []model.Protected
 	if err := a.model.Find(&branches); err != nil {
 		return
 	}

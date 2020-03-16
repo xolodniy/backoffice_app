@@ -262,9 +262,9 @@ func (c *Controller) setOnDutyFrontend(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, "Success! These users are on duty for frontend team!")
 }
 
-func (c *Controller) setProtectedBranch(ctx *gin.Context) {
+func (c *Controller) protect(ctx *gin.Context) {
 	var request struct {
-		Text   string `form:"text" binding:"required"`
+		Text   string `form:"text"    binding:"required"`
 		UserId string `form:"user_id" binding:"required"`
 	}
 	if err := ctx.ShouldBindWith(&request, binding.FormPost); err != nil {
@@ -275,10 +275,10 @@ func (c *Controller) setProtectedBranch(ctx *gin.Context) {
 	message := strings.Split(request.Text, " ")
 	if len(message) < 2 {
 		ctx.String(http.StatusOK, "Invalid request. "+
-			"Please specify a both branch name and comment with reason why need to protect it. "+
-			"For example /protect-branch test-branch will be need after new year")
+			"Please specify a both branch/PR name and comment with reason why need to protect it. "+
+			"For example /protect test-branch will be need after new year")
 	}
-	err := c.App.ProtectBranch(request.UserId, message[0], strings.Join(message[1:], " "))
+	err := c.App.Protect(request.UserId, message[0], strings.Join(message[1:], " "))
 	if err != nil {
 		ctx.String(http.StatusOK, err.Error())
 		return
@@ -286,9 +286,9 @@ func (c *Controller) setProtectedBranch(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "ok")
 }
 
-func (c *Controller) deleteProtectedBranch(ctx *gin.Context) {
+func (c *Controller) unprotect(ctx *gin.Context) {
 	var request struct {
-		Text   string `form:"text" binding:"required"`
+		Text   string `form:"text"    binding:"required"`
 		UserId string `form:"user_id" binding:"required"`
 	}
 	if err := ctx.ShouldBindWith(&request, binding.FormPost); err != nil {
@@ -297,14 +297,14 @@ func (c *Controller) deleteProtectedBranch(ctx *gin.Context) {
 		return
 	}
 	firstWord := strings.Split(request.Text, " ")[0]
-	if err := c.App.UnprotectBranch(request.UserId, firstWord); err != nil {
+	if err := c.App.Unprotect(request.UserId, firstWord); err != nil {
 		ctx.String(http.StatusOK, common.ErrInternal.Error())
 		return
 	}
 	ctx.String(http.StatusOK, "ok")
 }
 
-func (c *Controller) showProtectedBranches(ctx *gin.Context) {
+func (c *Controller) showProtected(ctx *gin.Context) {
 	var request struct {
 		UserId string `form:"user_id" binding:"required"`
 	}
@@ -313,7 +313,7 @@ func (c *Controller) showProtectedBranches(ctx *gin.Context) {
 		ctx.String(http.StatusOK, common.ErrInternal.Error())
 		return
 	}
-	go c.App.ShowProtectedBranches(request.UserId)
+	go c.App.ShowProtected(request.UserId)
 	ctx.JSON(http.StatusOK, gin.H{
 		"text": "Report is preparing. Your request will be processed soon.",
 	})

@@ -82,7 +82,7 @@ type OnDutyUser struct {
 	Team        string
 }
 
-type ProtectedBranch struct {
+type Protected struct {
 	ID        int
 	Name      string
 	Comment   string
