@@ -45,6 +45,10 @@ func (fb ForgottenBranches) Run(channel string) {
 	if err != nil {
 		return
 	}
+	var protectedBranches []model.ProtectedBranch
+	if err := fb.model.Find(&protectedBranches); err != nil {
+		return
+	}
 	var (
 		firstAttentionBranches  = make(map[string][]string)
 		secondAttentionBranches = make(map[string][]string)
@@ -69,9 +73,16 @@ func (fb ForgottenBranches) Run(channel string) {
 			if branch.Name != forgottenBranches[i].Name || branch.Target.Repository.Name != forgottenBranches[i].RepoSlug {
 				continue
 			}
-			if forgottenBranches[i].Protected {
-				// FIXME: testing protected branch
-				fb.slack.SendMessage(fmt.Sprintf("Ветка %s защищена", forgottenBranches[i].Name), "U8A004WK0")
+			var flag bool
+			for _, pb := range protectedBranches {
+				if forgottenBranches[i].Name == pb.Name {
+					// FIXME: testing protected branch
+					fb.slack.SendMessage(fmt.Sprintf("Ветка %s защищена", forgottenBranches[i].Name), "U8A004WK0")
+					flag = true
+				}
+			}
+			if flag {
+				continue
 			}
 			switch {
 			case forgottenBranches[i].CreatedAt.Before(time.Now().AddDate(0, 0, -7)):

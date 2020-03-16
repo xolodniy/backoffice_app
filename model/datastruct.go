@@ -73,8 +73,6 @@ type ForgottenBranch struct {
 	Name      string
 	RepoSlug  string
 	CreatedAt time.Time
-	Protected bool
-	Comment   string
 }
 
 // OnDutyUser struct contains users on duty by team
@@ -82,4 +80,13 @@ type OnDutyUser struct {
 	ID          int
 	SlackUserID string
 	Team        string
+}
+
+type ProtectedBranch struct {
+	Name      string `gorm:"primary_key"`
+	Comment   string
+	UserID    string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time
 }

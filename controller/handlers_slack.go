@@ -261,3 +261,59 @@ func (c *Controller) setOnDutyFrontend(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, "Success! These users are on duty for frontend team!")
 }
+
+func (c *Controller) setProtectedBranch(ctx *gin.Context) {
+	var request struct {
+		Text   string `form:"text" binding:"required"`
+		UserId string `form:"user_id" binding:"required"`
+	}
+	if err := ctx.ShouldBindWith(&request, binding.FormPost); err != nil {
+		logrus.WithError(err).Error("can't parse slack webhook")
+		ctx.String(http.StatusOK, common.ErrInternal.Error())
+		return
+	}
+	message := strings.Split(request.Text, " ")
+	if len(message) < 2 {
+		ctx.String(http.StatusOK, "Invalid request. "+
+			"Please specify a both branch name and comment with reason why need to protect it. "+
+			"For example /protect test-branch will be need after new year")
+	}
+	err := c.App.ProtectBranch(request.UserId, message[0], strings.Join(message[1:], " "))
+	if err != nil {
+		ctx.String(http.StatusOK, common.ErrInternal.Error())
+		return
+	}
+	ctx.String(http.StatusOK, "ok")
+}
+
+func (c *Controller) deleteProtectedBranch(ctx *gin.Context) {
+	var request struct {
+		Text   string `form:"text" binding:"required"`
+		UserId string `form:"user_id" binding:"required"`
+	}
+	if err := ctx.ShouldBindWith(&request, binding.FormPost); err != nil {
+		logrus.WithError(err).Error("can't parse slack webhook")
+		ctx.String(http.StatusOK, common.ErrInternal.Error())
+		return
+	}
+	if err := c.App.UnprotectBranch(request.UserId, request.Text); err != nil {
+		ctx.String(http.StatusOK, common.ErrInternal.Error())
+		return
+	}
+	ctx.String(http.StatusOK, "ok")
+}
+
+func (c *Controller) showProtectedBranches(ctx *gin.Context) {
+	var request struct {
+		UserId string `form:"user_id" binding:"required"`
+	}
+	if err := ctx.ShouldBindWith(&request, binding.FormPost); err != nil {
+		logrus.WithError(err).Error("can't parse slack webhook")
+		ctx.String(http.StatusOK, common.ErrInternal.Error())
+		return
+	}
+	go c.App.ShowProtectedBranches(request.UserId)
+	ctx.JSON(http.StatusOK, gin.H{
+		"text": "Report is preparing. Your request will be processed soon.",
+	})
+}

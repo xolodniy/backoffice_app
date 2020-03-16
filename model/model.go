@@ -17,6 +17,10 @@ import (
 // Model is data tier of 3-layer architecture
 type Model struct {
 	db *gorm.DB
+
+	// Used for tracing during building sql query.
+	// Must be initialized separately for each query.
+	logTrace logrus.Fields
 }
 
 // New Model constructor
@@ -359,4 +363,67 @@ func (m *Model) GetOnDutyUsersByTeam(team string) ([]OnDutyUser, error) {
 		return nil, common.ErrInternal
 	}
 	return res, nil
+}
+
+// Update is gorm interface func
+func (m Model) Update(attrs ...interface{}) error {
+	if err := m.db.Update(attrs...).Error; err != nil {
+		logrus.WithError(err).WithFields(m.logTrace).WithFields(logrus.Fields{
+			"updateAttrs":     fmt.Sprintf("%+v", attrs),
+			"updateAttrsType": fmt.Sprintf("%T", attrs),
+			"trace":           common.GetFrames(),
+		}).Error("can't update object in database")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// Model is gorm interface func
+func (m Model) Model(value interface{}) *Model {
+	trace := initLogTrace(m.logTrace)
+	trace["modelValueType"] = fmt.Sprintf("%T", value)
+	return &Model{db: m.db.Model(value), logTrace: trace}
+}
+
+// Model is gorm interface func
+func (m Model) Where(query interface{}, args ...interface{}) Model {
+	trace := initLogTrace(m.logTrace)
+	trace["whereQuery"] = fmt.Sprintf("%+v", query)
+	trace["whereArgs"] = fmt.Sprintf("%+v", args)
+	return Model{db: m.db.Where(query, args...), logTrace: trace}
+}
+
+// Save is gorm interface func
+func (m *Model) Save(value interface{}) error {
+	if err := m.db.Save(value).Error; err != nil {
+		logrus.WithError(err).WithFields(m.logTrace).WithFields(logrus.Fields{
+			"savedValue":     fmt.Sprintf("%+v", value),
+			"savedValueType": fmt.Sprintf("%T", value),
+			"trace":          common.GetFrames(),
+		}).Error("can't save object in a database")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// Find is gorm interface func
+func (m *Model) Find(out interface{}, where ...interface{}) error {
+	err := m.db.Find(out, where...).Error
+	if err != nil {
+		logrus.WithError(err).WithFields(m.logTrace).WithFields(logrus.Fields{
+			"findOutValue":       fmt.Sprintf("%+v", out),
+			"findTypeOfOutValue": fmt.Sprintf("%T", out),
+			"findWhereCondition": fmt.Sprintf("%+v", where),
+			"trace":              common.GetFrames(),
+		}).Error("can't find from the database")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+func initLogTrace(trace logrus.Fields) logrus.Fields {
+	if trace == nil {
+		return make(logrus.Fields)
+	}
+	return trace
 }
