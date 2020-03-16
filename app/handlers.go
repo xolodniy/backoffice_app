@@ -41,7 +41,7 @@ func (a *App) Unprotect(name string) error {
 	if err == common.ErrModelNotFound {
 		return fmt.Errorf("Not found protected '%s' in memory", name)
 	}
-	return a.model.Delete(&model.Protected{Name: name})
+	return a.model.Delete(&model.Protected{}, model.Protected{Name: name})
 }
 
 func (a *App) ShowProtected() string {
