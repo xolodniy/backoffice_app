@@ -63,6 +63,18 @@ func (fb ForgottenBranches) Run(channel string) {
 		if common.ValueIn(branch.Name, "master", "dev") || r.Match([]byte(branch.Name)) {
 			continue
 		}
+		var flag bool
+		for _, pb := range protectedBranches {
+			if branch.Name == pb.Name {
+				// FIXME: testing protected branch
+				fb.slack.SendMessage(fmt.Sprintf("Ветка %s защищена", forgottenBranches[i].Name), "U8A004WK0")
+				flag = true
+			}
+		}
+		if flag {
+			continue
+		}
+
 		// TODO: move slackrealname & slackid to constant
 		userSlackMention := "<@" + fb.config.GetUserInfoByTagValue("slackrealname", branch.Target.Author.User.DisplayName)["slackid"] + ">"
 		if fb.config.GetUserInfoByTagValue("slackrealname", branch.Target.Author.User.DisplayName)["slackid"] == "" {
@@ -71,17 +83,6 @@ func (fb ForgottenBranches) Run(channel string) {
 		var isExist bool
 		for i := len(forgottenBranches) - 1; i >= 0; i-- {
 			if branch.Name != forgottenBranches[i].Name || branch.Target.Repository.Name != forgottenBranches[i].RepoSlug {
-				continue
-			}
-			var flag bool
-			for _, pb := range protectedBranches {
-				if forgottenBranches[i].Name == pb.Name {
-					// FIXME: testing protected branch
-					fb.slack.SendMessage(fmt.Sprintf("Ветка %s защищена", forgottenBranches[i].Name), "U8A004WK0")
-					flag = true
-				}
-			}
-			if flag {
 				continue
 			}
 			switch {
