@@ -58,7 +58,7 @@ func (a *App) ShowProtected() string {
 		if !ok {
 			userName = b.UserID // prevent situation when user info not found in configuration
 		}
-		message += fmt.Sprintf("%50s %30s %s\n", b.Name, userName, b.Comment)
+		message += fmt.Sprintf("%50s %30s   %s\n", b.Name, userName, b.Comment)
 	}
 	return message
 }
