@@ -83,7 +83,8 @@ type OnDutyUser struct {
 }
 
 type ProtectedBranch struct {
-	Name      string `gorm:"primary_key"`
+	ID        int
+	Name      string
 	Comment   string
 	UserID    string
 	CreatedAt time.Time

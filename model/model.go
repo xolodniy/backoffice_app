@@ -385,7 +385,14 @@ func (m Model) Model(value interface{}) *Model {
 	return &Model{db: m.db.Model(value), logTrace: trace}
 }
 
-// Model is gorm interface func
+// Unscoped is gorm interface func
+func (m Model) Unscoped() Model {
+	trace := initLogTrace(m.logTrace)
+	trace["unscoped"] = true
+	return Model{db: m.db.Unscoped(), logTrace: trace}
+}
+
+// Where is gorm interface func
 func (m Model) Where(query interface{}, args ...interface{}) Model {
 	trace := initLogTrace(m.logTrace)
 	trace["whereQuery"] = fmt.Sprintf("%+v", query)
@@ -406,6 +413,20 @@ func (m *Model) Save(value interface{}) error {
 	return nil
 }
 
+// Create is gorm interface func
+func (m *Model) Create(value interface{}) error {
+	err := m.db.Create(value).Error
+	if err != nil {
+		logrus.WithError(err).WithFields(m.logTrace).WithFields(logrus.Fields{
+			"createValue":       fmt.Sprintf("%+v", value),
+			"createTypeOfValue": fmt.Sprintf("%T", value),
+			"trace":             common.GetFrames(),
+		}).Error("can't create value in database")
+		return common.ErrInternal
+	}
+	return nil
+}
+
 // Find is gorm interface func
 func (m *Model) Find(out interface{}, where ...interface{}) error {
 	err := m.db.Find(out, where...).Error
@@ -416,6 +437,55 @@ func (m *Model) Find(out interface{}, where ...interface{}) error {
 			"findWhereCondition": fmt.Sprintf("%+v", where),
 			"trace":              common.GetFrames(),
 		}).Error("can't find from the database")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// First is gorm interface func
+func (m *Model) First(out interface{}, where ...interface{}) error {
+	err := m.db.First(out, where...).Error
+	if gorm.IsRecordNotFoundError(err) {
+		return common.ErrModelNotFound
+	}
+	if err != nil {
+		logrus.WithError(err).WithFields(m.logTrace).WithFields(logrus.Fields{
+			"firstOutValue":       fmt.Sprintf("%+v", out),
+			"firstTypeOfOutValue": fmt.Sprintf("%T", out),
+			"firstWhereCondition": fmt.Sprintf("%+v", where),
+			"trace":               common.GetFrames(),
+		}).Error("can't get first object from the database")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// Last is gorm interface func
+func (m *Model) Last(out interface{}, where ...interface{}) error {
+	err := m.db.Last(out, where...).Error
+	if gorm.IsRecordNotFoundError(err) {
+		return common.ErrModelNotFound
+	}
+	if err != nil {
+		logrus.WithError(err).WithFields(m.logTrace).WithFields(logrus.Fields{
+			"lastOutValue":       fmt.Sprintf("%+v", out),
+			"lastTypeOfOutValue": fmt.Sprintf("%T", out),
+			"lastWhereCondition": fmt.Sprintf("%+v", where),
+			"trace":              common.GetFrames(),
+		}).Error("can't get last object from the database")
+		return common.ErrInternal
+	}
+	return nil
+}
+
+// Delete is gorm interface func
+func (m *Model) Delete(value interface{}, where ...interface{}) error {
+	if err := m.db.Delete(value, where...).Error; err != nil {
+		logrus.WithError(err).WithFields(m.logTrace).WithFields(logrus.Fields{
+			"deleteValue": fmt.Sprintf("%+v", value),
+			"deleteWhere": fmt.Sprintf("%+v", where),
+			"trace":       common.GetFrames(),
+		})
 		return common.ErrInternal
 	}
 	return nil

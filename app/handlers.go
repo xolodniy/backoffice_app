@@ -4,26 +4,39 @@ package app
 
 import (
 	"fmt"
-	"time"
 
+	"backoffice_app/common"
 	"backoffice_app/model"
 )
 
 func (a *App) ProtectBranch(userID, branchName, comment string) error {
-	return a.model.Save(&model.ProtectedBranch{
+	var b model.ProtectedBranch
+	err := a.model.First(&b, model.ProtectedBranch{Name: branchName})
+	if err == common.ErrInternal {
+		return err
+	}
+	if err == nil {
+		userName, ok := a.Config.GetUserInfoByTagValue(TagUserSlackID, userID)[TagUserSlackRealName]
+		if !ok {
+			userName = userID // prevent situation when user info not found in configuration
+		}
+		return fmt.Errorf("branch '%s' already protected by %s with comment '%s'",
+			b.Name, userName, b.Comment)
+	}
+
+	b.UserID = a.Config.GetUserInfoByTagValue(TagUserSlackID, userID)[TagUserSlackRealName]
+	b.Name = branchName
+	b.Comment = comment
+
+	return a.model.Create(&model.ProtectedBranch{
 		Name:    branchName,
 		Comment: comment,
-		UserID:  a.Config.GetUserInfoByTagValue(TagUserSlackID, userID)[TagUserSlackRealName],
+		UserID:  userID,
 	})
 }
 
 func (a *App) UnprotectBranch(userID, branchName string) error {
-	now := time.Now()
-	return a.model.Save(&model.ProtectedBranch{
-		Name:      branchName,
-		UserID:    a.Config.GetUserInfoByTagValue(TagUserSlackID, userID)[TagUserSlackRealName],
-		DeletedAt: &now,
-	})
+	return a.model.Delete(&model.ProtectedBranch{Name: branchName})
 }
 
 func (a *App) ShowProtectedBranches(channel string) {
@@ -37,7 +50,11 @@ func (a *App) ShowProtectedBranches(channel string) {
 	}
 	var message string
 	for _, b := range branches {
-		message += fmt.Sprintf("%30s %20s %s\n", b.Name, b.UserID, b.Comment)
+		userName, ok := a.Config.GetUserInfoByTagValue(TagUserSlackID, b.UserID)[TagUserSlackRealName]
+		if !ok {
+			userName = b.UserID // prevent situation when user info not found in configuration
+		}
+		message += fmt.Sprintf("%50s %30s %s\n", b.Name, userName, b.Comment)
 	}
 	a.Slack.SendMessage(message, channel)
 }
