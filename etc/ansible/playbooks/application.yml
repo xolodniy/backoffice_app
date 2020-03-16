@@ -1,7 +1,7 @@
 ---
 - hosts: backoffice_app
   vars:
-    - version: move-fb-report
+    - version: master
     - service_name: "api"
     - command: ""
   roles:
