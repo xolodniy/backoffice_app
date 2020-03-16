@@ -24,10 +24,6 @@ func (a *App) ProtectBranch(userID, branchName, comment string) error {
 			b.Name, userName, b.Comment)
 	}
 
-	b.UserID = a.Config.GetUserInfoByTagValue(TagUserSlackID, userID)[TagUserSlackRealName]
-	b.Name = branchName
-	b.Comment = comment
-
 	return a.model.Create(&model.ProtectedBranch{
 		Name:    branchName,
 		Comment: comment,

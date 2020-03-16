@@ -280,7 +280,7 @@ func (c *Controller) setProtectedBranch(ctx *gin.Context) {
 	}
 	err := c.App.ProtectBranch(request.UserId, message[0], strings.Join(message[1:], " "))
 	if err != nil {
-		ctx.String(http.StatusOK, common.ErrInternal.Error())
+		ctx.String(http.StatusOK, err.Error())
 		return
 	}
 	ctx.String(http.StatusOK, "ok")
