@@ -32,7 +32,7 @@ func (a *App) Protect(userID, name, comment string) error {
 	})
 }
 
-func (a *App) Unprotect(userID, name string) error {
+func (a *App) Unprotect(name string) error {
 	var protected model.Protected
 	err := a.model.First(&protected, model.Protected{Name: name})
 	if err == common.ErrInternal {

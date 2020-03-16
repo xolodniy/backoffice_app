@@ -273,13 +273,22 @@ func (c *Controller) protect(ctx *gin.Context) {
 		return
 	}
 	message := strings.Split(request.Text, "\"")
-	if len(message) != 3 || message[0] == "" || message[1] == "" {
-		ctx.String(http.StatusOK, `Invalid request. 
+	errMessage := `Invalid request. 
 			Please specify a both branch/PR name and comment with reason why need to protect it.
-			For example /protect test-branch "will be need after new year"`)
+			For example /protect test-branch "will be need after new year"`
+
+	if len(message) != 3 {
+		ctx.String(http.StatusOK, errMessage)
+		return
 	}
-	err := c.App.Protect(request.UserId, message[0], message[1])
-	if err != nil {
+	name := strings.TrimSpace(message[0])
+	comment := strings.TrimSpace(message[1])
+	if name == "" || comment == "" {
+		ctx.String(http.StatusOK, errMessage)
+		return
+	}
+
+	if err := c.App.Protect(request.UserId, name, comment); err != nil {
 		ctx.String(http.StatusOK, err.Error())
 		return
 	}
@@ -288,15 +297,14 @@ func (c *Controller) protect(ctx *gin.Context) {
 
 func (c *Controller) unprotect(ctx *gin.Context) {
 	var request struct {
-		Text   string `form:"text"    binding:"required"`
-		UserId string `form:"user_id" binding:"required"`
+		Text string `form:"text"    binding:"required"`
 	}
 	if err := ctx.ShouldBindWith(&request, binding.FormPost); err != nil {
 		logrus.WithError(err).Error("can't parse slack webhook")
-		ctx.String(http.StatusOK, common.ErrInternal.Error())
+		ctx.String(http.StatusOK, "Invalid request. Please specify name of protected branch or pool request")
 		return
 	}
-	if err := c.App.Unprotect(request.UserId, request.Text); err != nil {
+	if err := c.App.Unprotect(request.Text); err != nil {
 		ctx.String(http.StatusOK, err.Error())
 		return
 	}
