@@ -276,7 +276,7 @@ func (c *Controller) setProtectedBranch(ctx *gin.Context) {
 	if len(message) < 2 {
 		ctx.String(http.StatusOK, "Invalid request. "+
 			"Please specify a both branch name and comment with reason why need to protect it. "+
-			"For example /protect test-branch will be need after new year")
+			"For example /protect-branch test-branch will be need after new year")
 	}
 	err := c.App.ProtectBranch(request.UserId, message[0], strings.Join(message[1:], " "))
 	if err != nil {
@@ -296,7 +296,8 @@ func (c *Controller) deleteProtectedBranch(ctx *gin.Context) {
 		ctx.String(http.StatusOK, common.ErrInternal.Error())
 		return
 	}
-	if err := c.App.UnprotectBranch(request.UserId, request.Text); err != nil {
+	firstWord := strings.Split(request.Text, " ")[0]
+	if err := c.App.UnprotectBranch(request.UserId, firstWord); err != nil {
 		ctx.String(http.StatusOK, common.ErrInternal.Error())
 		return
 	}

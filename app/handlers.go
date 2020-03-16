@@ -13,7 +13,7 @@ func (a *App) ProtectBranch(userID, branchName, comment string) error {
 	return a.model.Save(&model.ProtectedBranch{
 		Name:    branchName,
 		Comment: comment,
-		UserID:  userID,
+		UserID:  a.Config.GetUserInfoByTagValue(TagUserSlackID, userID)[TagUserSlackRealName],
 	})
 }
 
@@ -21,7 +21,7 @@ func (a *App) UnprotectBranch(userID, branchName string) error {
 	now := time.Now()
 	return a.model.Save(&model.ProtectedBranch{
 		Name:      branchName,
-		UserID:    userID,
+		UserID:    a.Config.GetUserInfoByTagValue(TagUserSlackID, userID)[TagUserSlackRealName],
 		DeletedAt: &now,
 	})
 }
