@@ -9,7 +9,7 @@ import (
 	"backoffice_app/model"
 )
 
-func (a App) ProtectBranch(userID, branchName, comment string) error {
+func (a *App) ProtectBranch(userID, branchName, comment string) error {
 	return a.model.Save(model.ProtectedBranch{
 		Name:    branchName,
 		Comment: comment,
@@ -17,7 +17,7 @@ func (a App) ProtectBranch(userID, branchName, comment string) error {
 	})
 }
 
-func (a App) UnprotectBranch(userID, branchName string) error {
+func (a *App) UnprotectBranch(userID, branchName string) error {
 	now := time.Now()
 	return a.model.Save(model.ProtectedBranch{
 		Name:      branchName,
@@ -26,7 +26,7 @@ func (a App) UnprotectBranch(userID, branchName string) error {
 	})
 }
 
-func (a App) ShowProtectedBranches(channel string) {
+func (a *App) ShowProtectedBranches(channel string) {
 	var branches []model.ProtectedBranch
 	if err := a.model.Find(&branches); err != nil {
 		return
