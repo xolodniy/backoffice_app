@@ -272,13 +272,13 @@ func (c *Controller) protect(ctx *gin.Context) {
 		ctx.String(http.StatusOK, common.ErrInternal.Error())
 		return
 	}
-	message := strings.Split(request.Text, " ")
-	if len(message) < 2 {
-		ctx.String(http.StatusOK, "Invalid request. "+
-			"Please specify a both branch/PR name and comment with reason why need to protect it. "+
-			"For example /protect test-branch will be need after new year")
+	message := strings.Split(request.Text, "\"")
+	if len(message) != 3 || message[0] == "" || message[1] == "" {
+		ctx.String(http.StatusOK, `Invalid request. 
+			Please specify a both branch/PR name and comment with reason why need to protect it.
+			For example /protect test-branch "will be need after new year"`)
 	}
-	err := c.App.Protect(request.UserId, message[0], strings.Join(message[1:], " "))
+	err := c.App.Protect(request.UserId, message[0], message[1])
 	if err != nil {
 		ctx.String(http.StatusOK, err.Error())
 		return
@@ -296,25 +296,13 @@ func (c *Controller) unprotect(ctx *gin.Context) {
 		ctx.String(http.StatusOK, common.ErrInternal.Error())
 		return
 	}
-	firstWord := strings.Split(request.Text, " ")[0]
-	if err := c.App.Unprotect(request.UserId, firstWord); err != nil {
-		ctx.String(http.StatusOK, common.ErrInternal.Error())
+	if err := c.App.Unprotect(request.UserId, request.Text); err != nil {
+		ctx.String(http.StatusOK, err.Error())
 		return
 	}
 	ctx.String(http.StatusOK, "ok")
 }
 
 func (c *Controller) showProtected(ctx *gin.Context) {
-	var request struct {
-		UserId string `form:"user_id" binding:"required"`
-	}
-	if err := ctx.ShouldBindWith(&request, binding.FormPost); err != nil {
-		logrus.WithError(err).Error("can't parse slack webhook")
-		ctx.String(http.StatusOK, common.ErrInternal.Error())
-		return
-	}
-	go c.App.ShowProtected(request.UserId)
-	ctx.JSON(http.StatusOK, gin.H{
-		"text": "Report is preparing. Your request will be processed soon.",
-	})
+	ctx.String(http.StatusOK, c.App.ShowProtected())
 }

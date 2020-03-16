@@ -1,15 +1,15 @@
 package reports
 
 import (
-	"backoffice_app/config"
-	"backoffice_app/services/slack"
 	"fmt"
 	"regexp"
 	"time"
 
 	"backoffice_app/common"
+	"backoffice_app/config"
 	"backoffice_app/model"
 	"backoffice_app/services/bitbucket"
+	"backoffice_app/services/slack"
 
 	"github.com/sirupsen/logrus"
 )

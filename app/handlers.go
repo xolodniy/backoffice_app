@@ -32,18 +32,25 @@ func (a *App) Protect(userID, name, comment string) error {
 	})
 }
 
-func (a *App) Unprotect(userID, branchName string) error {
-	return a.model.Delete(&model.Protected{Name: branchName})
+func (a *App) Unprotect(userID, name string) error {
+	var protected model.Protected
+	err := a.model.First(&protected, model.Protected{Name: name})
+	if err == common.ErrInternal {
+		return err
+	}
+	if err == common.ErrModelNotFound {
+		return fmt.Errorf("Not found protected '%s' in memory", name)
+	}
+	return a.model.Delete(&model.Protected{Name: name})
 }
 
-func (a *App) ShowProtected(channel string) {
+func (a *App) ShowProtected() string {
 	var branches []model.Protected
 	if err := a.model.Find(&branches); err != nil {
-		return
+		return err.Error()
 	}
 	if len(branches) == 0 {
-		a.Slack.SendMessage("Protected branches not found", channel)
-		return
+		return "Protected branches not found"
 	}
 	var message string
 	for _, b := range branches {
@@ -53,5 +60,5 @@ func (a *App) ShowProtected(channel string) {
 		}
 		message += fmt.Sprintf("%50s %30s %s\n", b.Name, userName, b.Comment)
 	}
-	a.Slack.SendMessage(message, channel)
+	return message
 }
