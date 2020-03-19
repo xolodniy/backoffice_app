@@ -427,6 +427,15 @@ func (m *Model) Create(value interface{}) error {
 	return nil
 }
 
+func (m *Model) GetNamesOfProtectedBranchesAndPRs() ([]string, error) {
+	var names []string
+	if err := m.db.Model(Protected{}).Pluck("name", &names).Error; err != nil {
+		logrus.WithError(err).Error("can't pluck names of protected branches and pull requests")
+		return nil, common.ErrInternal
+	}
+	return names, nil
+}
+
 // Find is gorm interface func
 func (m *Model) Find(out interface{}, where ...interface{}) error {
 	err := m.db.Find(out, where...).Error

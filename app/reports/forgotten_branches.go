@@ -1,7 +1,6 @@
 package reports
 
 import (
-	"fmt"
 	"regexp"
 	"time"
 
@@ -45,10 +44,12 @@ func (fb ForgottenBranches) Run(channel string) {
 	if err != nil {
 		return
 	}
-	var protected []model.Protected
-	if err := fb.model.Find(&protected); err != nil {
+	protected, err := fb.model.GetNamesOfProtectedBranchesAndPRs()
+	if err != nil {
 		return
 	}
+	protected = append(protected, "master", "dev")
+
 	var (
 		firstAttentionBranches  = make(map[string][]string)
 		secondAttentionBranches = make(map[string][]string)
@@ -60,18 +61,7 @@ func (fb ForgottenBranches) Run(channel string) {
 		return
 	}
 	for _, branch := range branchesWithoutPRs {
-		if common.ValueIn(branch.Name, "master", "dev") || r.Match([]byte(branch.Name)) {
-			continue
-		}
-		var flag bool
-		for _, pb := range protected {
-			if branch.Name == pb.Name {
-				// FIXME: testing protected branch. Remove after tests
-				fb.slack.SendMessage(fmt.Sprintf("Ветка %s защищена", branch.Name), "U8A004WK0")
-				flag = true
-			}
-		}
-		if flag {
+		if common.ValueIn(branch.Name, protected...) || r.Match([]byte(branch.Name)) {
 			continue
 		}
 

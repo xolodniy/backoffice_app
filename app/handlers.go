@@ -9,8 +9,8 @@ import (
 	"backoffice_app/model"
 )
 
-// Protect branch or pool request for prevent show it in report
-func (a *App) Protect(userID, name, comment string) error {
+// SkipMonitoring branch or pool request for prevent show it in report
+func (a *App) SkipMonitoring(userID, name, comment string) error {
 	var b model.Protected
 	err := a.model.First(&b, model.Protected{Name: name})
 	if err == common.ErrInternal {
@@ -32,7 +32,7 @@ func (a *App) Protect(userID, name, comment string) error {
 	})
 }
 
-func (a *App) Unprotect(name string) error {
+func (a *App) ContinueMonitoring(name string) error {
 	var protected model.Protected
 	err := a.model.First(&protected, model.Protected{Name: name})
 	if err == common.ErrInternal {
@@ -44,7 +44,7 @@ func (a *App) Unprotect(name string) error {
 	return a.model.Delete(&model.Protected{}, model.Protected{Name: name})
 }
 
-func (a *App) ShowProtected() string {
+func (a *App) ShowSkipped() string {
 	var branches []model.Protected
 	if err := a.model.Find(&branches); err != nil {
 		return err.Error()

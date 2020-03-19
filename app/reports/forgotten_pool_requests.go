@@ -1,9 +1,9 @@
 package reports
 
 import (
-	"fmt"
 	"time"
 
+	"backoffice_app/common"
 	"backoffice_app/config"
 	"backoffice_app/model"
 	"backoffice_app/services/bitbucket"
@@ -41,8 +41,8 @@ func (fpr ForgottenPoolRequests) Run(channel string) {
 	if err != nil {
 		return
 	}
-	var protected []model.Protected
-	if err := fpr.model.Find(&protected); err != nil {
+	protected, err := fpr.model.GetNamesOfProtectedBranchesAndPRs()
+	if err != nil {
 		return
 	}
 	var (
@@ -51,15 +51,7 @@ func (fpr ForgottenPoolRequests) Run(channel string) {
 		thirdAttentionPRs  = make(map[string][]string)
 	)
 	for _, pr := range pullRequests {
-		var flag bool
-		for _, ppr := range protected {
-			if pr.Title == ppr.Name {
-				// FIXME: testing protected branch. Remove after tests
-				fpr.slack.SendMessage(fmt.Sprintf("Пул реквест %s защищен", pr.Title), "U8A004WK0")
-				flag = true
-			}
-		}
-		if flag {
+		if common.ValueIn(pr.Title, protected...) {
 			continue
 		}
 		userSlackMention := "<@" + fpr.config.GetUserInfoByTagValue("slackrealname", pr.Author.DisplayName)["slackid"] + ">"
