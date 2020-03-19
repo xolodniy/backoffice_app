@@ -44,7 +44,8 @@ func (c *Controller) Start() {
 	c.initRoutes()
 
 	// external middleware for repeating http requests to sentry.io. will be used when sentry enabled in config only
-	if *c.Config.Sentry.EnableSentry && *c.Config.Sentry.LoggingHTTPRequests {
+	if c.Config.Sentry.EnableSentry != nil && *c.Config.Sentry.EnableSentry &&
+		c.Config.Sentry.LoggingHTTPRequests != nil && *c.Config.Sentry.LoggingHTTPRequests {
 		c.Gin.Use(SendHTTPLogsToSentry())
 	}
 

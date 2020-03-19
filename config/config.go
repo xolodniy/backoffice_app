@@ -205,7 +205,7 @@ func (c *Database) ConnURL() string {
 }
 
 func configureSentry(config Sentry) {
-	if !*config.EnableSentry {
+	if config.EnableSentry == nil || !*config.EnableSentry {
 		return
 	}
 	if config.DSN == "" {
