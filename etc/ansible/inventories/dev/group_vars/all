@@ -31,3 +31,10 @@ postgres_user: backoffice
 postgres_password: KMp7mMnfgOws2BYw
 postgres_database: backoffice
 postgres_enable_ssl: false
+
+# sentry.io cloud service for accumulating logs from logging library && http server
+sentry_enable: false
+sentry_dsn: http://127.0.0.1
+sentry_log_level: warning
+sentry_logging_http_requests: false
+sentry_env : Dev
