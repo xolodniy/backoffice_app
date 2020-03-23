@@ -5,9 +5,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"path"
+	"path/filepath"
 	"strings"
 
 	"backoffice_app/config"
@@ -539,4 +544,51 @@ func (s *Slack) ChannelsList() ([]Channel, error) {
 		resp.Body.Close()
 	}
 	return channels, nil
+}
+
+func (s *Slack) SendFile(channel, fileName string) error {
+	fileDir, err := os.Getwd()
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"filename": fileName,
+			"channel":  channel,
+		}).Error("can't find file")
+		return common.ErrInternal
+	}
+	filePath := path.Join(fileDir, fileName)
+	file, err := os.Open(filePath)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"filename": fileName,
+			"channel":  channel,
+		}).Error("can't open file")
+		return common.ErrInternal
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", filepath.Base(file.Name()))
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"filename": fileName,
+			"channel":  channel,
+		}).Error("can't create multipart from file file")
+		return common.ErrInternal
+	}
+	_, err = io.Copy(part, file)
+	if err != nil {
+		logrus.WithError(err).WithFields(logrus.Fields{
+			"filename": fileName,
+			"channel":  channel,
+		}).Error("can't copy multipart from file")
+		return common.ErrInternal
+	}
+	writer.Close()
+	err = s.UploadFile(channel, writer.FormDataContentType(), body)
+	if err != nil {
+		return err
+	}
+	file.Close()
+	os.Remove(filePath)
+	return nil
 }

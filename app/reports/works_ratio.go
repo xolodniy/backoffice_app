@@ -1,8 +1,8 @@
-package app
+// works ratio generates xlsx report which shows information current sprint status
+// includes info about overworking
+package reports
 
 import (
-	"backoffice_app/common"
-	"backoffice_app/services/jira"
 	"bytes"
 	"fmt"
 	"os"
@@ -10,27 +10,45 @@ import (
 	"strconv"
 	"time"
 
+	"backoffice_app/common"
+	"backoffice_app/services/jira"
+	"backoffice_app/services/slack"
+
 	"github.com/sirupsen/logrus"
 	"github.com/unidoc/unioffice/spreadsheet"
 )
 
-func (a *App) WorkRatioReport(dateStart, dateEnd time.Time, channel string) {
-	issues, err := a.Jira.IssuesClosedInInterim(dateStart, dateEnd)
+type WorksRatio struct {
+	jira  jira.Jira
+	slack slack.Slack
+}
+
+func NewReportWorksRatio(
+	j jira.Jira,
+	s slack.Slack,
+) WorksRatio {
+	return WorksRatio{
+		jira:  j,
+		slack: s,
+	}
+}
+
+func (wr WorksRatio) Run(dateStart, dateEnd time.Time, channel string) {
+	issues, err := wr.jira.IssuesClosedInInterim(dateStart, dateEnd)
 	if err != nil {
-		a.Slack.SendMessage("*Generating work reatio report was failed with err*:\n"+err.Error(), channel)
+		wr.slack.SendMessage("*Generating work ratio report was failed with err*:\n"+err.Error(), channel)
 		return
 	}
 	// sort by overwork %
 	sort.SliceStable(issues, func(i, j int) bool {
 		iEstimate := issues[i].Fields.TimeTracking.OriginalEstimateSeconds
 		jEstimate := issues[j].Fields.TimeTracking.OriginalEstimateSeconds
-		if iEstimate/100 == 0 || jEstimate/100 == 0 {
+		if iEstimate < 100 || jEstimate < 100 {
 			return false
 		}
 		iTimeSpent := issues[i].Fields.TimeTracking.TimeSpentSeconds
 		jTimeSpent := issues[j].Fields.TimeTracking.TimeSpentSeconds
-		return (iTimeSpent-iEstimate)/(iEstimate/100) <
-			(jTimeSpent - jEstimate/(jEstimate/100))
+		return (iTimeSpent-iEstimate)/(iEstimate/100) < (jTimeSpent - jEstimate/(jEstimate/100))
 	})
 	var workRatio []WorkRatioDTO
 	for _, issue := range issues {
@@ -38,7 +56,7 @@ func (a *App) WorkRatioReport(dateStart, dateEnd time.Time, channel string) {
 		if developer == "" {
 			developer = jira.NoDeveloper
 		}
-		if common.ValueIn(developer, a.Slack.IgnoreList...) ||
+		if common.ValueIn(developer, wr.slack.IgnoreList...) ||
 			!common.ValueIn(issue.Fields.Type.Name, jira.TypeBETask, jira.TypeFETask, jira.TypeBESubTask, jira.TypeFESubTask, jira.TypeDesignTask) {
 			continue
 		}
@@ -60,8 +78,46 @@ func (a *App) WorkRatioReport(dateStart, dateEnd time.Time, channel string) {
 			DiffProcent:      overWorkedDuration / (issue.Fields.TimeTracking.OriginalEstimateSeconds / 100),
 		})
 	}
-	if err := a.CreateWorkRatioXlsxReport(workRatio, channel); err != nil {
-		a.Slack.SendMessage("*Generating work ratio report was failed with err*:\n"+err.Error(), channel)
+	if len(workRatio) == 0 {
+		wr.slack.SendMessage("*Generating work ratio report was failed, There are no issues for workRatioReport.csv file", channel)
+		return
+	}
+
+	// make csv report
+	var sheetRows [][]string
+	sheetRows = append(sheetRows, []string{""}) // unlicensed mode arrives first row
+	sheetRows = append(sheetRows, []string{
+		"Developer",
+		"Resolution date",
+		"Issue link",
+		"Issue type",
+		"Original estimate,h",
+		"Time spent,h",
+		"Diff,h",
+		"Diff, %",
+	})
+
+	for _, issue := range workRatio {
+		sheetRows = append(sheetRows, []string{
+			issue.DeveloperName,
+			issue.ResolutionDate,
+			issue.IssueLink,
+			issue.IssueType,
+			issue.OriginalEstimate,
+			issue.TimeSpent,
+			issue.DiffHours,
+			strconv.Itoa(issue.DiffProcent),
+		})
+
+	}
+
+	fileName := "workRatio.xlsx"
+	if err := wr.CreateExcel(fileName, sheetRows); err != nil {
+		wr.slack.SendMessage("*Generating work ratio report was failed with err*:\n"+err.Error(), channel)
+		return
+	}
+	if err := wr.slack.SendFile(channel, fileName); err != nil {
+		logrus.WithError(err).Error("failed to send file with works ratio report to slack")
 	}
 }
 
@@ -76,29 +132,8 @@ type WorkRatioDTO struct {
 	DiffProcent      int
 }
 
-// CreateWorkRatioXlsxReport create csv file with report about work ratio
-func (a *App) CreateWorkRatioXlsxReport(workRatio []WorkRatioDTO, channel string) error {
-	if len(workRatio) == 0 {
-		return fmt.Errorf("There are no issues for workRatioReport.csv file")
-	}
-	var sheetRows [][]string
-	sheetRows = append(sheetRows, []string{""}) // for unlicensed message
-	sheetRows = append(sheetRows, []string{"Developer", "Resolution date", "Issue link", "Issue type", "Original estimate,h", "Time spent,h", "Diff,h", "Diff, %"})
-
-	for _, issue := range workRatio {
-		sheetRows = append(sheetRows, []string{issue.DeveloperName, issue.ResolutionDate, issue.IssueLink, issue.IssueType,
-			issue.OriginalEstimate, issue.TimeSpent, issue.DiffHours, strconv.Itoa(issue.DiffProcent)})
-
-	}
-	fileName := "workRatio.xlsx"
-	if err := a.CreateExcel(fileName, sheetRows); err != nil {
-		a.Slack.SendMessage("*Generating work ratio report was failed with err*:\n"+err.Error(), channel)
-	}
-	return a.SendFileToSlack(channel, fileName)
-}
-
 // CreateExcel creates XLSX from 2-dimensional slice
-func (a *App) CreateExcel(fileName string, sheetRows [][]string) error {
+func (wr WorksRatio) CreateExcel(fileName string, sheetRows [][]string) error {
 	ss := spreadsheet.New()
 	sheet := ss.AddSheet()
 	file, err := os.Create(fileName)

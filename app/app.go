@@ -54,7 +54,7 @@ type App struct {
 	ReleaseBot tg_bot.ReleaseBot
 	Reports    struct {
 		ForgottenBranches     reports.ForgottenBranches
-		ForgottenPoolRequests reports.ForgottenPoolRequests
+		ForgottenPoolRequests reports.ForgottenPullRequests
 	}
 }
 
@@ -92,10 +92,10 @@ func New(conf *config.Main, m *model.Model, ctx context.Context, wg *sync.WaitGr
 		model:      m,
 		Reports: struct {
 			ForgottenBranches     reports.ForgottenBranches
-			ForgottenPoolRequests reports.ForgottenPoolRequests
+			ForgottenPoolRequests reports.ForgottenPullRequests
 		}{
 			ForgottenBranches:     reports.NewReportForgottenBranches(*m, b, *conf, s),
-			ForgottenPoolRequests: reports.NewReportForgottenPoolRequests(*m, b, *conf, s),
+			ForgottenPoolRequests: reports.NewReportForgottenPullRequests(*m, b, *conf, s),
 		},
 	}
 }
@@ -608,6 +608,8 @@ func (a *App) FindLastSprintSequence(sprints []interface{}) (int, error) {
 }
 
 // SendFileToSlack sends file to slack
+// TODO: remove duplicate func
+// DEPRECATED: use some function from slack package
 func (a *App) SendFileToSlack(channel, fileName string) error {
 	fileDir, err := os.Getwd()
 	if err != nil {

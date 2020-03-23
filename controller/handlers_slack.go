@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"backoffice_app/app/reports"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -345,7 +346,7 @@ func (c *Controller) workRatioReport(ctx *gin.Context) {
 		logrus.WithError(err).WithField("dateEnd", datesSlice[1]).Error("can't parse end date")
 		return
 	}
-	go c.App.WorkRatioReport(dStart, dEnd, request.UserId)
+	go reports.NewReportWorksRatio(c.App.Jira, c.App.Slack).Run(dStart, dEnd, request.UserId)
 	ctx.JSON(http.StatusOK, gin.H{
 		"text": "Report is preparing. Your request will be processed soon.",
 	})

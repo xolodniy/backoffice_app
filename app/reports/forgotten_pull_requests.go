@@ -1,3 +1,8 @@
+// report about pull requests with no activity
+// does request with all pull requests to bitbucket and compares they with already stored in DB
+// pull requests which stored in DB so long will be showed in report
+// some protected pull requests will be omitted
+// you can protect pull request by command /skip in slack
 package reports
 
 import (
@@ -10,20 +15,20 @@ import (
 	"backoffice_app/services/slack"
 )
 
-type ForgottenPoolRequests struct {
+type ForgottenPullRequests struct {
 	bitbucket bitbucket.Bitbucket
 	config    config.Main
 	model     model.Model
 	slack     slack.Slack
 }
 
-func NewReportForgottenPoolRequests(
+func NewReportForgottenPullRequests(
 	m model.Model,
 	b bitbucket.Bitbucket,
 	c config.Main,
 	s slack.Slack,
-) ForgottenPoolRequests {
-	return ForgottenPoolRequests{
+) ForgottenPullRequests {
+	return ForgottenPullRequests{
 		bitbucket: b,
 		config:    c,
 		model:     m,
@@ -32,7 +37,7 @@ func NewReportForgottenPoolRequests(
 }
 
 // CheckForgottenGitPullRequests checks pull requests on activity
-func (fpr ForgottenPoolRequests) Run(channel string) {
+func (fpr ForgottenPullRequests) Run(channel string) {
 	forgottenPullRequests, err := fpr.model.GetForgottenPullRequest()
 	if err != nil {
 		return
