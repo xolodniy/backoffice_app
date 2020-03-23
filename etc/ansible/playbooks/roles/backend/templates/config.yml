@@ -143,11 +143,18 @@ database:
 amplify:
   notifychannelid: CKBT66G5A
   channelstag: '#cdto-staging'
-  channelprod: '#cdto'
+  channelprod: '#monitoring'
   mention:
     - U97DJLL11
     - UG47GFL92
     - U9FDU5W4D
+
+sentry:
+  enablesentry: {{ sentry_enable }}
+  dsn: {{ sentry_dsn }}
+  loglevel: {{ sentry_log_level }}
+  logginghttprequests: {{ sentry_logging_http_requests }}
+  env: {{ sentry_env }}
 
 users:
   - jiraaccountid: 5a2575776a747c0e71ab2972

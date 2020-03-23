@@ -2,8 +2,12 @@ package config
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/evalphobia/logrus_sentry"
+	"github.com/getsentry/raven-go"
 	"github.com/jinzhu/configor"
+	"github.com/sirupsen/logrus"
 )
 
 // Main is template to storing of all configuration settings needed
@@ -46,6 +50,7 @@ type Main struct {
 		ReleaseBotAPIKey string
 	}
 	Users []User
+	Sentry
 }
 
 // Jira is template to storing jira configuration
@@ -132,6 +137,15 @@ type Amplify struct {
 	Mention         []string
 }
 
+// Sentry cloud service for accumulating logs from logrus && gin
+type Sentry struct {
+	EnableSentry        *bool
+	DSN                 string
+	LogLevel            string
+	LoggingHTTPRequests *bool
+	Env                 string
+}
+
 type User map[string]string
 
 // GetConfig return config parsed from config/config.yml
@@ -146,7 +160,7 @@ func GetConfig(skipFieldsFilledCheck bool, path string) *Main {
 			panic(err)
 		}
 	}
-
+	configureSentry(config.Sentry)
 	return &config
 }
 
@@ -188,4 +202,48 @@ func (c *Database) ConnURL() string {
 		url += "?sslmode=disable"
 	}
 	return url
+}
+
+func configureSentry(config Sentry) {
+	if config.EnableSentry == nil || !*config.EnableSentry {
+		return
+	}
+	if config.DSN == "" {
+		logrus.Fatal("sentry.dsn must be specified for using sentry")
+	}
+
+	if err := raven.SetDSN(config.DSN); err != nil {
+		logrus.WithError(err).Fatal("applying sentry dsn was failed, please recheck that it is valid")
+	}
+	raven.SetEnvironment(config.Env)
+	// gather logrus levels which should be sent to sentry.vpe.ninja/
+	var sentryLevels []logrus.Level
+	// from most critical level to trace
+	for _, level := range logrus.AllLevels {
+		sentryLevels = append(sentryLevels, level)
+
+		if config.LogLevel == level.String() {
+			hook, err := logrus_sentry.NewSentryHook(config.DSN, sentryLevels)
+			if err != nil {
+				logrus.WithError(err).Fatal("can't init sentry")
+			}
+
+			// increase default server response timeout in case of long Sentry response
+			hook.Timeout = time.Second
+
+			logrus.AddHook(hook)
+			return
+		}
+	}
+	logrus.Fatal("invalid sentry.logLevel variable. Available values: ", logrus.AllLevels)
+}
+
+// GetUserInfoByTagValue retrieve user info by value of tag in map
+func (c Main) GetUserInfoByTagValue(tag, value string) User {
+	for _, a := range c.Users {
+		if a[tag] != "" && a[tag] == value {
+			return a
+		}
+	}
+	return make(User, 0)
 }

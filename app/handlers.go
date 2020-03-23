@@ -1,0 +1,64 @@
+// All direct slack commands handling in this place
+// TODO: move old commands from app.go
+package app
+
+import (
+	"fmt"
+
+	"backoffice_app/common"
+	"backoffice_app/model"
+)
+
+// SkipMonitoring branch or pool request for prevent show it in report
+func (a *App) SkipMonitoring(userID, name, comment string) error {
+	var b model.Protected
+	err := a.model.First(&b, model.Protected{Name: name})
+	if err == common.ErrInternal {
+		return err
+	}
+	if err == nil {
+		userName, ok := a.Config.GetUserInfoByTagValue(TagUserSlackID, userID)[TagUserSlackRealName]
+		if !ok {
+			userName = userID // prevent situation when user info not found in configuration
+		}
+		return fmt.Errorf("branch '%s' already protected by %s with comment '%s'",
+			b.Name, userName, b.Comment)
+	}
+
+	return a.model.Create(&model.Protected{
+		Name:    name,
+		Comment: comment,
+		UserID:  userID,
+	})
+}
+
+func (a *App) ContinueMonitoring(name string) error {
+	var protected model.Protected
+	err := a.model.First(&protected, model.Protected{Name: name})
+	if err == common.ErrInternal {
+		return err
+	}
+	if err == common.ErrModelNotFound {
+		return fmt.Errorf("Not found protected '%s' in memory", name)
+	}
+	return a.model.Delete(&model.Protected{}, model.Protected{Name: name})
+}
+
+func (a *App) ShowSkipped() string {
+	var branches []model.Protected
+	if err := a.model.Find(&branches); err != nil {
+		return err.Error()
+	}
+	if len(branches) == 0 {
+		return "Protected branches not found"
+	}
+	var message string
+	for _, b := range branches {
+		userName, ok := a.Config.GetUserInfoByTagValue(TagUserSlackID, b.UserID)[TagUserSlackRealName]
+		if !ok {
+			userName = b.UserID // prevent situation when user info not found in configuration
+		}
+		message += fmt.Sprintf("%50s %30s   %s\n", b.Name, userName, b.Comment)
+	}
+	return message
+}

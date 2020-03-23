@@ -2,6 +2,8 @@ package common
 
 import (
 	"fmt"
+	"runtime"
+	"strings"
 	"time"
 )
 
@@ -49,4 +51,34 @@ func RemoveDuplicates(elements []string) []string {
 		}
 	}
 	return result
+}
+
+// GetFrames function for retrieve calling trace,
+// can be used if you want write to logs calling trace
+func GetFrames() []Frame {
+	maxLengh := make([]uintptr, 99)
+	// skip firs 2 callers which is "runtime.Callers" and common.GetFrames
+	n := runtime.Callers(2, maxLengh)
+
+	var res []Frame
+	if n > 0 {
+		frames := runtime.CallersFrames(maxLengh[:n])
+		for more, frameIndex := true, 0; more; frameIndex++ {
+
+			var frameCandidate runtime.Frame
+			frameCandidate, more = frames.Next()
+
+			// skip tracing when called function not from our project (as example external dependency gin, urfaveCli)
+			if !strings.Contains(frameCandidate.Function, "cdto_platform") {
+				break
+			}
+			res = append(res, Frame{
+				Function: frameCandidate.Function,
+				File:     frameCandidate.File,
+				Line:     frameCandidate.Line,
+			})
+		}
+	}
+
+	return res
 }
