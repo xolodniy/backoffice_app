@@ -438,7 +438,7 @@ func main() {
 						return
 					}
 					application := initAppWithDB(cfg, context.Background(), &sync.WaitGroup{})
-					application.CheckForgottenGitPullRequests(channel)
+					application.Reports.ForgottenPoolRequests.Run(channel)
 				},
 			},
 			{
@@ -453,7 +453,7 @@ func main() {
 						return
 					}
 					application := initAppWithDB(cfg, context.Background(), &sync.WaitGroup{})
-					application.CheckForgottenGitBranches(channel)
+					application.Reports.ForgottenBranches.Run(channel)
 				},
 			},
 		}
@@ -624,14 +624,14 @@ func initCronTasks(ctx context.Context, wg *sync.WaitGroup, cfg *config.Main, ap
 	}
 
 	err = tm.AddTask(cfg.Reports.ReportForgottenPRs.Schedule, func() {
-		application.CheckForgottenGitPullRequests(cfg.Reports.ReportForgottenPRs.Channel)
+		application.Reports.ForgottenPoolRequests.Run(cfg.Reports.ReportForgottenPRs.Channel)
 	})
 	if err != nil {
 		panic(err)
 	}
 
 	err = tm.AddTask(cfg.Reports.ReportForgottenBranches.Schedule, func() {
-		application.CheckForgottenGitBranches(cfg.Reports.ReportForgottenBranches.Channel)
+		application.Reports.ForgottenBranches.Run(cfg.Reports.ReportForgottenBranches.Channel)
 	})
 	if err != nil {
 		panic(err)

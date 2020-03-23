@@ -47,3 +47,10 @@ var (
 	ErrInternal      = errors.New("Внутренняя ошибка сервера, повторите попытку позже или обратитесь к системному администратору")
 	ErrModelNotFound = errors.New("Запись не найдена")
 )
+
+// Frame is short format of runtime.Frame
+type Frame struct {
+	Function string
+	File     string
+	Line     int
+}

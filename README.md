@@ -32,17 +32,6 @@
 
     $ ./backoffice-app send-last-activity-report-now
 
-## **Directory Structure**
-    app/          — Go application domain layer
-    controller/   — Go router layer
-    config/       — Go confg folder
-    vendor/       — Go 3rd-party libraries
-
-    main.go       — Main project file
-    go.mod        — `go mod` auto-generated file with project dependencies. Defines a tree of Go source files.
-    go.sum        — Defines a collection of checksums of each libraries for other programmers to check whether those libraries are hacked or not.
-    
-
 ## **Running the Application**
 
 ### **Prerequisites**

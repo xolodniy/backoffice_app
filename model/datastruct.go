@@ -81,3 +81,17 @@ type OnDutyUser struct {
 	SlackUserID string
 	Team        string
 }
+
+type Protected struct {
+	ID        int
+	Name      string
+	Comment   string
+	UserID    string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt *time.Time
+}
+
+func (Protected) TableName() string {
+	return "protected"
+}

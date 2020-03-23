@@ -261,3 +261,54 @@ func (c *Controller) setOnDutyFrontend(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, "Success! These users are on duty for frontend team!")
 }
+
+func (c *Controller) skipMonitoring(ctx *gin.Context) {
+	var request struct {
+		Text   string `form:"text"    binding:"required"`
+		UserId string `form:"user_id" binding:"required"`
+	}
+	errMessage := `Invalid request. 
+			Please specify a both branch/PR name and comment with reason why need to skipMonitoring it.
+			For example /skipMonitoring test-branch "will be need after new year"`
+	if err := ctx.ShouldBindWith(&request, binding.FormPost); err != nil {
+		ctx.String(http.StatusOK, errMessage)
+		return
+	}
+	message := strings.Split(request.Text, "\"")
+
+	if len(message) != 3 {
+		ctx.String(http.StatusOK, errMessage)
+		return
+	}
+	name := strings.TrimSpace(message[0])
+	comment := strings.TrimSpace(message[1])
+	if name == "" || comment == "" {
+		ctx.String(http.StatusOK, errMessage)
+		return
+	}
+
+	if err := c.App.SkipMonitoring(request.UserId, name, comment); err != nil {
+		ctx.String(http.StatusOK, err.Error())
+		return
+	}
+	ctx.String(http.StatusOK, "ok")
+}
+
+func (c *Controller) continueMonitoring(ctx *gin.Context) {
+	var request struct {
+		Text string `form:"text"    binding:"required"`
+	}
+	if err := ctx.ShouldBindWith(&request, binding.FormPost); err != nil {
+		ctx.String(http.StatusOK, "Invalid request. Please specify name of protected branch or pool request")
+		return
+	}
+	if err := c.App.ContinueMonitoring(request.Text); err != nil {
+		ctx.String(http.StatusOK, err.Error())
+		return
+	}
+	ctx.String(http.StatusOK, "ok")
+}
+
+func (c *Controller) showSkipped(ctx *gin.Context) {
+	ctx.String(http.StatusOK, c.App.ShowSkipped())
+}

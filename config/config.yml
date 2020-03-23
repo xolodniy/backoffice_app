@@ -3,10 +3,10 @@ ginport: 1234
 gindebugmode: true
 maxweekworkinghours: 30.0
 reports:
-  dailyworkersworkedtime:
+  dailyworkersworkedtime: # gather daily working activity and send it to slack
     schedule: "@yearly"
     channel: "#work-reports"
-  weeklyworkersworkedtime:
+  weeklyworkersworkedtime: # gather weekly working activity and send it to slack
     schedule: "@yearly"
     channel: "#work-reports"
   reportclosedsubtasks:
@@ -59,10 +59,10 @@ reports:
     channel: "Artem Efremov"
   sendreminders:
     schedule: "@yearly"
-  reportforgottenprs:
+  reportforgottenprs: # looking for pool requests without activity and report about them to slack
     schedule: "@yearly"
     channel: "#back-office-app"
-  reportforgottenbranches:
+  reportforgottenbranches: # looking for branches without activity and report about them to slack
     schedule: "@yearly"
     channel: "#back-office-app"
 
