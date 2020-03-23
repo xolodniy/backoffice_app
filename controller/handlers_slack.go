@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"backoffice_app/app/reports"
 	"backoffice_app/common"
 	"backoffice_app/types"
 
@@ -311,4 +312,42 @@ func (c *Controller) continueMonitoring(ctx *gin.Context) {
 
 func (c *Controller) showSkipped(ctx *gin.Context) {
 	ctx.String(http.StatusOK, c.App.ShowSkipped())
+}
+
+func (c *Controller) workRatioReport(ctx *gin.Context) {
+	request := struct {
+		Text   string `form:"text" binding:"required"`
+		UserId string `form:"user_id" binding:"required"`
+	}{}
+	err := ctx.ShouldBindWith(&request, binding.FormPost)
+	if err != nil {
+		ctx.String(http.StatusOK, common.ErrInternal.Error())
+		logrus.WithError(err).Error("can't parse request to json")
+		return
+	}
+
+	errWrongFormat := `Failed! Format is wrong! Please, type /work-ratio 02.01.1970 02.01.1970`
+	datesSlice := strings.Split(request.Text, " ")
+	if len(datesSlice) != 2 {
+		ctx.String(http.StatusOK, errWrongFormat)
+		logrus.WithField("datesSlice", datesSlice).Error(`datesSlice has count of elements != 2`)
+		return
+	}
+
+	dStart, err := time.Parse("02.01.2006", datesSlice[0])
+	if err != nil {
+		ctx.String(http.StatusOK, errWrongFormat)
+		logrus.WithError(err).WithField("dateStart", datesSlice[0]).Error("can't parse start date")
+		return
+	}
+	dEnd, err := time.Parse("02.01.2006", datesSlice[1])
+	if err != nil {
+		ctx.String(http.StatusOK, errWrongFormat)
+		logrus.WithError(err).WithField("dateEnd", datesSlice[1]).Error("can't parse end date")
+		return
+	}
+	go reports.NewReportWorksRatio(c.App.Jira, c.App.Slack).Run(dStart, dEnd, request.UserId)
+	ctx.JSON(http.StatusOK, gin.H{
+		"text": "Report is preparing. Your request will be processed soon.",
+	})
 }

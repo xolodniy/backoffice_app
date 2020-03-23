@@ -1,3 +1,8 @@
+// report about branches with no activity
+// does request with all branches to bitbucket and compares they with already stored in DB
+// branches which stored in DB so long will be showed in report
+// some protected branches will be omitted
+// you can protect branch by command /skip in slack
 package reports
 
 import (
