@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"backoffice_app/app/reports"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -9,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"backoffice_app/app/reports"
 	"backoffice_app/common"
 	"backoffice_app/types"
 
@@ -315,18 +315,18 @@ func (c *Controller) showSkipped(ctx *gin.Context) {
 }
 
 func (c *Controller) workRatioReport(ctx *gin.Context) {
-
 	request := struct {
 		Text   string `form:"text" binding:"required"`
 		UserId string `form:"user_id" binding:"required"`
 	}{}
-	errWrongFormat := `Failed! Format is wrong! Please, type /work-ratio 02.01.1970 02.01.1970`
 	err := ctx.ShouldBindWith(&request, binding.FormPost)
 	if err != nil {
-		ctx.String(http.StatusOK, errWrongFormat)
+		ctx.String(http.StatusOK, common.ErrInternal.Error())
 		logrus.WithError(err).Error("can't parse request to json")
 		return
 	}
+
+	errWrongFormat := `Failed! Format is wrong! Please, type /work-ratio 02.01.1970 02.01.1970`
 	datesSlice := strings.Split(request.Text, " ")
 	if len(datesSlice) != 2 {
 		ctx.String(http.StatusOK, errWrongFormat)
