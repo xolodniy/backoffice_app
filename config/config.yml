@@ -147,6 +147,13 @@ amplify:
   mention:
     - UFNGKAYDC
 
+sentry:
+  enablesentry: false
+  dsn: http://127.0.0.1
+  loglevel: warning
+  logginghttprequests: true
+  env: Dev
+
 users:
   - jiraaccountid: 5a2575776a747c0e71ab2972
     email: andrey.solovyov@atnr.pro

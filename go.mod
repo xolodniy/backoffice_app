@@ -6,10 +6,13 @@ require (
 	github.com/Syfaro/telegram-bot-api v4.6.4+incompatible
 	github.com/andygrunwald/go-jira v1.10.0
 	github.com/banzaicloud/logrus-runtime-formatter v0.0.0-20180617171254-12df4a18567f
+	github.com/certifi/gocertifi v0.0.0-20200211180108-c7c1fbc02894 // indirect
 	github.com/cznic/ql v1.2.0 // indirect
 	github.com/denisenkom/go-mssqldb v0.0.0-20191128021309-1d7a30a10f73 // indirect
 	github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 // indirect
+	github.com/evalphobia/logrus_sentry v0.8.2
 	github.com/fatih/structs v1.1.0 // indirect
+	github.com/getsentry/raven-go v0.2.0
 	github.com/gin-contrib/sse v0.0.0-20170109093832-22d885f9ecc7 // indirect
 	github.com/gin-gonic/gin v1.3.0
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
