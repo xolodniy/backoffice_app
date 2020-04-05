@@ -403,7 +403,7 @@ func main() {
 						return
 					}
 					application := initAppWithDB(cfg, context.Background(), &sync.WaitGroup{})
-					application.ReportLowPriorityIssuesStarted(channel)
+					application.Reports.LowPriorityIssuesStarted.Run(channel)
 				},
 			},
 			{
@@ -598,7 +598,7 @@ func initCronTasks(ctx context.Context, wg *sync.WaitGroup, cfg *config.Main, ap
 	}
 
 	err = tm.AddTask(cfg.Reports.ReportLowPriorityIssuesStarted.Schedule, func() {
-		application.ReportLowPriorityIssuesStarted(cfg.Reports.ReportLowPriorityIssuesStarted.Channel)
+		application.Reports.LowPriorityIssuesStarted.Run(cfg.Reports.ReportLowPriorityIssuesStarted.Channel)
 	})
 	if err != nil {
 		panic(err)

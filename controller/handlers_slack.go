@@ -270,7 +270,7 @@ func (c *Controller) skipMonitoring(ctx *gin.Context) {
 	}
 	errMessage := `Invalid request. 
 			Please specify a both branch/PR name and comment with reason why need to skipMonitoring it.
-			For example /skipMonitoring test-branch "will be need after new year"`
+			For example /skip test-branch "will be need after new year"`
 	if err := ctx.ShouldBindWith(&request, binding.FormPost); err != nil {
 		ctx.String(http.StatusOK, errMessage)
 		return

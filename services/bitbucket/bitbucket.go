@@ -225,10 +225,13 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 			return []diffStat{}, err
 		}
 		var nextDiffStats diffStats
-		err = json.Unmarshal(res, &nextDiffStats)
-		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{"repoSlug": repoSlug, "spec": spec, "res": string(res)}).
-				Error("can't unmarshal response body for commits diff stats list")
+		if err = json.Unmarshal(res, &nextDiffStats); err != nil {
+			logrus.WithFields(logrus.Fields{
+				"repositoryName": repoSlug,
+				"commitHash":     spec,
+				"serverResponse": string(res),
+				"error":          err,
+			}).Error("can't unmarshal response body for commits diff stats list")
 			return []diffStat{}, common.ErrInternal
 		}
 		for _, pullRequest := range nextDiffStats.Values {

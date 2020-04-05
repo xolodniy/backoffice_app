@@ -1,7 +1,6 @@
 package slack
 
 import (
-	"backoffice_app/common"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -9,12 +8,14 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"backoffice_app/common"
 	"backoffice_app/config"
 	"backoffice_app/types"
 
@@ -425,34 +426,41 @@ func (s *Slack) ChannelMessageHistory(channelID string, latest, oldest int64) ([
 
 // ChannelMessage retrieves slack channel message by ts
 func (s *Slack) ChannelMessage(channelID, ts string) (Message, error) {
+	logFields := logrus.Fields{"channel": channelID, "ts": ts}
+
 	urlStr := fmt.Sprintf("%s/channels.history?token=%s&inclusive=true&channel=%s&latest=%v&pretty=1&count=1",
 		s.APIURL, s.InToken, channelID, ts)
+	logFields["urlString"] = urlStr
 
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{"url": urlStr}).Error("Can't create http request")
+		logrus.WithError(err).WithFields(logFields).Error("can't send message to slack channel: create http request filed")
 		return Message{}, common.ErrInternal
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	res := MessagesHistory{}
+	reqBlob, _ := httputil.DumpRequestOut(req, true)
+	logFields["dumpRequest"] = reqBlob
+
+	var res MessagesHistory
 	resp, err := http.DefaultClient.Do(req)
+	respBlob, _ := httputil.DumpResponse(resp, true)
+	logFields["dumpResponse"] = respBlob
 	if err != nil {
-		logrus.WithError(err).WithField("request", req).Error("Can't do http request")
+		logrus.WithError(err).WithFields(logFields).Error("can't send message to slack channel: can't do http request")
 		return Message{}, common.ErrInternal
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logrus.WithError(err).WithField("request", req).Error("Can't read response body")
+		logrus.WithError(err).WithFields(logFields).Error("can't send message to slack channel: failed to read response body")
 		return Message{}, common.ErrInternal
 	}
 	if err := json.Unmarshal(body, &res); err != nil {
-		logrus.WithError(err).WithField("res", string(body)).
-			Error("can't unmarshal response body for channel message")
+		logrus.WithError(err).WithFields(logFields).Error("can't send message to slack channel: can't unmarshal response body")
 		return Message{}, common.ErrInternal
 	}
 	if !res.Ok {
-		logrus.WithField("response", res).Error(res.Error)
+		logrus.WithFields(logFields).Error("can't send message to slack channel: return wrong response")
 		return Message{}, common.ErrInternal
 	}
 	if len(res.Messages) == 0 {
