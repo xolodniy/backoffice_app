@@ -50,15 +50,8 @@ func New(config *config.Slack) Slack {
 
 // SendMessage is main message sending method
 func (s *Slack) SendMessage(text, channel string) {
-	channel, err := s.checkChannelOnUserRealName(channel)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"msgBody":        text,
-			"channelID":      channel,
-			"channelBotName": s.BotName,
-		}).Error("can't find user in slack")
-		return
-	}
+	channel = s.checkChannelOnUserRealName(channel)
+
 	var message = &types.PostChannelMessage{
 		Token:   s.OutToken,
 		Channel: channel,
@@ -88,15 +81,8 @@ func (s *Slack) SendMessage(text, channel string) {
 
 // SendMessageWithAttachments is sending method with attachments
 func (s *Slack) SendMessageWithAttachments(text, channel string, attachments []types.PostChannelMessageAttachment) {
-	channel, err := s.checkChannelOnUserRealName(channel)
-	if err != nil {
-		logrus.WithError(err).WithFields(logrus.Fields{
-			"msgBody":        text,
-			"channelID":      channel,
-			"channelBotName": s.BotName,
-		}).Error("can't find user in slack")
-		return
-	}
+	channel = s.checkChannelOnUserRealName(channel)
+
 	var message = &types.PostChannelMessage{
 		Token:       s.OutToken,
 		Channel:     channel,
@@ -358,20 +344,20 @@ func (s *Slack) UsersSlice() ([]Member, error) {
 }
 
 // checkChannelOnUserRealName retrieve channel with user id if it user real name
-func (s *Slack) checkChannelOnUserRealName(channel string) (string, error) {
+func (s *Slack) checkChannelOnUserRealName(channel string) string {
 	userNameSlice := strings.Split(channel, " ")
 	if len(userNameSlice) > 1 {
 		allMembers, err := s.UsersSlice()
 		if err != nil {
-			return "", err
+			return channel
 		}
 		for _, member := range allMembers {
 			if member.Profile.RealName == channel {
-				return member.Id, nil
+				return member.Id
 			}
 		}
 	}
-	return channel, nil
+	return channel
 }
 
 // ChannelMessageHistory retrieves slice of all slack channel messages by time
