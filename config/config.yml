@@ -293,5 +293,11 @@ users:
     slackname: mikhail.gaidadym
     slackrealname: "Mikhail Gaidadym"
 
+  - jiraaccountid: 5e5a7b46393ea90c94b55269
+    email: tatiana.kozlova@atnr.pro
+    slackid: UUAE4224T
+    slackname: tatiana.kozlova
+    slackrealname: "Tatiana Kozlova"
+
 telegram:
   releasebotapikey: 950759502:AAGcarZ4z9_Oa3qMK4lTlVZmB6yxg6tnrSU
