@@ -20,7 +20,7 @@ bitbucket_password: bugivugi
 hubstaff_token: 9omAc5EjhHp7wKXfqBCunHri6jkOsn_FFCcPC8XOqZo # TODO: check token valid after 11.03.2019
 hubstaff_app_token: yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ
 
-slack_intoken: xoxp-281270780213-532563372454-545645521588-6e70abc49c386bb1ad94465d19866188
+slack_intoken: xoxp-281270780213-282000166646-1066897461489-f866875805f45f602a529a65ca6dfad8
 slack_outtoken: xoxb-281270780213-431653228886-P89rKXUXZwXyvg0gmBLI3W79
 slack_secret: 27f79262fd9f22a1db80a4fd70b2374a
 
