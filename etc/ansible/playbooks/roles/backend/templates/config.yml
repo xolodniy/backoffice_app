@@ -277,6 +277,12 @@ users:
     slackname: empty
     slackrealname: empty
 
+  - jiraaccountid: 5da0233a87dd6f0dcb4d765e # Valentin Orlov
+    email: empty
+    slackid: empty
+    slackname: empty
+    slackrealname: empty
+
   - jiraaccountid: 5db0206ede99ed0dac191c31
     email: dmitrii.tkachenko@atnr.pro
     slackid: UPC78UAH1
