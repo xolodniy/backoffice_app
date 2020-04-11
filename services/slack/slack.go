@@ -402,12 +402,12 @@ func (s *Slack) ChannelMessage(channelID, ts string) (Message, error) {
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	reqBlob, _ := httputil.DumpRequestOut(req, true)
-	logFields["dumpRequest"] = reqBlob
+	logFields["dumpRequest"] = string(reqBlob)
 
 	var res MessagesHistory
 	resp, err := http.DefaultClient.Do(req)
 	respBlob, _ := httputil.DumpResponse(resp, true)
-	logFields["dumpResponse"] = respBlob
+	logFields["dumpResponse"] = string(respBlob)
 	if err != nil {
 		logrus.WithError(err).WithFields(logFields).Error("can't send message to slack channel: can't do http request")
 		return Message{}, common.ErrInternal
