@@ -219,7 +219,7 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 		Values []diffStat `json:"values"`
 	}
 	var diff = diffStats{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/diffstat/" + spec}
-	for i := 0; i <= 1000; i++ {
+	for i := 0; i < 1000; i++ {
 		res, err := b.get(diff.Next)
 		if err != nil {
 			return []diffStat{}, err
@@ -231,6 +231,7 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 				"commitHash":     spec,
 				"serverResponse": string(res),
 				"error":          err,
+				"url":            diff.Next,
 			}).Error("can't unmarshal response body for commits diff stats list")
 			return []diffStat{}, common.ErrInternal
 		}
@@ -241,11 +242,12 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 			break
 		}
 		diff.Next = nextDiffStats.Next
-		// warning message about big pull requests list or endless cycle
-		if i == 1000 {
-			logrus.Warn("Commits diff stats list exceed count of 1000")
-		}
 	}
+	// warning message about big pull requests list or endless cycle
+	if diff.Next != "" {
+		logrus.Warn("Commits diff stats list exceed count of 1000")
+	}
+
 	return diff.Values, nil
 }
 
