@@ -219,7 +219,8 @@ func (b *Bitbucket) CommitsDiffStats(repoSlug, spec string) ([]diffStat, error) 
 		Values []diffStat `json:"values"`
 	}
 	var diff = diffStats{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/diffstat/" + spec}
-	for i := 0; i < 1000; i++ {
+	// bitbucket max limit less than 1000
+	for i := 0; i < 999; i++ {
 		res, err := b.get(diff.Next)
 		if err != nil {
 			return []diffStat{}, err
