@@ -61,48 +61,75 @@ func (nrm *NeedReplyMessages) Run() {
 }
 
 func (nrm *NeedReplyMessages) notifyMentionedUsersIfNeed(channel slack.Channel, message slack.Message) {
-	repliedUsers := message.RepliedUsers()
+	notifications := make(map[string]slack.Message)
 
-	var replyMessages []slack.Message
-	// check for replies of channel message
+	if strings.Contains(message.Text, "<!channel>") {
+		for _, user := range channel.Members {
+			notifications[user] = message
+		}
+	}
+	for _, user := range channel.Members {
+		if strings.Contains(message.Text, user) {
+			notifications[user] = message
+		}
+	}
+	for _, user := range message.ReactedUsers() {
+		delete(notifications, user)
+	}
+
 	for _, reply := range message.Replies {
+		delete(notifications, reply.User)
+
 		replyMessage, err := nrm.slack.ChannelMessage(channel.ID, reply.Ts)
 		if err != nil {
 			return
 		}
-		if replyMessage.IsMessageFromBot() {
-			continue
-		}
-		replyMessages = append(replyMessages, replyMessage)
-	}
-	// check reactions of channel members on message if it contains @channel
-	if strings.Contains(message.Text, "<!channel>") {
-		nrm.sendMessageToNotReactedUsers(message, channel, repliedUsers)
-	}
-	var mentionedUsers = make(map[string]string)
-	if !message.IsMessageFromBot() {
-		reactedUsers := message.ReactedUsers()
-		for _, userSlackID := range channel.Members {
-			if strings.Contains(message.Text, userSlackID) && mentionedUsers[userSlackID] == "" && !common.ValueIn(userSlackID, reactedUsers...) {
-				mentionedUsers[userSlackID] = message.Ts
+		for _, user := range channel.Members {
+			if strings.Contains(replyMessage.Text, user) {
+				notifications[user] = replyMessage
 			}
 		}
+		for _, user := range replyMessage.ReactedUsers() {
+			delete(notifications, user)
+		}
 	}
-	// check replies for message and new mentions in replies
-	for _, replyMessage := range replyMessages {
-		delete(mentionedUsers, replyMessage.User)
+
+	for user, message := range notifications {
 		if message.IsMessageFromBot() {
-			continue
-		}
-		// if users reacted we don't send message
-		reactedUsers := replyMessage.ReactedUsers()
-		for _, userSlackID := range channel.Members {
-			if strings.Contains(replyMessage.Text, userSlackID) && mentionedUsers[userSlackID] == "" && !common.ValueIn(userSlackID, reactedUsers...) {
-				mentionedUsers[userSlackID] = replyMessage.Ts
-			}
+			delete(notifications, user)
 		}
 	}
-	nrm.sendMessageToMentionedUsers(message, channel, mentionedUsers)
+
+	afkUsers, _ := nrm.getAfkUsersIDs()
+	for _, user := range afkUsers {
+		if m, ok := notifications[user]; ok {
+			nrm.model.CreateReminder(model.Reminder{
+				UserID:     user,
+				Message:    fmt.Sprintf("<@%s> %s", user, m.Ts),
+				ChannelID:  channel.ID,
+				ThreadTs:   message.Ts,
+				ReplyCount: message.ReplyCount,
+			})
+			delete(notifications, user)
+		}
+	}
+
+	for len(notifications) > 0 {
+		var users, template string
+		for user, message := range notifications {
+			template = message.Text
+			users = "<@" + user + "> "
+			delete(notifications, user)
+			break
+		}
+		for user, message := range notifications {
+			if message.Text == template {
+				users += "<@" + user + "> "
+				delete(notifications, user)
+			}
+		}
+		nrm.slack.SendToThread(users+"\n>"+template, channel.ID, message.Ts)
+	}
 }
 
 // sendMessageToNotReactedUsers sends messages to not reacted users for CheckNeedReplyMessages method

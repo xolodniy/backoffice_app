@@ -118,9 +118,15 @@ func (m Message) IsMessageFromBot() bool {
 
 // ReactedUsers retrieves user that react on message
 func (m Message) ReactedUsers() []string {
-	var reactedUsers []string
-	for _, rection := range m.Reactions {
-		reactedUsers = append(reactedUsers, rection.Users...)
+	reactions := make(map[string]struct{})
+	for _, reaction := range m.Reactions {
+		for _, user := range reaction.Users {
+			reactions[user] = struct{}{}
+		}
+	}
+	reactedUsers := make([]string, 0, len(reactions))
+	for user := range reactions {
+		reactedUsers = append(reactedUsers, user)
 	}
 	return reactedUsers
 }
