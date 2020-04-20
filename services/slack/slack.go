@@ -478,33 +478,35 @@ func (s *Slack) ChannelsList() ([]Channel, error) {
 		cursor   string
 	)
 	for i := 0; i <= 500; i++ {
-		urlStr := fmt.Sprintf("%s/channels.list?token=%s&cursor=%s&pretty=1",
-			s.APIURL, s.InToken, cursor)
+		urlStr := fmt.Sprintf("%s/channels.list?token=%s&cursor=%s&pretty=1", s.APIURL, s.InToken, cursor)
 
+		logFields := logrus.Fields{
+			"getURL": urlStr,
+		}
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{"url": urlStr}).Error("Can't create http request")
+			logrus.WithError(err).WithFields(logFields).Error("Can't create http request")
 			return []Channel{}, common.ErrInternal
 		}
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		res := ChannelList{}
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			logrus.WithError(err).WithField("request", req).Error("Can't do http request")
+			logrus.WithError(err).WithFields(logFields).Error("Can't do http request")
 			return []Channel{}, common.ErrInternal
 		}
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			logrus.WithError(err).WithField("request", req).Error("Can't read response body")
+			logrus.WithError(err).WithFields(logFields).Error("Can't read response body")
 			return []Channel{}, common.ErrInternal
 		}
+		logFields["responseBody"] = string(body)
 		if err := json.Unmarshal(body, &res); err != nil {
-			logrus.WithError(err).WithField("res", string(body)).
-				Error("can't unmarshal response body for channels list")
+			logrus.WithError(err).WithFields(logFields).Error("can't unmarshal response body for channels list")
 			return []Channel{}, common.ErrInternal
 		}
 		if !res.Ok {
-			logrus.WithField("response", res).Error(res.Error)
+			logrus.WithFields(logFields).Error("can't get channels list from slack")
 			return []Channel{}, common.ErrInternal
 		}
 		channels = append(channels, res.Channels...)

@@ -127,9 +127,14 @@ func (m Message) ReactedUsers() []string {
 
 // RepliedUsers retrieves user that replies on message
 func (m Message) RepliedUsers() []string {
-	var repliedUsers []string
+	replies := make(map[string]struct{})
 	for _, reply := range m.Replies {
-		repliedUsers = append(repliedUsers, reply.User)
+		replies[reply.User] = struct{}{}
+	}
+
+	repliedUsers := make([]string, 0, len(replies))
+	for id := range replies {
+		repliedUsers = append(repliedUsers, id)
 	}
 	return repliedUsers
 }
@@ -155,14 +160,14 @@ type Channel struct {
 	Members    []string `json:"members"`
 }
 
-// IsChannelActual checks if channel is actual
-func (ch Channel) IsChannelActual() bool {
+// IsActual checks if channel is actual
+func (ch Channel) IsActual() bool {
 	return !ch.IsArchived && ch.IsChannel && ch.NumMembers > 0
 }
 
-func (ch *Channel) RemoveBotMembers(bots ...string) {
+func (ch *Channel) RemoveMembers(members []string) {
 	for i := len(ch.Members) - 1; i >= 0; i-- {
-		if common.ValueIn(ch.Members[i], bots...) {
+		if common.ValueIn(ch.Members[i], members...) {
 			ch.Members = append(ch.Members[:i], ch.Members[i+1:]...)
 		}
 	}
