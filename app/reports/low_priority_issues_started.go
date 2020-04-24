@@ -66,10 +66,6 @@ func (l LowPriorityIssuesStarted) Run(channel string) {
 			if len(issue.Fields.Worklog.Worklogs) == 0 {
 				continue
 			}
-			// check if issue has activity, but not started and start it
-			if issue.Fields.Status.Name == jira.StatusOpen {
-				l.jira.IssueSetStatusTransition(issue.Key, jira.TransitionStart)
-			}
 
 			if activeIssue.Fields == nil || len(activeIssue.Fields.Worklog.Worklogs) == 0 {
 				activeIssue = issue
