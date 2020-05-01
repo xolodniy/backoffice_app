@@ -16,7 +16,6 @@ import (
 	"backoffice_app/model"
 	"backoffice_app/services/jira"
 
-	runtime "github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/now"
 	"github.com/sirupsen/logrus"
@@ -25,7 +24,6 @@ import (
 
 func main() {
 	{
-
 		cliApp := cli.NewApp()
 		cliApp.Name = "Backoffice App"
 		cliApp.Usage = "It's the best application for real time workers day and week progress."
@@ -51,10 +49,7 @@ func main() {
 				panic(fmt.Sprintf("invalid logLevel \"%s\" in cfg. available: %s", cfg.LogLevel, logrus.AllLevels))
 			}
 			logrus.SetLevel(level)
-
-			formatter := runtime.Formatter{ChildFormatter: &logrus.TextFormatter{}}
-			formatter.Line = true
-			logrus.SetFormatter(&formatter)
+			logrus.SetReportCaller(true) // adds line number to log message
 
 			now.WeekStartDay = time.Monday
 
