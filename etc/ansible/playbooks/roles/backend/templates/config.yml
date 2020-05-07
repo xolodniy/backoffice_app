@@ -50,7 +50,7 @@ reports:
     schedule: "@yearly"
     channel: "#backoffice-bot-test"
   reportlowpriorityissuesstarted:
-    schedule: "@hourly"
+    schedule: "@yearly"
     channel: "#back-office-app"
   checkneedreplymessages:
     schedule: "@hourly"
