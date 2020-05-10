@@ -40,16 +40,8 @@ func main() {
 				Usage: "Channel for sending report, for example: -channel=#backoffice_app ",
 			},
 		}
-
 		cliApp.Action = func(c *cli.Context) {
 			cfg := config.GetConfig(true, c.String("config"))
-
-			level, err := logrus.ParseLevel(cfg.LogLevel)
-			if err != nil {
-				panic(fmt.Sprintf("invalid logLevel \"%s\" in cfg. available: %s", cfg.LogLevel, logrus.AllLevels))
-			}
-			logrus.SetLevel(level)
-			logrus.SetReportCaller(true) // adds line number to log message
 
 			now.WeekStartDay = time.Monday
 
@@ -533,7 +525,7 @@ func initCronTasks(ctx context.Context, wg *sync.WaitGroup, cfg *config.Main, ap
 		application.Reports.ForgottenBranches.Run(cfg.Reports.ReportForgottenBranches.Channel)
 	}))
 
-	checkErr(tm.AddTask(cfg.Reports.CheckNeedReplyMessages.Schedule, application.Reports.NeedReplyMessages.Run))
+	checkErr(tm.AddTask("@every 1m", application.Reports.NeedReplyMessages.Run))
 	checkErr(tm.AddTask(cfg.Reports.ReportClarificationIssues.Schedule, application.ReportClarificationIssues))
 	checkErr(tm.AddTask(cfg.Reports.Report24HoursReviewIssues.Schedule, application.Report24HoursReviewIssues))
 

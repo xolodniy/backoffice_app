@@ -7,6 +7,7 @@ package reports
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 	"backoffice_app/config"
 	"backoffice_app/model"
 	"backoffice_app/services/slack"
+
+	"github.com/sirupsen/logrus"
 )
 
 type NeedReplyMessages struct {
@@ -36,67 +39,73 @@ func NewNeedReplyMessages(
 
 // CheckNeedReplyMessages check messages in all channels for need to reply on it if user was mentioned
 func (nrm *NeedReplyMessages) Run() {
-	latestUnix := time.Now().Add(-24 * time.Hour).Unix()
-	oldestUnix := time.Now().Add(-23 * time.Hour).Unix()
-	channelsList, err := nrm.slack.ChannelsList()
-	if err != nil {
-		return
-	}
-	for _, channel := range channelsList {
-		if !channel.IsActual() {
+	var (
+		dateStart = time.Now().Add(-24 * time.Hour)
+		dateEnd   = dateStart.Add(time.Minute)
+	)
+	for _, channel := range nrm.slack.Channels() {
+		if channel.NumMembers < 2 { // exclude extra requests to channels where notifications are excess
 			continue
 		}
-		channel.RemoveMembers(nrm.config.BotIDs)
-		channelMessages, err := nrm.slack.ChannelMessageHistory(channel.ID, oldestUnix, latestUnix)
-		if err != nil {
-			return
+		channelMessages := nrm.slack.ChannelMessageHistory(channel.ID, dateStart, dateEnd)
+		if len(channelMessages) > 0 {
+			logrus.Tracef("channel %s(%s), messages count: %v", channel.Name, channel.ID, len(channelMessages))
 		}
 		for _, channelMessage := range channelMessages {
 			nrm.notifyMentionedUsersIfNeed(channel, channelMessage)
 		}
 	}
 
-	// Send snoozed reminders for users whose was vacation & afk
+	// Send snoozed reminders for users whose were on vacation & afk
 	nrm.SendReminders()
 }
 
 func (nrm *NeedReplyMessages) notifyMentionedUsersIfNeed(channel slack.Channel, message slack.Message) {
+	logrus.Tracef("message from user %s: %.100s", message.User, message.Text)
 	notifications := make(map[string]slack.Message)
 
 	if strings.Contains(message.Text, "<!channel>") {
-		for _, user := range channel.Members {
+		for _, user := range channel.Members() {
 			notifications[user] = message
 		}
+		delete(notifications, message.User)
 	}
-	for _, user := range channel.Members {
+	for _, user := range channel.Members() {
 		if strings.Contains(message.Text, user) {
 			notifications[user] = message
 		}
 	}
+	if len(notifications) > 0 {
+		logrus.Trace("catch notifications for users: ", reflect.ValueOf(notifications).MapKeys())
+	}
 	for _, user := range message.ReactedUsers() {
-		delete(notifications, user)
+		if _, ok := notifications[user]; ok {
+			delete(notifications, user)
+			logrus.Tracef("excluded reacted user %s, rest notifications: %v", user, reflect.ValueOf(notifications).MapKeys())
+		}
 	}
 
-	for _, reply := range message.Replies {
-		delete(notifications, reply.User)
+	if message.ReplyCount > 0 { // don't remove this condition, ReplyCount already exist, .Replies() method do request to slack API
+		logrus.Trace("go range over message replies")
+		for _, reply := range message.Replies()[1:] { // first message is initial message, not reply
+			logrus.Tracef("reply from %s: %.100s", reply.User, reply.Text)
 
-		replyMessage, err := nrm.slack.ChannelMessage(channel.ID, reply.Ts)
-		if err != nil {
-			return
-		}
-		for _, user := range channel.Members {
-			if strings.Contains(replyMessage.Text, user) {
-				notifications[user] = replyMessage
+			for _, user := range channel.Members() {
+				if strings.Contains(reply.Text, user) {
+					notifications[user] = reply
+					logrus.Tracef("catch new notification for %s", user)
+				}
 			}
-		}
-		for _, user := range replyMessage.ReactedUsers() {
-			delete(notifications, user)
-		}
-	}
-
-	for user, message := range notifications {
-		if message.IsMessageFromBot() {
-			delete(notifications, user)
+			for _, user := range reply.ReactedUsers() {
+				if _, ok := notifications[user]; ok {
+					delete(notifications, user)
+					logrus.Tracef("excluded reacted user %s, rest notifications: %v", user, reflect.ValueOf(notifications).MapKeys())
+				}
+			}
+			if _, ok := notifications[reply.User]; ok {
+				delete(notifications, reply.User)
+				logrus.Tracef("excluded reply author, rest notifications: %v", reflect.ValueOf(notifications).MapKeys())
+			}
 		}
 	}
 
@@ -105,12 +114,13 @@ func (nrm *NeedReplyMessages) notifyMentionedUsersIfNeed(channel slack.Channel, 
 		if m, ok := notifications[user]; ok {
 			nrm.model.CreateReminder(model.Reminder{
 				UserID:     user,
-				Message:    fmt.Sprintf("<@%s> %s", user, m.Ts),
+				Message:    fmt.Sprintf("<@%s>\n>%s", user, m.Text),
 				ChannelID:  channel.ID,
 				ThreadTs:   message.Ts,
 				ReplyCount: message.ReplyCount,
 			})
 			delete(notifications, user)
+			logrus.Tracef("snoozed notification for user %s, because he is afk", user)
 		}
 	}
 
@@ -128,72 +138,9 @@ func (nrm *NeedReplyMessages) notifyMentionedUsersIfNeed(channel slack.Channel, 
 				delete(notifications, user)
 			}
 		}
-		nrm.slack.SendToThread(users+"\n>"+template, channel.ID, message.Ts)
-	}
-}
-
-// sendMessageToNotReactedUsers sends messages to not reacted users for CheckNeedReplyMessages method
-func (nrm *NeedReplyMessages) sendMessageToNotReactedUsers(channelMessage slack.Message, channel slack.Channel, repliedUsers []string) {
-	reactedUsers := channelMessage.ReactedUsers()
-	var notReactedUsers []string
-	for _, member := range channel.Members {
-		if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, repliedUsers...) && member != channelMessage.User {
-			notReactedUsers = append(notReactedUsers, member)
-		}
-	}
-	if len(notReactedUsers) == 0 {
-		return
-	}
-	afkUsers, err := nrm.getAfkUsersIDs()
-	if err != nil {
-		return
-	}
-	var message string
-	for _, userID := range notReactedUsers {
-		if common.ValueIn(userID, afkUsers...) {
-			nrm.model.CreateReminder(model.Reminder{
-				UserID:     userID,
-				Message:    "<@" + userID + "> ",
-				ChannelID:  channel.ID,
-				ThreadTs:   channelMessage.Ts,
-				ReplyCount: channelMessage.ReplyCount,
-			})
-			continue
-		}
-		message += "<@" + userID + "> "
-	}
-	nrm.slack.SendToThread(message+" ^", channel.ID, channelMessage.Ts)
-}
-
-// sendMessageToMentionedUsers sends messages to mentioned users for CheckNeedReplyMessages method
-func (nrm *NeedReplyMessages) sendMessageToMentionedUsers(channelMessage slack.Message, channel slack.Channel, mentionedUsers map[string]string) {
-	if len(mentionedUsers) == 0 {
-		return
-	}
-	afkUsers, err := nrm.getAfkUsersIDs()
-	if err != nil {
-		return
-	}
-	messages := make(map[string]string)
-	for userID, replyTs := range mentionedUsers {
-		replyPermalink, err := nrm.slack.MessagePermalink(channel.ID, replyTs)
-		if err != nil {
-			return
-		}
-		if common.ValueIn(userID, afkUsers...) {
-			nrm.model.CreateReminder(model.Reminder{
-				UserID:     userID,
-				Message:    fmt.Sprintf("<@%s> %s", userID, replyPermalink),
-				ChannelID:  channel.ID,
-				ThreadTs:   channelMessage.Ts,
-				ReplyCount: channelMessage.ReplyCount,
-			})
-			continue
-		}
-		messages[replyPermalink] += "<@" + userID + "> "
-	}
-	for messagePermalink, message := range messages {
-		nrm.slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
+		text := users + "\n>" + template
+		nrm.slack.SendToThread(text, channel.ID, message.Ts)
+		logrus.Tracef("into message (%.50s...) sent notification '%s'", message.Text, text)
 	}
 }
 
@@ -211,25 +158,29 @@ func (nrm *NeedReplyMessages) SendReminders() {
 		if common.ValueIn(reminder.UserID, afkUsers...) {
 			continue
 		}
-		message, err := nrm.slack.ChannelMessage(reminder.ChannelID, reminder.ThreadTs)
-		if err != nil {
-			return
-		}
-		newReplies := message.Replies[reminder.ReplyCount-1:]
+		logrus.Tracef("found available reminder (%.100s...) for user %s", reminder.Message, reminder.UserID)
+		replies := slackMessageFromReminder(reminder).Replies()
+		// we remember count of replies when reminder was created
+		// maybe user answered already, we should check this
 		var wasAnswered bool
+		newReplies := replies[reminder.ReplyCount:]
 		for _, reply := range newReplies {
-			if reply.User != reminder.UserID {
-				continue
+			if reply.User == reminder.UserID {
+				wasAnswered = true
+				logrus.Tracef("user already made answer in tread")
+				break
 			}
-			wasAnswered = true
-			break
+			if common.ValueIn(reminder.UserID, reply.ReactedUsers()...) {
+				wasAnswered = true
+				logrus.Tracef("user sent reaction in some next reply, so we decide he answer")
+				break
+			}
 		}
 		if !wasAnswered {
+			logrus.Tracef("send snoozed notification (%.100s) from reminder", reminder.Message)
 			nrm.slack.SendToThread(reminder.Message, reminder.ChannelID, reminder.ThreadTs)
 		}
-		if err := nrm.model.DeleteReminder(reminder.ID); err != nil {
-			return
-		}
+		nrm.model.DeleteReminder(reminder.ID)
 	}
 }
 
@@ -254,4 +205,13 @@ func (nrm *NeedReplyMessages) getAfkUsersIDs() ([]string, error) {
 		usersIDs = append(usersIDs, v.UserID)
 	}
 	return usersIDs, nil
+}
+
+// manual converting reminder to slack message
+// should return minimal info for retrieve message replies
+func slackMessageFromReminder(reminder model.Reminder) *slack.Message {
+	return &slack.Message{
+		Channel: reminder.ChannelID,
+		Ts:      reminder.ThreadTs,
+	}
 }

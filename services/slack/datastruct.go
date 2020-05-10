@@ -1,10 +1,11 @@
 package slack
 
-import "backoffice_app/common"
-
 // Slack is main Slack client app implementation
 type Slack struct {
-	InToken     string
+	// TODO: check that token usable for bot.
+	//  probably we don't need it
+	InToken string
+
 	OutToken    string
 	BotName     string
 	APIURL      string
@@ -73,19 +74,6 @@ type Member struct {
 	} `json:"profile"`
 }
 
-// MessagesHistory is message object containts information about messages https://api.slack.com/methods/conversations.history
-type MessagesHistory struct {
-	Ok               bool      `json:"ok"`
-	Error            string    `json:"error"`
-	Oldest           string    `json:"oldest"`
-	Messages         []Message `json:"messages"`
-	HasMore          bool      `json:"has_more"`
-	IsLimited        bool      `json:"is_limited"`
-	ResponseMetadata struct {
-		NextCursor string `json:"next_cursor"`
-	} `json:"response_metadata"`
-}
-
 // Message is object that contains message info https://api.slack.com/events/message
 type Message struct {
 	BotID           string   `json:"bot_id"`
@@ -100,15 +88,13 @@ type Message struct {
 	ReplyUsersCount int      `json:"reply_users_count"`
 	LatestReply     string   `json:"latest_reply"`
 	ReplyUsers      []string `json:"reply_users"`
-	Replies         []struct {
-		User string `json:"user"`
-		Ts   string `json:"ts"`
-	} `json:"replies"`
-	Reactions []struct {
+	Reactions       []struct {
 		Name  string   `json:"name"`
 		Users []string `json:"users"`
 		Count int      `json:"count"`
 	}
+
+	replies []Message
 }
 
 // IsMessageFromBot checks if message from bot
@@ -131,50 +117,19 @@ func (m Message) ReactedUsers() []string {
 	return reactedUsers
 }
 
-// RepliedUsers retrieves user that replies on message
-func (m Message) RepliedUsers() []string {
-	replies := make(map[string]struct{})
-	for _, reply := range m.Replies {
-		replies[reply.User] = struct{}{}
-	}
-
-	repliedUsers := make([]string, 0, len(replies))
-	for id := range replies {
-		repliedUsers = append(repliedUsers, id)
-	}
-	return repliedUsers
-}
-
-// ChannelList is chanel list object that contains channels https://api.slack.com/methods/channels.list
-type ChannelList struct {
-	Ok               bool      `json:"ok"`
-	Error            string    `json:"error"`
-	Channels         []Channel `json:"channels"`
-	ResponseMetadata struct {
-		NextCursor string `json:"next_cursor"`
-	} `json:"response_metadata"`
-}
-
 // Channel contains channel info
 type Channel struct {
-	ID         string   `json:"id"`
-	Name       string   `json:"name"`
-	IsChannel  bool     `json:"is_channel"`
-	IsArchived bool     `json:"is_archived"`
-	IsPrivate  bool     `json:"is_private"`
-	NumMembers int      `json:"num_members"`
-	Members    []string `json:"members"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	IsChannel  bool   `json:"is_channel"`
+	IsArchived bool   `json:"is_archived"`
+	IsPrivate  bool   `json:"is_private"`
+	NumMembers int    `json:"num_members"`
+
+	members []string
 }
 
 // IsActual checks if channel is actual
 func (ch Channel) IsActual() bool {
 	return !ch.IsArchived && ch.IsChannel && ch.NumMembers > 0
-}
-
-func (ch *Channel) RemoveMembers(members []string) {
-	for i := len(ch.Members) - 1; i >= 0; i-- {
-		if common.ValueIn(ch.Members[i], members...) {
-			ch.Members = append(ch.Members[:i], ch.Members[i+1:]...)
-		}
-	}
 }
