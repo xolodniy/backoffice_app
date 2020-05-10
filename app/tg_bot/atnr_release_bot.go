@@ -43,6 +43,7 @@ func (rb *ReleaseBot) RunBot() {
 	rb.bot, err = tgbotapi.NewBotAPI(rb.apiKey)
 	if err != nil {
 		logrus.WithError(err).Error("can't run Release bot")
+		return
 	}
 
 	logrus.Debugf("Authorized on account %s", rb.bot.Self.UserName)

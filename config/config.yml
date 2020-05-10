@@ -1,4 +1,4 @@
-loglevel: debug
+loglevel: trace
 ginport: 1234
 gindebugmode: true
 maxweekworkinghours: 30.0

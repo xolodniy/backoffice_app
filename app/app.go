@@ -56,6 +56,7 @@ type App struct {
 		ForgottenBranches        reports.ForgottenBranches
 		ForgottenPoolRequests    reports.ForgottenPullRequests
 		LowPriorityIssuesStarted reports.LowPriorityIssuesStarted
+		NeedReplyMessages        reports.NeedReplyMessages
 	}
 }
 
@@ -95,10 +96,12 @@ func New(conf *config.Main, m *model.Model, ctx context.Context, wg *sync.WaitGr
 			ForgottenBranches        reports.ForgottenBranches
 			ForgottenPoolRequests    reports.ForgottenPullRequests
 			LowPriorityIssuesStarted reports.LowPriorityIssuesStarted
+			NeedReplyMessages        reports.NeedReplyMessages
 		}{
 			ForgottenBranches:        reports.NewReportForgottenBranches(*m, b, *conf, s),
 			ForgottenPoolRequests:    reports.NewReportForgottenPullRequests(*m, b, *conf, s),
 			LowPriorityIssuesStarted: reports.NewLowPriorityIssuesStarted(*conf, j, s),
+			NeedReplyMessages:        reports.NewNeedReplyMessages(*conf, *m, s),
 		},
 	}
 }
@@ -1455,193 +1458,6 @@ func (a *App) ReportIssuesLockedByLowPriority(channel string) {
 	}
 	if msg != "" {
 		a.Slack.SendMessage(msg, channel)
-	}
-}
-
-// CheckNeedReplyMessages check messages in all channels for need to reply on it if user was mentioned
-func (a *App) CheckNeedReplyMessages() {
-	latestUnix := time.Now().Add(-12 * time.Hour).Unix()
-	oldestUnix := time.Now().Add(-11 * time.Hour).Unix()
-	channelsList, err := a.Slack.ChannelsList()
-	if err != nil {
-		return
-	}
-	for _, channel := range channelsList {
-		if !channel.IsChannelActual() {
-			continue
-		}
-		channel.RemoveBotMembers(a.Config.BotIDs...)
-		channelMessages, err := a.Slack.ChannelMessageHistory(channel.ID, oldestUnix, latestUnix)
-		if err != nil {
-			return
-		}
-		for _, channelMessage := range channelMessages {
-			repliedUsers := channelMessage.RepliedUsers()
-			var replyMessages []slack.Message
-			// check for replies of channel message
-			for _, reply := range channelMessage.Replies {
-				replyMessage, err := a.Slack.ChannelMessage(channel.ID, reply.Ts)
-				if err != nil {
-					return
-				}
-				if replyMessage.IsMessageFromBot() {
-					continue
-				}
-				replyMessages = append(replyMessages, replyMessage)
-			}
-			// check reactions of channel members on message if it contains @channel
-			if strings.Contains(channelMessage.Text, "<!channel>") {
-				a.sendMessageToNotReactedUsers(channelMessage, channel, repliedUsers)
-			}
-			var mentionedUsers = make(map[string]string)
-			if !channelMessage.IsMessageFromBot() {
-				reactedUsers := channelMessage.ReactedUsers()
-				for _, userSlackID := range channel.Members {
-					if strings.Contains(channelMessage.Text, userSlackID) && mentionedUsers[userSlackID] == "" && !common.ValueIn(userSlackID, reactedUsers...) {
-						mentionedUsers[userSlackID] = channelMessage.Ts
-					}
-				}
-			}
-			// check replies for message and new nemtions in replies
-			for _, replyMessage := range replyMessages {
-				delete(mentionedUsers, replyMessage.User)
-				if channelMessage.IsMessageFromBot() {
-					continue
-				}
-				// if users reacted we don't send message
-				reactedUsers := replyMessage.ReactedUsers()
-				for _, userSlackID := range channel.Members {
-					if strings.Contains(replyMessage.Text, userSlackID) && mentionedUsers[userSlackID] == "" && !common.ValueIn(userSlackID, reactedUsers...) {
-						mentionedUsers[userSlackID] = replyMessage.Ts
-					}
-				}
-			}
-			a.sendMessageToMentionedUsers(channelMessage, channel, mentionedUsers)
-		}
-	}
-}
-
-// sendMessageToNotReactedUsers sends messages to not reacted users for CheckNeedReplyMessages method
-func (a *App) sendMessageToNotReactedUsers(channelMessage slack.Message, channel slack.Channel, repliedUsers []string) {
-	reactedUsers := channelMessage.ReactedUsers()
-	var notReactedUsers []string
-	for _, member := range channel.Members {
-		if !common.ValueIn(member, reactedUsers...) && !common.ValueIn(member, repliedUsers...) && member != channelMessage.User {
-			notReactedUsers = append(notReactedUsers, member)
-		}
-	}
-	if len(notReactedUsers) == 0 {
-		return
-	}
-	afkUsers, err := a.getAfkUsersIDs()
-	if err != nil {
-		return
-	}
-	var message string
-	for _, userID := range notReactedUsers {
-		if common.ValueIn(userID, afkUsers...) {
-			a.model.CreateReminder(model.Reminder{
-				UserID:     userID,
-				Message:    "<@" + userID + "> ",
-				ChannelID:  channel.ID,
-				ThreadTs:   channelMessage.Ts,
-				ReplyCount: channelMessage.ReplyCount,
-			})
-			continue
-		}
-		message += "<@" + userID + "> "
-	}
-	a.Slack.SendToThread(message+" ^", channel.ID, channelMessage.Ts)
-}
-
-// sendMessageToMentionedUsers sends messages to mentioned users for CheckNeedReplyMessages method
-func (a *App) sendMessageToMentionedUsers(channelMessage slack.Message, channel slack.Channel, mentionedUsers map[string]string) {
-	if len(mentionedUsers) == 0 {
-		return
-	}
-	afkUsers, err := a.getAfkUsersIDs()
-	if err != nil {
-		return
-	}
-	messages := make(map[string]string)
-	for userID, replyTs := range mentionedUsers {
-		replyPermalink, err := a.Slack.MessagePermalink(channel.ID, replyTs)
-		if err != nil {
-			return
-		}
-		if common.ValueIn(userID, afkUsers...) {
-			a.model.CreateReminder(model.Reminder{
-				UserID:     userID,
-				Message:    fmt.Sprintf("<@%s> %s", userID, replyPermalink),
-				ChannelID:  channel.ID,
-				ThreadTs:   channelMessage.Ts,
-				ReplyCount: channelMessage.ReplyCount,
-			})
-			continue
-		}
-		messages[replyPermalink] += "<@" + userID + "> "
-	}
-	for messagePermalink, message := range messages {
-		a.Slack.SendToThread(fmt.Sprintf("%s %s", message, messagePermalink), channel.ID, channelMessage.Ts)
-	}
-}
-
-// getAfkUsersIDs retrieves all afk users on vacation or with afk status
-func (a *App) getAfkUsersIDs() ([]string, error) {
-	var usersIDs []string
-	afkTimers, err := a.model.GetAfkTimers()
-	if err != nil {
-		return []string{}, err
-	}
-	for _, at := range afkTimers {
-		usersIDs = append(usersIDs, at.UserID)
-	}
-	vacations, err := a.model.GetActualVacations()
-	if err != nil {
-		return []string{}, err
-	}
-	for _, v := range vacations {
-		if common.ValueIn(v.UserID, usersIDs...) {
-			continue
-		}
-		usersIDs = append(usersIDs, v.UserID)
-	}
-	return usersIDs, nil
-}
-
-// SendReminders sends reminders for non afk users
-func (a *App) SendReminders() {
-	afkUsers, err := a.getAfkUsersIDs()
-	if err != nil {
-		return
-	}
-	reminders, err := a.model.GetReminders()
-	if err != nil {
-		return
-	}
-	for _, reminder := range reminders {
-		if common.ValueIn(reminder.UserID, afkUsers...) {
-			continue
-		}
-		message, err := a.Slack.ChannelMessage(reminder.ChannelID, reminder.ThreadTs)
-		if err != nil {
-			return
-		}
-		newReplies := message.Replies[reminder.ReplyCount-1:]
-		var wasAnswered bool
-		for _, reply := range newReplies {
-			if reply.User != reminder.UserID {
-				continue
-			}
-			wasAnswered = true
-			break
-		}
-		if !wasAnswered {
-			a.Slack.SendToThread(reminder.Message, reminder.ChannelID, reminder.ThreadTs)
-		}
-		if err := a.model.DeleteReminder(reminder.ID); err != nil {
-			return
-		}
 	}
 }
 

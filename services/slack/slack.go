@@ -13,7 +13,9 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"backoffice_app/common"
 	"backoffice_app/config"
@@ -24,7 +26,7 @@ import (
 
 // New creates new slack
 func New(config *config.Slack) Slack {
-	return Slack{
+	slack = &Slack{
 		InToken:     config.InToken,
 		OutToken:    config.OutToken,
 		BotName:     config.BotName,
@@ -46,7 +48,13 @@ func New(config *config.Slack) Slack {
 			DevOps:            config.Employees.DevOps,
 		},
 	}
+	return *slack
 }
+
+// allows package objects to communicate with slack api independently
+// maybe it will be usable
+// Just for experiment, looking how to make more readable code
+var slack *Slack
 
 // SendMessage is main message sending method
 func (s *Slack) SendMessage(text, channel string) {
@@ -338,98 +346,85 @@ func (s *Slack) checkChannelOnUserRealName(channel string) string {
 }
 
 // ChannelMessageHistory retrieves slice of all slack channel messages by time
-func (s *Slack) ChannelMessageHistory(channelID string, latest, oldest int64) ([]Message, error) {
+func (s *Slack) ChannelMessageHistory(channelID string, dateStart, dateEnd time.Time) []Message {
 	var (
-		channelMessages []Message
-		cursor          string
-	)
-	for i := 0; i <= 500; i++ {
-		urlStr := fmt.Sprintf("%s/conversations.history?token=%s&inclusive=true&channel=%s&cursor=%s&latest=%v&oldest=%v&pretty=1",
-			s.APIURL, s.InToken, channelID, cursor, latest, oldest)
+		params = url.Values{
+			"token":     {s.OutToken},
+			"channel":   {channelID},
+			"oldest":    {strconv.FormatInt(dateStart.Unix(), 10)},
+			"latest":    {strconv.FormatInt(dateEnd.Unix(), 10)},
+			"inclusive": {"true"}, // Include messages with latest or oldest timestamp in results only when either timestamp is specified.
 
-		req, err := http.NewRequest("GET", urlStr, nil)
-		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{"url": urlStr}).Error("Can't create http request")
-			return []Message{}, common.ErrInternal
+			// Slack says about limit param: Fewer than the requested number of items may be returned, even if the end of the users list hasn't been reached.
+			// If it's real case than need a new solution with several requests and cursor
+			// https://api.slack.com/methods/conversations.history
+			"limit": {"1000"},
 		}
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		res := MessagesHistory{}
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			logrus.WithError(err).WithField("request", req).Error("Can't do http request")
-			return []Message{}, common.ErrInternal
+		url      = fmt.Sprintf("%s/conversations.history?%s", s.APIURL, params.Encode())
+		response struct {
+			OK               bool      `json:"ok"`
+			Error            string    `json:"error"`
+			Messages         []Message `json:"messages"`
+			HasMore          bool      `json:"has_more"`
+			ResponseMetadata struct {
+				NextCursor string `json:"next_cursor"`
+			} `json:"response_metadata"`
 		}
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			logrus.WithError(err).WithField("request", req).Error("Can't read response body")
-			return []Message{}, common.ErrInternal
-		}
-		if err := json.Unmarshal(body, &res); err != nil {
-			logrus.WithError(err).WithField("res", string(body)).
-				Error("can't unmarshal response body for channel messages history")
-			return []Message{}, common.ErrInternal
-		}
-		if !res.Ok {
-			logrus.WithField("response", res).Error(res.Error)
-			return []Message{}, common.ErrInternal
-		}
-		channelMessages = append(channelMessages, res.Messages...)
-		if !res.HasMore {
-			break
-		}
-		cursor = res.ResponseMetadata.NextCursor
-		// warning message about big history or endless cycle
-		if i == 500 {
-			logrus.Warn("Message history exceed count of 500")
-		}
-		resp.Body.Close()
+	)
+	if log := get(url, &response); log != nil {
+		log.Error("can't get conversations.history from slack")
+		return []Message{}
 	}
-	return channelMessages, nil
+	if !response.OK {
+		logrus.WithFields(logrus.Fields{
+			"url":   url,
+			"error": response.Error},
+		).Error("received error response from slack while get conversations history")
+		return []Message{}
+	}
+
+	// back-capability
+	// TODO: get rid of this link
+	for i := range response.Messages {
+		response.Messages[i].Channel = channelID
+	}
+	return response.Messages
 }
 
 // ChannelMessage retrieves slack channel message by ts
-func (s *Slack) ChannelMessage(channelID, ts string) (Message, error) {
-	logFields := logrus.Fields{"channel": channelID, "ts": ts}
+// in a head of returned slice will be initial message
+func (message *Message) Replies() []Message {
+	if len(message.replies) != 0 {
+		return message.replies
+	}
+	var (
+		params = url.Values{
+			"token":   {slack.OutToken},
+			"channel": {message.Channel},
+			"ts":      {message.Ts},
+			// Slack says about limit param: Fewer than the requested number of items may be returned, even if the end of the users list hasn't been reached.
+			// If it's real case than need a new solution with several requests and cursor
+			// https://api.slack.com/methods/conversations.replies
+			"limit": {"200"},
+		}
+		url      = fmt.Sprintf("%s/conversations.replies?%s", slack.APIURL, params.Encode())
+		response struct {
+			Messages []Message `json:"messages"`
+			OK       bool      `json:"ok"`
+			Error    string    `json:"error"`
+		}
+	)
 
-	urlStr := fmt.Sprintf("%s/channels.history?token=%s&inclusive=true&channel=%s&latest=%v&pretty=1&count=1",
-		s.APIURL, s.InToken, channelID, ts)
-	logFields["urlString"] = urlStr
-
-	req, err := http.NewRequest("GET", urlStr, nil)
-	if err != nil {
-		logrus.WithError(err).WithFields(logFields).Error("can't send message to slack channel: create http request filed")
-		return Message{}, common.ErrInternal
+	if log := get(url, &response); log != nil {
+		log.Error("can't get message replies")
+		return []Message{}
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	reqBlob, _ := httputil.DumpRequestOut(req, true)
-	logFields["dumpRequest"] = string(reqBlob)
-
-	var res MessagesHistory
-	resp, err := http.DefaultClient.Do(req)
-	respBlob, _ := httputil.DumpResponse(resp, true)
-	logFields["dumpResponse"] = string(respBlob)
-	if err != nil {
-		logrus.WithError(err).WithFields(logFields).Error("can't send message to slack channel: can't do http request")
-		return Message{}, common.ErrInternal
+	if !response.OK {
+		logrus.WithFields(logrus.Fields{"url": url, "error": response.Error}).Error("received error response from slack while get message replies")
+		return []Message{}
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		logrus.WithError(err).WithFields(logFields).Error("can't send message to slack channel: failed to read response body")
-		return Message{}, common.ErrInternal
-	}
-	if err := json.Unmarshal(body, &res); err != nil {
-		logrus.WithError(err).WithFields(logFields).Error("can't send message to slack channel: can't unmarshal response body")
-		return Message{}, common.ErrInternal
-	}
-	if !res.Ok {
-		logrus.WithFields(logFields).Error("can't send message to slack channel: return wrong response")
-		return Message{}, common.ErrInternal
-	}
-	if len(res.Messages) == 0 {
-		return Message{}, nil
-	}
-	return res.Messages[0], nil
+	message.replies = response.Messages
+	return message.replies
 }
 
 // MessagePermalink retrieves slack channel message permalink by ts
@@ -472,49 +467,29 @@ func (s *Slack) MessagePermalink(channelID, ts string) (string, error) {
 }
 
 // ChannelsList retrieves slice of channels
-func (s *Slack) ChannelsList() ([]Channel, error) {
+// Note that default limit is 100 channels, you should upgrade this method if you have more
+func (s *Slack) Channels() []Channel {
 	var (
-		channels []Channel
-		cursor   string
+		params = url.Values{
+			"token":            {s.OutToken},
+			"exclude_archived": {"true"},
+		}
+		url      = fmt.Sprintf("%s/conversations.list?%s", s.APIURL, params.Encode())
+		response struct {
+			OK       bool      `json:"ok"`
+			Error    string    `json:"error"`
+			Channels []Channel `json:"channels"`
+		}
 	)
-	for i := 0; i <= 500; i++ {
-		urlStr := fmt.Sprintf("%s/channels.list?token=%s&cursor=%s&pretty=1",
-			s.APIURL, s.InToken, cursor)
-
-		req, err := http.NewRequest("GET", urlStr, nil)
-		if err != nil {
-			logrus.WithError(err).WithFields(logrus.Fields{"url": urlStr}).Error("Can't create http request")
-			return []Channel{}, common.ErrInternal
-		}
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		res := ChannelList{}
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			logrus.WithError(err).WithField("request", req).Error("Can't do http request")
-			return []Channel{}, common.ErrInternal
-		}
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			logrus.WithError(err).WithField("request", req).Error("Can't read response body")
-			return []Channel{}, common.ErrInternal
-		}
-		if err := json.Unmarshal(body, &res); err != nil {
-			logrus.WithError(err).WithField("res", string(body)).
-				Error("can't unmarshal response body for channels list")
-			return []Channel{}, common.ErrInternal
-		}
-		if !res.Ok {
-			logrus.WithField("response", res).Error(res.Error)
-			return []Channel{}, common.ErrInternal
-		}
-		channels = append(channels, res.Channels...)
-		if res.ResponseMetadata.NextCursor == "" {
-			break
-		}
-		cursor = res.ResponseMetadata.NextCursor
-		resp.Body.Close()
+	if log := get(url, &response); log != nil {
+		log.Error("can't get channels from slack")
+		return []Channel{}
 	}
-	return channels, nil
+	if !response.OK {
+		logrus.WithFields(logrus.Fields{"url": url, "error": response.Error}).Error("received error response from slack while get channels")
+		return []Channel{}
+	}
+	return response.Channels
 }
 
 func (s *Slack) SendFile(channel, fileName string) error {
@@ -561,5 +536,58 @@ func (s *Slack) SendFile(channel, fileName string) error {
 	}
 	file.Close()
 	os.Remove(filePath)
+	return nil
+}
+
+func (channel *Channel) Members() []string {
+	if len(channel.members) != 0 {
+		return channel.members
+	}
+
+	// Preload members from slack API
+	// Note that default members limit is 100.
+	//  If your channel has more members - you should improve it yourself
+	params := url.Values{
+		"token":   {slack.OutToken},
+		"channel": {channel.ID},
+	}
+	url := fmt.Sprintf("%s/conversations.members?%s", slack.APIURL, params.Encode())
+	var response struct {
+		OK      bool     `json:"ok"`
+		Error   string   `json:"error"`
+		Members []string `json:"members"`
+	}
+	if log := get(url, &response); log != nil {
+		log.WithFields(logrus.Fields{"URL": url, "channel": channel.Name}).Error("can't get channel members")
+		return []string{}
+	}
+	if !response.OK {
+		logrus.WithField("error_from_slack", response.Error).Error("reseived error response from slack during get channel members")
+		return []string{}
+	}
+	channel.members = response.Members
+	return channel.members
+}
+
+func get(url string, result interface{}) *logrus.Entry {
+	log := logrus.WithFields(logrus.Fields{
+		"url":                  url,
+		"expected_result_type": fmt.Sprintf("%T", result),
+		"trace":                common.GetFrames(),
+	})
+	response, err := http.DefaultClient.Get(url)
+	if err != nil {
+		return log.WithError(err).WithField("function_get", "can't do http request")
+	}
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return log.WithError(err).WithField("function_get", "can't read response body")
+	}
+	if err := response.Body.Close(); err != nil {
+		log.WithError(err).Error("can't close response body")
+	}
+	if err := json.Unmarshal(body, result); err != nil {
+		return log.WithError(err).WithField("function_get", "can't unmarshal response into the expected result")
+	}
 	return nil
 }

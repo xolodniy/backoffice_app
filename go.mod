@@ -1,5 +1,7 @@
 module backoffice_app
 
+go 1.14
+
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
 	github.com/GuiaBolso/darwin v0.0.0-20170210191649-86919dfcf808
@@ -37,6 +39,7 @@ require (
 	github.com/unidoc/unioffice v1.3.0
 	github.com/urfave/cli v1.20.0
 	google.golang.org/appengine v1.3.0 // indirect
+	gopkg.in/DATA-DOG/go-sqlmock.v1 v1.3.0 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/validator.v8 v8.18.2
 	gopkg.in/yaml.v2 v2.2.2 // indirect

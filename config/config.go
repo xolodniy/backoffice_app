@@ -160,6 +160,12 @@ func GetConfig(skipFieldsFilledCheck bool, path string) *Main {
 			panic(err)
 		}
 	}
+	level, err := logrus.ParseLevel(config.LogLevel)
+	if err != nil {
+		logrus.Fatalf("invalid logLevel \"%s\" in cfg. available: %s", config.LogLevel, logrus.AllLevels)
+	}
+	logrus.SetLevel(level)
+
 	configureSentry(config.Sentry)
 	return &config
 }
