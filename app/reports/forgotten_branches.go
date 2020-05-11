@@ -41,7 +41,6 @@ func NewReportForgottenBranches(
 
 // Run checks branches without pull requests
 func (fb ForgottenBranches) Run() {
-	//channel := "#back-office-app"
 	forgottenBranches, err := fb.model.GetForgottenBranches()
 	if err != nil {
 		return
