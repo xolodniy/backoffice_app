@@ -14,8 +14,8 @@ bitbucket_private_token: YmFja29mZmljZS1kb3dubG9hZEBhdG5yLnBybzpNZlQ3MldTR3JwU2M
 jira_login: stepan.morozov@atnr.pro # TODO: special account with full read access
 jira_token: GaQ1oimS8bWXNdqcFyRG492D
 
-bitbucket_login: stepan.morozov@atnr.pro
-bitbucket_password: bugivugi
+bitbucket_login: stepan_morozov
+bitbucket_password: PUajQfbKPJ3VjAsunvg6
 
 hubstaff_token: 9omAc5EjhHp7wKXfqBCunHri6jkOsn_FFCcPC8XOqZo # TODO: check token valid after 11.03.2019
 hubstaff_app_token: yWDG5mMG3yln_GaIg-P5vnvlKlWeXZC9IE9cqAuDkoQ

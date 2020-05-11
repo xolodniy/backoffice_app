@@ -114,7 +114,7 @@ func (nrm *NeedReplyMessages) notifyMentionedUsersIfNeed(channel slack.Channel, 
 		if m, ok := notifications[user]; ok {
 			nrm.model.CreateReminder(model.Reminder{
 				UserID:     user,
-				Message:    fmt.Sprintf("<@%s>\n>%s", user, m.Text),
+				Message:    fmt.Sprintf("<@%s>\n>%s", user, strings.Replace(m.Text, "\n", "\n>", -1)),
 				ChannelID:  channel.ID,
 				ThreadTs:   message.Ts,
 				ReplyCount: message.ReplyCount,
@@ -138,7 +138,7 @@ func (nrm *NeedReplyMessages) notifyMentionedUsersIfNeed(channel slack.Channel, 
 				delete(notifications, user)
 			}
 		}
-		text := users + "\n>" + template
+		text := users + "\n>" + strings.Replace(template, "\n", "\n>", -1)
 		nrm.slack.SendToThread(text, channel.ID, message.Ts)
 		logrus.Tracef("into message (%.50s...) sent notification '%s'", message.Text, text)
 	}

@@ -145,23 +145,23 @@ func (b *Bitbucket) RepositoriesList() ([]repository, error) {
 }
 
 // PullRequestsList returns list of pull requests in repository by repository slug
-func (b *Bitbucket) PullRequestsList(repoSlug string) ([]pullRequest, error) {
+func (b *Bitbucket) PullRequestsList(repoSlug string) ([]PullRequest, error) {
 	type pullRequests struct {
 		Next   string        `json:"next"`
-		Values []pullRequest `json:"values"`
+		Values []PullRequest `json:"values"`
 	}
 	var pr = pullRequests{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/pullrequests?state=OPEN"}
 	for i := 0; i <= 500; i++ {
 		res, err := b.get(pr.Next)
 		if err != nil {
-			return []pullRequest{}, err
+			return []PullRequest{}, err
 		}
 		var nextPullRequests pullRequests
 		err = json.Unmarshal(res, &nextPullRequests)
 		if err != nil {
 			logrus.WithError(err).WithFields(logrus.Fields{"repoSlug": repoSlug, "res": string(res)}).
 				Error("can't unmarshal response body for pull requests list")
-			return []pullRequest{}, common.ErrInternal
+			return []PullRequest{}, common.ErrInternal
 		}
 		for _, pullRequest := range nextPullRequests.Values {
 			pr.Values = append(pr.Values, pullRequest)
@@ -280,7 +280,7 @@ func (b *Bitbucket) CommitsOfOpenedPRs() ([]Commit, error) {
 		return nil, err
 	}
 
-	var allPullRequests []pullRequest
+	var allPullRequests []PullRequest
 	for _, repository := range repositories {
 		pullRequests, err := b.PullRequestsList(repository.Name)
 		if err != nil {
@@ -444,28 +444,20 @@ func (b *Bitbucket) pullRequestActivity(repoSlug, pullRequestID string) ([]pullR
 	return pr.Values, nil
 }
 
-// PullRequestsActivity returns pull requests with activity
-func (b *Bitbucket) PullRequestsActivity() ([]pullRequest, error) {
+// PullRequests returns pull requests
+func (b *Bitbucket) PullRequests() ([]PullRequest, error) {
 	repositories, err := b.RepositoriesList()
 	if err != nil {
 		return nil, err
 	}
 
-	var allPullRequests []pullRequest
+	var allPullRequests []PullRequest
 	for _, repository := range repositories {
 		pullRequests, err := b.PullRequestsList(repository.Name)
 		if err != nil {
 			return nil, err
 		}
 		allPullRequests = append(allPullRequests, pullRequests...)
-	}
-
-	for i, pullRequest := range allPullRequests {
-		activities, err := b.pullRequestActivity(pullRequest.Source.Repository.Name, strconv.Itoa(pullRequest.ID))
-		if err != nil {
-			return nil, err
-		}
-		allPullRequests[i].Activities = activities
 	}
 	return allPullRequests, nil
 }
@@ -515,7 +507,7 @@ func (b *Bitbucket) BranchesList(repoSlug string) ([]branch, error) {
 		Next   string   `json:"next"`
 		Values []branch `json:"values"`
 	}
-	var pb = paginatedBranches{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/refs/branches?state=OPEN"}
+	var pb = paginatedBranches{Next: b.Url + "/repositories/" + b.Owner + "/" + repoSlug + "/refs/branches"}
 	for i := 0; i <= 500; i++ {
 		res, err := b.get(pb.Next)
 		if err != nil {
