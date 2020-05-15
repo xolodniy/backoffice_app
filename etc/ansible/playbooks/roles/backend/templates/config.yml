@@ -60,11 +60,9 @@ reports:
   sendreminders:
     schedule: "@hourly"
   reportforgottenprs:
-    schedule: "00 00 07 * * *"
-    channel: "#back-office-app"
+    schedule: "00 00 07 * * 2"
   reportforgottenbranches:
-    schedule: "00 00 07 * * *"
-    channel: "#back-office-app"
+    schedule: "00 00 07 * * 4"
 
 jira:
   apiurl: https://atnr.atlassian.net

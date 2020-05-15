@@ -52,19 +52,13 @@ reports:
   reportlowpriorityissuesstarted:
     schedule: "@yearly"
     channel: "#back-office-app"
-  checkneedreplymessages:
-    schedule: "@yearly"
   checklowerpriorityblockers:
     schedule: "@yearly"
     channel: "Artem Efremov"
-  sendreminders:
-    schedule: "@yearly"
   reportforgottenprs: # looking for pool requests without activity and report about them to slack
     schedule: "@yearly"
-    channel: "#back-office-app"
   reportforgottenbranches: # looking for branches without activity and report about them to slack
     schedule: "@yearly"
-    channel: "#back-office-app"
 
 jira:
   apiurl: https://atnr.atlassian.net
@@ -76,8 +70,8 @@ bitbucket:
   apiurl: https://api.bitbucket.org/2.0
   owner: atnrpro
   auth:
-    username: stepan.morozov@atnr.pro
-    password: bugivugi
+    username: stepan_morozov
+    password: PUajQfbKPJ3VjAsunvg6
 
 slack:
   apiurl: https://slack.com/api

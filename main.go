@@ -410,13 +410,8 @@ func main() {
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
 					cfg := config.GetConfig(true, c.String("config"))
-					channel := c.String("channel")
-					if channel == "" {
-						logrus.Println("Empty channel flag!")
-						return
-					}
 					application := initAppWithDB(cfg, context.Background(), &sync.WaitGroup{})
-					application.Reports.ForgottenPoolRequests.Run(channel)
+					application.Reports.ForgottenPoolRequests.Run()
 				},
 			},
 			{
@@ -425,13 +420,8 @@ func main() {
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
 					cfg := config.GetConfig(true, c.String("config"))
-					channel := c.String("channel")
-					if channel == "" {
-						logrus.Println("Empty channel flag!")
-						return
-					}
 					application := initAppWithDB(cfg, context.Background(), &sync.WaitGroup{})
-					application.Reports.ForgottenBranches.Run(channel)
+					application.Reports.ForgottenBranches.Run()
 				},
 			},
 		}
@@ -518,13 +508,9 @@ func initCronTasks(ctx context.Context, wg *sync.WaitGroup, cfg *config.Main, ap
 	checkErr(tm.AddTask(cfg.Reports.CheckLowerPriorityBlockers.Schedule, func() {
 		application.ReportIssuesLockedByLowPriority(cfg.Reports.CheckLowerPriorityBlockers.Channel)
 	}))
-	checkErr(tm.AddTask(cfg.Reports.ReportForgottenPRs.Schedule, func() {
-		application.Reports.ForgottenPoolRequests.Run(cfg.Reports.ReportForgottenPRs.Channel)
-	}))
-	checkErr(tm.AddTask(cfg.Reports.ReportForgottenBranches.Schedule, func() {
-		application.Reports.ForgottenBranches.Run(cfg.Reports.ReportForgottenBranches.Channel)
-	}))
 
+	checkErr(tm.AddTask(cfg.Reports.ReportForgottenPRs.Schedule, application.Reports.ForgottenPoolRequests.Run))
+	checkErr(tm.AddTask(cfg.Reports.ReportForgottenBranches.Schedule, application.Reports.ForgottenBranches.Run))
 	checkErr(tm.AddTask("@every 1m", application.Reports.NeedReplyMessages.Run))
 	checkErr(tm.AddTask(cfg.Reports.ReportClarificationIssues.Schedule, application.ReportClarificationIssues))
 	checkErr(tm.AddTask(cfg.Reports.Report24HoursReviewIssues.Schedule, application.Report24HoursReviewIssues))

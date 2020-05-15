@@ -6,7 +6,7 @@ import (
 
 // PullRequest struct of pull request from bitbucket
 // https://developer.atlassian.com/bitbucket/api/2/reference/resource/repositories/%7Busername%7D/%7Brepo_slug%7D/pullrequests#get
-type pullRequest struct {
+type PullRequest struct {
 	ID          int    `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
@@ -51,7 +51,7 @@ type pullRequest struct {
 	Activities []pullRequestActivity `json:"-"`
 }
 
-func (pr pullRequest) LastActivityDate() time.Time {
+func (pr PullRequest) LastActivityDate() time.Time {
 	var lastActivity time.Time
 	// find activity date by type (there are 3 types: approve, update, comment)
 	for _, activity := range pr.Activities {
@@ -335,7 +335,7 @@ type RepoPushPayload struct {
 // https://confluence.atlassian.com/bitbucket/event-payloads-740262817.html#EventPayloads-Merged (Pull Request -> Merged)
 type PullRequestMergedPayload struct {
 	Actor       owner       `json:"actor"`
-	PullRequest pullRequest `json:"pullrequest"`
+	PullRequest PullRequest `json:"pullrequest"`
 	Repository  repository  `json:"repository"`
 }
 
