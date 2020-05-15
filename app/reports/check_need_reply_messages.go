@@ -68,7 +68,9 @@ func (nrm *NeedReplyMessages) notifyMentionedUsersIfNeed(channel slack.Channel, 
 		for _, user := range channel.Members() {
 			notifications[user] = message
 		}
-		delete(notifications, message.User)
+		delete(notifications, message.User) // message author
+		delete(notifications, "UCPK76QS2")  // @Flowee Backoffice
+		delete(notifications, "UB85C4HSP")  // @Jira Cloud
 	}
 	for _, user := range channel.Members() {
 		if strings.Contains(message.Text, user) {
