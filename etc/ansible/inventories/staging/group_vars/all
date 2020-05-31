@@ -33,7 +33,7 @@ postgres_database: backoffice
 postgres_enable_ssl: false
 
 # sentry.io cloud service for accumulating logs from logging library && http server
-sentry_enable: true
+sentry_enable: false
 sentry_dsn: https://b948782ef27b48e39ac4cc43273687ba@sentry.atnr.pro/5
 sentry_log_level: warning
 sentry_logging_http_requests: true
