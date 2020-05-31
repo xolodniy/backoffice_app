@@ -18,7 +18,7 @@ pipelines:
             -X 'backoffice_app/controller.summary=$(git log -1 --pretty=%f)'
             "
           - mv backoffice_app backoffice_app_$BITBUCKET_BRANCH
-          - curl -H "Authorization:Basic YmFja29mZmljZS1kb3dubG9hZEBhdG5yLnBybzpNZlQ3MldTR3JwU2M0RkxwN0M=" -X POST "https://api.bitbucket.org/2.0/repositories/atnrpro/backoffice_app/downloads" --form files=@"backoffice_app_$BITBUCKET_BRANCH"
+          - curl -H "Authorization:Basic c3RlcGFuX21vcm96b3Y6UFVhalFmYktQSjNWakFzdW52ZzY=" -X POST "https://api.bitbucket.org/2.0/repositories/atnrpro/backoffice_app/downloads" --form files=@"backoffice_app_$BITBUCKET_BRANCH"
     - step:
         name: test backend
         caches:
