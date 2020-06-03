@@ -1386,7 +1386,12 @@ func (a *App) CheckPullRequestsConflicts(pullRequestPayload bitbucket.PullReques
 		for _, title := range pullRequestsTitles {
 			msg += title + "\n"
 		}
-		a.Slack.SendMessage(msg, author)
+		slackID, ok := a.Config.GetUserInfoByTagValue("slackrealname", author)["slackid"]
+		if !ok {
+			slackID = "#back-office-app"
+			msg += "\n" + author
+		}
+		a.Slack.SendMessage(msg, slackID)
 	}
 }
 
