@@ -6,7 +6,6 @@
 package reports
 
 import (
-	"regexp"
 	"time"
 
 	"backoffice_app/common"
@@ -14,8 +13,6 @@ import (
 	"backoffice_app/model"
 	"backoffice_app/services/bitbucket"
 	"backoffice_app/services/slack"
-
-	"github.com/sirupsen/logrus"
 )
 
 type ForgottenBranches struct {
@@ -53,14 +50,9 @@ func (fb ForgottenBranches) Run() {
 	if err != nil {
 		return
 	}
-	r, err := regexp.Compile("^(release|hotfix)/[0-9]{8}")
-	if err != nil {
-		logrus.WithError(err).WithField("regexp", "^(release|hotfix)/[0-9]{8}").Error("Can't compile regexp")
-		return
-	}
 	m := make(map[string][]string)
 	for _, branch := range branchesWithoutPRs {
-		if common.ValueIn(branch.Name, protected...) || r.MatchString(branch.Name) || branch.Name == "master" {
+		if common.ValueIn(branch.Name, protected...) || branch.Name == "master" {
 			continue
 		}
 		var exists bool
