@@ -47,14 +47,14 @@ func (fpr ForgottenPullRequests) Run() {
 	}
 
 	var (
-		twoMonth = time.Now().AddDate(0, -2, 0)
+		monthAgo = time.Now().AddDate(0, -1, 0)
 		m        = make(map[string][]bitbucket.PullRequest)
 	)
 	for _, pr := range pullRequests {
 		if common.ValueIn(pr.Title, protected...) {
 			continue
 		}
-		if pr.UpdatedOn.Before(twoMonth) {
+		if pr.UpdatedOn.Before(monthAgo) {
 			m[pr.Author.DisplayName] = append(m[pr.Author.DisplayName], pr)
 		}
 	}
@@ -63,7 +63,7 @@ func (fpr ForgottenPullRequests) Run() {
 		return
 	}
 
-	message := "*Эти пул реквесты не обновлялись больше двух месяцев:*\n\n"
+	message := "*Эти пулл реквесты не обновлялись больше месяца:*\n\n"
 	for author, pullRequests := range m {
 		for _, pr := range pullRequests {
 			message += "\n" + "<" + pr.Links.HTML.Href + "|" + pr.Title + ">"
