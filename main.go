@@ -125,13 +125,8 @@ func main() {
 				Flags: cliApp.Flags,
 				Action: func(c *cli.Context) {
 					cfg := config.GetConfig(true, c.String("config"))
-					channel := c.String("channel")
-					if channel == "" {
-						logrus.Println("Empty channel flag!")
-						return
-					}
 					application := initAppWithDB(cfg, context.Background(), &sync.WaitGroup{})
-					application.ReportIsuuesWithClosedSubtasks(channel)
+					application.Reports.NeedReplyMessages.Run()
 				},
 			},
 			{
@@ -469,9 +464,6 @@ func initCronTasks(ctx context.Context, wg *sync.WaitGroup, cfg *config.Main, ap
 	checkErr(tm.AddTask(cfg.Reports.EmployeesExceededTasks.Schedule, func() {
 		application.ReportEmployeesHaveExceededTasks(cfg.Reports.EmployeesExceededTasks.Channel)
 	}))
-	checkErr(tm.AddTask(cfg.Reports.ReportClosedSubtasks.Schedule, func() {
-		application.ReportIsuuesWithClosedSubtasks(cfg.Reports.ReportClosedSubtasks.Channel)
-	}))
 	checkErr(tm.AddTask(cfg.Reports.ReportAfterSecondReviewAll.Schedule, func() {
 		application.ReportIssuesAfterSecondReview(cfg.Reports.ReportAfterSecondReviewAll.Channel)
 	}))
@@ -514,6 +506,7 @@ func initCronTasks(ctx context.Context, wg *sync.WaitGroup, cfg *config.Main, ap
 	checkErr(tm.AddTask("@every 1m", application.Reports.NeedReplyMessages.Run))
 	checkErr(tm.AddTask(cfg.Reports.ReportClarificationIssues.Schedule, application.ReportClarificationIssues))
 	checkErr(tm.AddTask(cfg.Reports.Report24HoursReviewIssues.Schedule, application.Report24HoursReviewIssues))
+	checkErr(tm.AddTask(cfg.Reports.ReportClosedSubtasks.Schedule, application.Reports.ClosedSubtasks.Run))
 
 	tm.Start()
 	log.Println("Task scheduler started.")

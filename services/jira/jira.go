@@ -62,6 +62,7 @@ const (
 	StatusEmptyAssignee                = "empty"
 	StatusInClarification              = "In clarification"
 	StatusInArtDirectorReview          = "In Art-director review"
+	StatusReadyForRelease              = "Ready for release"
 	FieldEpicName                      = "customfield_10005"
 	FieldEpicKey                       = "customfield_10008"
 	FieldSprintInfo                    = "customfield_10010"

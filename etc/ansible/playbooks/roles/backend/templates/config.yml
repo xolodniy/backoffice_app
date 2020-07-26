@@ -10,7 +10,7 @@ reports:
     schedule: "00 15 07 * * 1"
     channel: "#work-reports"
   reportclosedsubtasks:
-    schedule: "00 00 07 * * *"
+    schedule: "00 00 10 * * 1-5"
     channel: "Artem Efremov"
   reportaftersecondreviewall:
     schedule: "@yearly"
