@@ -7,31 +7,6 @@
 3. Gets jira exceedions right now and sending it to some Slack channel that specified config
 
 
-## **Command Line Switches**
-*Get Jira exceedions and send them to Slack channel, immediately:*
-
-    $ ./backoffice-app get-jira-exceedions-now
-
-*Send weekly report to Slack channel, immediately:*
-
-    $ ./backoffice-app make-weekly-report-now
-
-*Sends daily report to Slack channel, immediately:*
-
-    $ ./backoffice-app make-daily-report-now
-    
-*Sends current employees exceeded time report to Slack channel, immediately:*
-
-    $ ./backoffice-app report-exceeded-estimate-now
-
-*Obtains Hubstaff authorization token:*
-
-    $ ./backoffice-app obtain-hubstaff-token
-
-*Send last activity report to slack right now*
-
-    $ ./backoffice-app send-last-activity-report-now
-
 ## **Running the Application**
 
 ### **Prerequisites**
