@@ -136,24 +136,65 @@ You may use one of several pre-defined schedules in place of a cron expression.
 
 #### Config.yml variables for reports 
 
-      dailyworkersworkedtime:           — preference to send daily worked time of worker
-        schedule: "00 00 07 * * *"  
-        channel: "#back-office-app"
-      weeklyworkersworkedtime:          — preference to send weekly worked time of worker
-        schedule: "00 00 07 * * 1" 
-        channel: "#back-office-app"
-      reportclosedsubtasks:             — preference to send report about all closed subtask of issue
-        schedule: "00 00 07 * * *" 
-        channel: "#back-office-app"   
-      reportaftersecondreviewall:       — preference to send report about issues after second round review
-        schedule: "00 00 06 * * *"
-        channel: "U891K2Z2P"
-      reportaftersecondreviewbe:        — preference to send report about backend issues after second round review
-        schedule: "00 00 06 * * *"
-        channel: "U97DJLL11"
-      reportaftersecondreviewfe:        — preference to send report about frontend issues after second round review
-        schedule: "00 00 06 * * *"
-        channel: "U88K5BQAD"
+##### dailyworkersworkedtime 
+Детальный отчет о работе пользователей, зарегистрированных в команде hubstaff за последний день.
+
+Пример отчета:
+```
+Morozov Stepan (07:03 total)
+07:03 - CDTO
+- CDTO-3803 - Оптимизация времени выполнения е2е тестов (00:07)
+- CDTO-3809 - Обновить объекты topicPoll и topicTest (01:16)
+✎ Планирование спринта
+✎ Поиск максимально возможного размера файла
+✎ Отладка бага о завершенном треке при незавершенном итоговом тесте
+✎ Замена пароля от почтового сервиса
+✎ Ревью 3496
+✎ ЗАмена кредов от smtp
+✎ Восстановление работы БД препрода
+```
+
+##### weeklyworkersworkedtime
+Отчет о времени, залогированном командой за неделю.
+
+Пример отчета:
+```
+Weekly work time report (auto):
+
+From: 18.05.20 00:00:00
+To: 24.05.20 23:59:59
+
+32:22 Andrey Solovyov
+54:18 Denis Kolosov
+30:39 Dmitrii Kishchik
+43:43 Irina Glebova
+07:52 Ivan Tomilov
+51:22 Morozov Stepan
+21:27 Muzafar Muradov
+08:21 Pavel Palenin
+50:40 Rodion Golovushkin
+32:17 Tatiana Kozlova
+```
+
+##### reportclosedsubtasks
+Список открытых задач в Jira, в которых все подзадачи закрыты.
+
+// TODO:  Проверить работоспособность   
+// TODO:  Пример отчета
+
+##### reportaftersecondreview
+Отчет о задачах, прошедших более двух TL ревью, но не закрытых.
+
+Есть 3 вида отчета:
+ - reportaftersecondreviewall (весь скоуп задач)
+ - reportaftersecondreviewbe (только BE task)
+ - reportaftersecondreviewfe (только FE task)
+ 
+Для корректной работы отчета в Jira должны быть заведены типы задач 'BE task' & 'FE task'. А так же этап 'In TL review'
+ 
+ // TODO:  Проверить работоспособность   
+ // TODO:  Пример отчета
+
       employeesexceededtasks:           — preference to send report about employers that have exceeded tasks
         schedule: "00 00 07 * * *" 
         channel: "#back-office-app"
@@ -250,7 +291,6 @@ Please see [Postman API documentation](https://lively-water-8721.postman.co/coll
 ## Support
 
 In case of any bugs , please, contact support@atnr.pro
-
 
 ## Deployment with ANSIBLE
 
